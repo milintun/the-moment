@@ -7,6 +7,8 @@ import {
   InvalidUsername,
   UsernameTaken,
 } from "./concepts/Authenticating.ts";
+import sessioningSpec from "@design/concepts/Sessioning.md" with { type: "text" };
+import { SessioningConcept, UnknownSession } from "./concepts/Sessioning.ts";
 
 // TODO: for each concept, import its spec and class, then register it:
 // import spec from "@design/concepts/<Concept>.md" with { type: "text" };
@@ -23,8 +25,15 @@ const authenticating = registerConcept({
   },
 });
 
+const sessioning = registerConcept({
+  class: SessioningConcept,
+  spec: sessioningSpec,
+  refusals: { UNKNOWN_SESSION: UnknownSession },
+});
+
 export const applicationConceptSet = conceptSet({
   Authenticating: authenticating,
+  Sessioning: sessioning,
   // TODO: <Concept>: <concept>,
 });
 export const { concepts } = applicationConceptSet;

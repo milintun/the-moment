@@ -11,4 +11,7 @@ TODO: add one `instantiate` block per concept instance, e.g. `instantiate Postin
 
 ```instances
 instantiate Authenticating
+
+instantiate Sessioning with
+  Subject is Authenticating.Account
 ```
