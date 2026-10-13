@@ -1,17 +1,15 @@
 # Application types
 
-Guests type their own name, and each reservation holds one table at one time.
+TODO: one or two sentences on what the application's types mean.
 
 ```types
+TODO: concrete application types, e.g.
 concrete Name
-  The name a guest types in when reserving.
-
-concrete Table
-  A table at a certain time, such as friday-7pm-table-4.
+  What it is.
 ```
 
 ```instances
-instantiate Reserving with
-  User is Name
-  Resource is Table
+TODO: one block per concept instance, e.g.
+instantiate Posting with
+  User is ...
 ```
