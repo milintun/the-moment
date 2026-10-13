@@ -1,4 +1,5 @@
 import { assemble } from "@mit-sdg/sync-engine/assembly";
+import { composition as sessionsComposition } from "./compositions/Sessions.ts";
 import { applicationConceptSet } from "./concepts.ts";
 import { AuthenticatingConcept } from "./concepts/Authenticating.ts";
 import { SessioningConcept } from "./concepts/Sessioning.ts";
@@ -13,6 +14,7 @@ export function assembleApplication() {
       // TODO: <Concept>: new <Concept>Concept(db),
     },
     composition: {
+      Sessions: sessionsComposition,
       // TODO: <Composition>: composition,
     },
     // Print what went wrong. Otherwise a failure only shows up as INTERNAL_ERROR.

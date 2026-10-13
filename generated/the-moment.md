@@ -1,0 +1,213 @@
+<!-- Generated from the The Moment assembly. Do not edit. -->
+<!-- Manifest producer: @mit-sdg/sync-engine@1.1.0; concept specification: sync-engine.concept-specification@1; renderer: @mit-sdg/sync-engine@1.1.0. -->
+
+# The Moment — assembled read-back
+
+_Assembled by sync-engine from registered concepts and composition. Edit the concept_
+_specifications and composition source, then regenerate this file._
+
+## Concepts
+
+### Authenticating
+
+Defined in [Authenticating](../design/concepts/Authenticating.md), line 1.
+
+#### Actions
+
+- `register(username: String, password: String) : returns (account: Account)`
+  - Refuses `INVALID_USERNAME`: A username must contain 3 to 32 characters.
+  - Refuses `INVALID_PASSWORD`: A password must contain 8 to 128 characters.
+  - Refuses `USERNAME_TAKEN`: That username is already registered.
+- `authenticate(username: String, password: String) : returns (account: Account)`
+  - Refuses `INVALID_CREDENTIALS`: The username or password is incorrect.
+
+#### Queries
+
+- `_registered(username: String) : one (registered: Flag)`
+
+#### Instances
+
+- `Authenticating` — instance of `Authenticating` — [Application types](../design/types.md), line 13.
+
+### Sessioning
+
+Defined in [Sessioning](../design/concepts/Sessioning.md), line 1.
+
+#### Actions
+
+- `start(subject: Subject) : returns (session: Session, expiresAt: DateTime)`
+- `current(session: Session) : returns (subject: Subject)`
+  - Refuses `UNKNOWN_SESSION`: This session is not active.
+- `end(session: Session) : returns (ended: Flag)`
+  - Refuses `UNKNOWN_SESSION`: This session is not active.
+
+#### Queries
+
+- `_active(session: Session) : optional (subject: Subject, expiresAt: DateTime)`
+
+#### Instances
+
+- `Sessioning` — instance of `Sessioning` — [Application types](../design/types.md), line 15.
+  - `Subject` is `Authenticating.Account` — [Application types](../design/types.md), line 16.
+
+## Reactions
+
+### DeliverFaultToAsker
+
+```reaction
+when any action is faulted, not asked by DeliverFaultToAsker
+where
+  earlier, RequestBoundary.request (requestId)
+then
+  RequestBoundary.respondFramework (error: "INTERNAL_ERROR", requestId)
+```
+
+### DeliverRefusalToAsker
+
+```reaction
+when any action is refused (message), except RequestBoundary
+where
+  earlier, RequestBoundary.request (requestId)
+then
+  RequestBoundary.respond (error: message, requestId)
+```
+
+### Sessions.CurrentUser
+
+Authored path: `Sessions.CurrentUser`.
+- Covered by [Sessions](../design/compositions/Sessions.md), line 17.
+- Covered by [Sessions](../design/compositions/Sessions.md), line 21.
+
+```reaction
+when RequestBoundary.request (path: "/auth/current", requestId, session)
+then
+  Sessioning.current (session)
+```
+
+### Sessions.CurrentUser#2
+
+Authored path: `Sessions.CurrentUser`.
+- Covered by [Sessions](../design/compositions/Sessions.md), line 17.
+- Covered by [Sessions](../design/compositions/Sessions.md), line 21.
+
+```reaction
+when Sessioning.current (session, subject: username), asked by Sessions.CurrentUser
+where
+  earlier, RequestBoundary.request (path: "/auth/current", requestId, session)
+then
+  RequestBoundary.respond (requestId, username)
+```
+
+### Sessions.Register
+
+Authored path: `Sessions.Register`.
+- Covered by [Sessions](../design/compositions/Sessions.md), line 6.
+- Covered by [Sessions](../design/compositions/Sessions.md), line 13.
+
+```reaction
+when RequestBoundary.request (password, path: "/auth/register", requestId, username)
+then
+  Authenticating.register (password, username)
+```
+
+### Sessions.Register#2
+
+Authored path: `Sessions.Register`.
+- Covered by [Sessions](../design/compositions/Sessions.md), line 6.
+- Covered by [Sessions](../design/compositions/Sessions.md), line 13.
+
+```reaction
+when Authenticating.register (password, username, account), asked by Sessions.Register
+then
+  Sessioning.start (subject: account)
+```
+
+### Sessions.Register#3
+
+Authored path: `Sessions.Register`.
+- Covered by [Sessions](../design/compositions/Sessions.md), line 6.
+- Covered by [Sessions](../design/compositions/Sessions.md), line 13.
+
+```reaction
+when Sessioning.start (subject: account, expiresAt, session), asked by Sessions.Register#2
+where
+  earlier, RequestBoundary.request (password, path: "/auth/register", requestId, username)
+then
+  RequestBoundary.respond (account, expiresAt, requestId, session)
+```
+
+### Sessions.SignIn
+
+Authored path: `Sessions.SignIn`.
+- Covered by [Sessions](../design/compositions/Sessions.md), line 8.
+- Covered by [Sessions](../design/compositions/Sessions.md), line 14.
+
+```reaction
+when RequestBoundary.request (password, path: "/auth/sign-in", requestId, username)
+then
+  Authenticating.authenticate (password, username)
+```
+
+### Sessions.SignIn#2
+
+Authored path: `Sessions.SignIn`.
+- Covered by [Sessions](../design/compositions/Sessions.md), line 8.
+- Covered by [Sessions](../design/compositions/Sessions.md), line 14.
+
+```reaction
+when Authenticating.authenticate (password, username, account), asked by Sessions.SignIn
+then
+  Sessioning.start (subject: account)
+```
+
+### Sessions.SignIn#3
+
+Authored path: `Sessions.SignIn`.
+- Covered by [Sessions](../design/compositions/Sessions.md), line 8.
+- Covered by [Sessions](../design/compositions/Sessions.md), line 14.
+
+```reaction
+when Sessioning.start (subject: account, expiresAt, session), asked by Sessions.SignIn#2
+where
+  earlier, RequestBoundary.request (password, path: "/auth/sign-in", requestId, username)
+then
+  RequestBoundary.respond (account, expiresAt, requestId, session)
+```
+
+### Sessions.SignOut
+
+Authored path: `Sessions.SignOut`.
+- Covered by [Sessions](../design/compositions/Sessions.md), line 24.
+- Covered by [Sessions](../design/compositions/Sessions.md), line 28.
+
+```reaction
+when RequestBoundary.request (path: "/auth/sign-out", requestId, session)
+then
+  Sessioning.end (session)
+```
+
+### Sessions.SignOut#2
+
+Authored path: `Sessions.SignOut`.
+- Covered by [Sessions](../design/compositions/Sessions.md), line 24.
+- Covered by [Sessions](../design/compositions/Sessions.md), line 28.
+
+```reaction
+when Sessioning.end (session, ended: signedOut), asked by Sessions.SignOut
+where
+  earlier, RequestBoundary.request (path: "/auth/sign-out", requestId, session)
+then
+  RequestBoundary.respond (requestId, signedOut)
+```
+
+## Endpoint input contracts
+
+Before recording an action ask, the boundary rejects a body that is not an
+object or lacks a required key. The response uses `INVALID_INPUT` and names
+the path or missing key. A declared default fills an absent key. Endpoints
+not listed here have no explicit input contract.
+
+- `/auth/current` — requires `session`
+- `/auth/register` — requires `username`, `password`
+- `/auth/sign-in` — requires `username`, `password`
+- `/auth/sign-out` — requires `session`

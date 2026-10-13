@@ -10,6 +10,7 @@ export default {
     version: 1,
     documents: [
       new URL("./design/types.md", import.meta.url),
+      new URL("./design/compositions/Sessions.md", import.meta.url),
       // TODO: new URL("./design/compositions/<Composition>.md", import.meta.url),
     ],
   },
