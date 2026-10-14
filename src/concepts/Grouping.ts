@@ -76,6 +76,11 @@ export class GroupingConcept {
     return [...found.items].sort().map((item) => ({ item }));
   }
 
+  async _groupsOf({ item }: { item: string }): Promise<Array<{ group: string }>> {
+    const rows = await this.groups.find({ items: item }).sort({ _id: 1 }).toArray();
+    return rows.map(({ _id }) => ({ group: _id }));
+  }
+
   async _byName({ name }: { name: string }): Promise<Array<{ group: string }>> {
     const found = await this.groups.findOne({ name });
     return found === null ? [] : [{ group: found._id }];

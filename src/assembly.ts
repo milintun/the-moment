@@ -1,5 +1,8 @@
 import { assemble } from "@mit-sdg/sync-engine/assembly";
 import { composition as sessionsComposition } from "./compositions/Sessions.ts";
+import { composition as userComposition } from "./compositions/User.ts";
+import { composition as adminComposition } from "./compositions/Admin.ts";
+import { composition as publicComposition } from "./compositions/Public.ts";
 import { applicationConceptSet } from "./concepts.ts";
 import { AuthenticatingConcept } from "./concepts/Authenticating.ts";
 import { SessioningConcept } from "./concepts/Sessioning.ts";
@@ -23,7 +26,9 @@ export function assembleApplication() {
     },
     composition: {
       Sessions: sessionsComposition,
-      // TODO: <Composition>: composition,
+      User: userComposition,
+      Admin: adminComposition,
+      Public: publicComposition,
     },
     // Print what went wrong. Otherwise a failure only shows up as INTERNAL_ERROR.
     rawFaultReporter: ({ error }) => console.error(error),

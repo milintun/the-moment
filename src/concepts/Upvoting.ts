@@ -39,6 +39,11 @@ export class UpvotingConcept {
     return {};
   }
 
+  async clear({ target }: { target: string }): Promise<Record<string, never>> {
+    await this.votes.deleteMany({ target });
+    return {};
+  }
+
   async _count({target} : {target: string}) {
     return { votes: await this.votes.countDocuments({target}) };
   }

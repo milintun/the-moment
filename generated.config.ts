@@ -11,7 +11,9 @@ export default {
     documents: [
       new URL("./design/types.md", import.meta.url),
       new URL("./design/compositions/Sessions.md", import.meta.url),
-      // TODO: new URL("./design/compositions/<Composition>.md", import.meta.url),
+      new URL("./design/compositions/User.md", import.meta.url),
+      new URL("./design/compositions/Admin.md", import.meta.url),
+      new URL("./design/compositions/Public.md", import.meta.url),
     ],
   },
   projections: [httpWire({ policy, name: "TheMomentWireHttp" })],

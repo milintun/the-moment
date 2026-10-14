@@ -16,7 +16,7 @@ import { AlreadyVoted, NotVoted, UpvotingConcept } from "./concepts/Upvoting.ts"
 import groupingSpec from "@design/concepts/Grouping.md" with { type: "text" };
 import { AlreadyInGroup, GroupingConcept, NameTaken, NoSuchGroup, NotInGroup } from "./concepts/Grouping.ts";
 import cyclingSpec from "@design/concepts/Cycling.md" with { type: "text" };
-import { AlreadyCycling, CyclingConcept, InvalidCycle, NoSuchCycle } from "./concepts/Cycling.ts";
+import { AlreadyCycling, CyclingConcept, InvalidCycle, NoSuchCycle, NotInCycle } from "./concepts/Cycling.ts";
 
   const posting = registerConcept({
     class: PostingConcept,
@@ -65,6 +65,7 @@ const cycling = registerConcept({
     INVALID_CYCLE: InvalidCycle,
     ALREADY_CYCLING: AlreadyCycling,
     NO_SUCH_CYCLE: NoSuchCycle,
+    NOT_IN_CYCLE: NotInCycle,
   },
 });
 

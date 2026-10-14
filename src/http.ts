@@ -22,6 +22,12 @@ export const policy = httpPolicy({
     INVALID_CYCLE: "INVALID_REQUEST",
     ALREADY_CYCLING: "CONFLICT",
     NO_SUCH_CYCLE: "NOT_FOUND",
+    NOT_IN_CYCLE: "NOT_FOUND",
+    // Errors the compositions answer with.
+    ADMIN_ONLY: "FORBIDDEN",
+    OWN_POST: "FORBIDDEN",
+    GROUP_CLOSED: "CONFLICT",
+    NOT_IN_SEASON: "CONFLICT",
   },
   cookies: {
     session: {

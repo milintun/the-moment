@@ -48,6 +48,12 @@ unvote (voter: User, target: Item) : returns ()
   then
     delete the vote with this voter and target
     returns
+
+clear (target: Item) : returns ()
+  where true
+  then
+    delete every vote for target
+    returns
 ```
 
 ## Queries

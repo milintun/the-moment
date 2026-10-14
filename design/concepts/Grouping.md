@@ -80,6 +80,9 @@ _groups () : many (group: Group, name: String)
 _items (group: Group) : many (item: Item)
   answers the items in group ordered by item, and no rows when group is not in Groups or holds no items
 
+_groupsOf (item: Item) : many (group: Group)
+  answers every group that holds item, ordered by group, and no rows when none does
+
 _byName (name: String) : optional (group: Group)
   answers the group with this name, and no row when no group has it
 ```
