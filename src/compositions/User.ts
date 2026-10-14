@@ -1,5 +1,5 @@
 import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
-import { is, no, now, reaction, view, when, where } from "@mit-sdg/sync-engine/language";
+import { each, form, former, is, no, now, reaction, view, when, where } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
 
 const { Sessioning, Posting, Grouping, Cycling, Upvoting } = concepts;
@@ -88,6 +88,23 @@ const Unvote = endpoint(
       ),
 );
 
+// The posts in a group that a person has upvoted.
+const MyVotes = former("the posts in (group) upvoted by (user)", ({ group, user }, { post }) =>
+  form({
+    posts: each(Grouping._items({ group }).is({ item: post }))
+      .where(Upvoting._voted({ voter: user, target: post }).is({ voted: true }))
+      .form({ post }),
+  }),
+);
+
+const ListMyVotes = endpoint(
+  "/posts/my-votes",
+  ({ session, group, user }) =>
+    receive({ session, group })
+      .then(Sessioning.current({ session }).responds({ subject: user }))
+      .then(respond({ votes: MyVotes({ group, user }) })),
+);
+
 // Cleanup: a deleted post leaves every group it was in, and its votes are cleared.
 const DeletedPostLeavesGroups = reaction(({ post, group }) =>
   when(Posting.delete({ post }).responds({}))
@@ -105,6 +122,8 @@ export const composition = {
   DeletePost,
   Vote,
   Unvote,
+  MyVotes,
+  ListMyVotes,
   DeletedPostLeavesGroups,
   DeletedPostLosesVotes,
 };

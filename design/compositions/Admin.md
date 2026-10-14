@@ -30,12 +30,14 @@ Admin.RemovePostFromGroup at /admin/groups/remove-post
 
 ## Cycles
 
-A cycle sets the seasons for the groups it holds. The admin may
+A cycle sets the seasons for the groups it holds. The admin may [list every cycle](reaction:Admin.ListCycles) as
+[each cycle with the groups it holds](former:Admin.CycleList),
 [create a cycle](reaction:Admin.CreateCycle), which starts at the request's time with
 the given period and number of runs, and [delete a cycle](reaction:Admin.DeleteCycle),
 which closes every group it held.
 
 ```endpoints
+Admin.ListCycles at /admin/cycles/list
 Admin.CreateCycle at /admin/cycles/create
 Admin.DeleteCycle at /admin/cycles/delete
 ```

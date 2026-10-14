@@ -1,5 +1,5 @@
 import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
-import { now, reaction, view, when, where } from "@mit-sdg/sync-engine/language";
+import { each, form, former, now, reaction, view, when, where } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
 
 const { Sessioning, Grouping, Cycling } = concepts;
@@ -144,6 +144,30 @@ const SetCycleRuns = endpoint(
       ),
 );
 
+// Every cycle with the groups it holds.
+const CycleList = former("every cycle", (_input, { cycle, start, period, runs, group }) =>
+  form({
+    cycles: each(Cycling._all({}).is({ cycle, start, period, runs })).form({
+      cycle,
+      start,
+      period,
+      runs,
+      groups: each(Cycling._items({ cycle }).is({ item: group })).form({ group }),
+    }),
+  }),
+);
+
+const ListCycles = endpoint(
+  "/admin/cycles/list",
+  ({ session }) =>
+    receive({ session })
+      .then(Sessioning.current({ session }).responds({}))
+      .then(
+        where(IsAdmin({ session })).then(respond({ list: CycleList({}) })).named("admin"),
+        where(IsNotAdmin({ session })).then(respond({ error: "ADMIN_ONLY" })).named("not-admin"),
+      ),
+);
+
 // Cleanup: a deleted group leaves the cycle it belonged to.
 const DeletedGroupLeavesCycle = reaction(({ group, cycle }) =>
   when(Grouping.delete({ group }).responds({}))
@@ -163,5 +187,7 @@ export const composition = {
   AddGroupToCycle,
   RemoveGroupFromCycle,
   SetCycleRuns,
+  CycleList,
+  ListCycles,
   DeletedGroupLeavesCycle,
 };

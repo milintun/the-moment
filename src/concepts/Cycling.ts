@@ -93,6 +93,11 @@ export class CyclingConcept {
     return [{ run, start, end: new Date(start.getTime() + found.period) }];
   }
 
+  async _all(_input: Record<string, never>): Promise<Array<{ cycle: string; start: Date; period: number; runs: number }>> {
+    const rows = await this.cycles.find().sort({ start: 1, _id: 1 }).toArray();
+    return rows.map(({ _id, start, period, runs }) => ({ cycle: _id, start, period, runs }));
+  }
+
   async _items({ cycle }: { cycle: string }): Promise<Array<{ item: string }>> {
     const rows = await this.memberships.find({ cycle }).sort({ _id: 1 }).toArray();
     return rows.map(({ _id }) => ({ item: _id }));

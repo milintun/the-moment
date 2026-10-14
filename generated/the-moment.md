@@ -53,6 +53,7 @@ Defined in [Cycling](../design/concepts/Cycling.md), line 1.
 
 - `_cycle(item: Item) : optional (cycle: Cycle, start: DateTime, period: Number, runs: Number)`
 - `_currentRun(item: Item, now: DateTime) : optional (run: Number, start: DateTime, end: DateTime)`
+- `_all() : many (cycle: Cycle, start: DateTime, period: Number, runs: Number)`
 - `_items(cycle: Cycle) : many (item: Item)`
 
 #### Instances
@@ -205,6 +206,25 @@ Authored path: `Admin.IsNotAdmin`.
 _Formers name result shapes evaluated when asked. The source former owns_
 _the authored explanation; this section records the generated shape._
 
+### every cycle
+
+Authored path: `Admin.CycleList`.
+- Covered by [Admin](../design/compositions/Admin.md), line 34.
+
+```former
+Former "every cycle" — inputs (); bindings (cycle, start, period, runs, group); promises exactly one record — forms:
+  a record of
+    cycles: each Cycling._all () has (cycle, period, runs, start)
+      form a record of
+        cycle
+        groups: each Cycling._items (cycle) has (item: group)
+          form a record of
+            group
+        period
+        runs
+        start
+```
+
 ### the cycle of (group)
 
 Authored path: `Public.GroupCycle`.
@@ -290,13 +310,27 @@ Former "the feed of (group) at (now)" — inputs (group, now); bindings (post, o
         votes
 ```
 
+### the posts in (group) upvoted by (user)
+
+Authored path: `User.MyVotes`.
+- Covered by [User](../design/compositions/User.md), line 41.
+
+```former
+Former "the posts in (group) upvoted by (user)" — inputs (group, user); bindings (post); promises exactly one record — forms:
+  a record of
+    posts: each Grouping._items (group) has (item: post)
+      where Upvoting._voted (target: post, voter: user) has (voted: true)
+      form a record of
+        post
+```
+
 ## Reactions
 
 ### Admin.AddGroupToCycle
 
 Authored path: `Admin.AddGroupToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 44.
-- Covered by [Admin](../design/compositions/Admin.md), line 51.
+- Covered by [Admin](../design/compositions/Admin.md), line 46.
+- Covered by [Admin](../design/compositions/Admin.md), line 53.
 
 ```reaction
 when RequestBoundary.request (cycle, group, path: "/admin/cycles/add-group", requestId, session)
@@ -307,8 +341,8 @@ then
 ### Admin.AddGroupToCycle:admin#2
 
 Authored path: `Admin.AddGroupToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 44.
-- Covered by [Admin](../design/compositions/Admin.md), line 51.
+- Covered by [Admin](../design/compositions/Admin.md), line 46.
+- Covered by [Admin](../design/compositions/Admin.md), line 53.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.AddGroupToCycle
@@ -322,8 +356,8 @@ then
 ### Admin.AddGroupToCycle:admin#3
 
 Authored path: `Admin.AddGroupToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 44.
-- Covered by [Admin](../design/compositions/Admin.md), line 51.
+- Covered by [Admin](../design/compositions/Admin.md), line 46.
+- Covered by [Admin](../design/compositions/Admin.md), line 53.
 
 ```reaction
 when Cycling.addItem (cycle, item: group), asked by Admin.AddGroupToCycle:admin#2
@@ -336,8 +370,8 @@ then
 ### Admin.AddGroupToCycle:not-admin#2
 
 Authored path: `Admin.AddGroupToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 44.
-- Covered by [Admin](../design/compositions/Admin.md), line 51.
+- Covered by [Admin](../design/compositions/Admin.md), line 46.
+- Covered by [Admin](../design/compositions/Admin.md), line 53.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.AddGroupToCycle
@@ -407,8 +441,8 @@ then
 ### Admin.CreateCycle
 
 Authored path: `Admin.CreateCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 34.
-- Covered by [Admin](../design/compositions/Admin.md), line 39.
+- Covered by [Admin](../design/compositions/Admin.md), line 35.
+- Covered by [Admin](../design/compositions/Admin.md), line 41.
 
 ```reaction
 when RequestBoundary.request (path: "/admin/cycles/create", period, requestId, runs, session)
@@ -419,8 +453,8 @@ then
 ### Admin.CreateCycle:admin#2
 
 Authored path: `Admin.CreateCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 34.
-- Covered by [Admin](../design/compositions/Admin.md), line 39.
+- Covered by [Admin](../design/compositions/Admin.md), line 35.
+- Covered by [Admin](../design/compositions/Admin.md), line 41.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.CreateCycle
@@ -435,8 +469,8 @@ then
 ### Admin.CreateCycle:admin#3
 
 Authored path: `Admin.CreateCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 34.
-- Covered by [Admin](../design/compositions/Admin.md), line 39.
+- Covered by [Admin](../design/compositions/Admin.md), line 35.
+- Covered by [Admin](../design/compositions/Admin.md), line 41.
 
 ```reaction
 when Cycling.create (period, runs, start, cycle), asked by Admin.CreateCycle:admin#2
@@ -449,8 +483,8 @@ then
 ### Admin.CreateCycle:not-admin#2
 
 Authored path: `Admin.CreateCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 34.
-- Covered by [Admin](../design/compositions/Admin.md), line 39.
+- Covered by [Admin](../design/compositions/Admin.md), line 35.
+- Covered by [Admin](../design/compositions/Admin.md), line 41.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.CreateCycle
@@ -520,8 +554,8 @@ then
 ### Admin.DeleteCycle
 
 Authored path: `Admin.DeleteCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 35.
-- Covered by [Admin](../design/compositions/Admin.md), line 40.
+- Covered by [Admin](../design/compositions/Admin.md), line 36.
+- Covered by [Admin](../design/compositions/Admin.md), line 42.
 
 ```reaction
 when RequestBoundary.request (cycle, path: "/admin/cycles/delete", requestId, session)
@@ -532,8 +566,8 @@ then
 ### Admin.DeleteCycle:admin#2
 
 Authored path: `Admin.DeleteCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 35.
-- Covered by [Admin](../design/compositions/Admin.md), line 40.
+- Covered by [Admin](../design/compositions/Admin.md), line 36.
+- Covered by [Admin](../design/compositions/Admin.md), line 42.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.DeleteCycle
@@ -547,8 +581,8 @@ then
 ### Admin.DeleteCycle:admin#3
 
 Authored path: `Admin.DeleteCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 35.
-- Covered by [Admin](../design/compositions/Admin.md), line 40.
+- Covered by [Admin](../design/compositions/Admin.md), line 36.
+- Covered by [Admin](../design/compositions/Admin.md), line 42.
 
 ```reaction
 when Cycling.delete (cycle), asked by Admin.DeleteCycle:admin#2
@@ -561,8 +595,8 @@ then
 ### Admin.DeleteCycle:not-admin#2
 
 Authored path: `Admin.DeleteCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 35.
-- Covered by [Admin](../design/compositions/Admin.md), line 40.
+- Covered by [Admin](../design/compositions/Admin.md), line 36.
+- Covered by [Admin](../design/compositions/Admin.md), line 42.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.DeleteCycle
@@ -642,11 +676,53 @@ then
   Cycling.removeItem (cycle, item: group)
 ```
 
+### Admin.ListCycles
+
+Authored path: `Admin.ListCycles`.
+- Covered by [Admin](../design/compositions/Admin.md), line 33.
+- Covered by [Admin](../design/compositions/Admin.md), line 40.
+
+```reaction
+when RequestBoundary.request (path: "/admin/cycles/list", requestId, session)
+then
+  Sessioning.current (session)
+```
+
+### Admin.ListCycles:admin#2
+
+Authored path: `Admin.ListCycles`.
+- Covered by [Admin](../design/compositions/Admin.md), line 33.
+- Covered by [Admin](../design/compositions/Admin.md), line 40.
+
+```reaction
+when Sessioning.current (session), asked by Admin.ListCycles
+where
+  view "(session) belongs to the admin" with (session)
+  earlier, RequestBoundary.request (path: "/admin/cycles/list", requestId, session)
+then
+  RequestBoundary.respond (list: former "every cycle", requestId)
+```
+
+### Admin.ListCycles:not-admin#2
+
+Authored path: `Admin.ListCycles`.
+- Covered by [Admin](../design/compositions/Admin.md), line 33.
+- Covered by [Admin](../design/compositions/Admin.md), line 40.
+
+```reaction
+when Sessioning.current (session), asked by Admin.ListCycles
+where
+  view "(session) does not belong to the admin" with (session)
+  earlier, RequestBoundary.request (path: "/admin/cycles/list", requestId, session)
+then
+  RequestBoundary.respond (error: "ADMIN_ONLY", requestId)
+```
+
 ### Admin.RemoveGroupFromCycle
 
 Authored path: `Admin.RemoveGroupFromCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 45.
-- Covered by [Admin](../design/compositions/Admin.md), line 52.
+- Covered by [Admin](../design/compositions/Admin.md), line 47.
+- Covered by [Admin](../design/compositions/Admin.md), line 54.
 
 ```reaction
 when RequestBoundary.request (cycle, group, path: "/admin/cycles/remove-group", requestId, session)
@@ -657,8 +733,8 @@ then
 ### Admin.RemoveGroupFromCycle:admin#2
 
 Authored path: `Admin.RemoveGroupFromCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 45.
-- Covered by [Admin](../design/compositions/Admin.md), line 52.
+- Covered by [Admin](../design/compositions/Admin.md), line 47.
+- Covered by [Admin](../design/compositions/Admin.md), line 54.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.RemoveGroupFromCycle
@@ -672,8 +748,8 @@ then
 ### Admin.RemoveGroupFromCycle:admin#3
 
 Authored path: `Admin.RemoveGroupFromCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 45.
-- Covered by [Admin](../design/compositions/Admin.md), line 52.
+- Covered by [Admin](../design/compositions/Admin.md), line 47.
+- Covered by [Admin](../design/compositions/Admin.md), line 54.
 
 ```reaction
 when Cycling.removeItem (cycle, item: group), asked by Admin.RemoveGroupFromCycle:admin#2
@@ -686,8 +762,8 @@ then
 ### Admin.RemoveGroupFromCycle:not-admin#2
 
 Authored path: `Admin.RemoveGroupFromCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 45.
-- Covered by [Admin](../design/compositions/Admin.md), line 52.
+- Covered by [Admin](../design/compositions/Admin.md), line 47.
+- Covered by [Admin](../design/compositions/Admin.md), line 54.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.RemoveGroupFromCycle
@@ -757,8 +833,8 @@ then
 ### Admin.SetCycleRuns
 
 Authored path: `Admin.SetCycleRuns`.
-- Covered by [Admin](../design/compositions/Admin.md), line 47.
-- Covered by [Admin](../design/compositions/Admin.md), line 53.
+- Covered by [Admin](../design/compositions/Admin.md), line 49.
+- Covered by [Admin](../design/compositions/Admin.md), line 55.
 
 ```reaction
 when RequestBoundary.request (cycle, path: "/admin/cycles/set-runs", requestId, runs, session)
@@ -769,8 +845,8 @@ then
 ### Admin.SetCycleRuns:admin#2
 
 Authored path: `Admin.SetCycleRuns`.
-- Covered by [Admin](../design/compositions/Admin.md), line 47.
-- Covered by [Admin](../design/compositions/Admin.md), line 53.
+- Covered by [Admin](../design/compositions/Admin.md), line 49.
+- Covered by [Admin](../design/compositions/Admin.md), line 55.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.SetCycleRuns
@@ -784,8 +860,8 @@ then
 ### Admin.SetCycleRuns:admin#3
 
 Authored path: `Admin.SetCycleRuns`.
-- Covered by [Admin](../design/compositions/Admin.md), line 47.
-- Covered by [Admin](../design/compositions/Admin.md), line 53.
+- Covered by [Admin](../design/compositions/Admin.md), line 49.
+- Covered by [Admin](../design/compositions/Admin.md), line 55.
 
 ```reaction
 when Cycling.setRuns (cycle, runs), asked by Admin.SetCycleRuns:admin#2
@@ -798,8 +874,8 @@ then
 ### Admin.SetCycleRuns:not-admin#2
 
 Authored path: `Admin.SetCycleRuns`.
-- Covered by [Admin](../design/compositions/Admin.md), line 47.
-- Covered by [Admin](../design/compositions/Admin.md), line 53.
+- Covered by [Admin](../design/compositions/Admin.md), line 49.
+- Covered by [Admin](../design/compositions/Admin.md), line 55.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.SetCycleRuns
@@ -1150,6 +1226,32 @@ then
   Upvoting.clear (target: post)
 ```
 
+### User.ListMyVotes
+
+Authored path: `User.ListMyVotes`.
+- Covered by [User](../design/compositions/User.md), line 40.
+- Covered by [User](../design/compositions/User.md), line 45.
+
+```reaction
+when RequestBoundary.request (group, path: "/posts/my-votes", requestId, session)
+then
+  Sessioning.current (session)
+```
+
+### User.ListMyVotes#2
+
+Authored path: `User.ListMyVotes`.
+- Covered by [User](../design/compositions/User.md), line 40.
+- Covered by [User](../design/compositions/User.md), line 45.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by User.ListMyVotes
+where
+  earlier, RequestBoundary.request (group, path: "/posts/my-votes", requestId, session)
+then
+  RequestBoundary.respond (requestId, votes: former "the posts in (group) upvoted by (user)" with (group, user))
+```
+
 ### User.Unvote
 
 Authored path: `User.Unvote`.
@@ -1340,6 +1442,7 @@ not listed here have no explicit input contract.
 - `/admin/cycles/add-group` — requires `cycle`, `group`, `session`
 - `/admin/cycles/create` — requires `period`, `runs`, `session`
 - `/admin/cycles/delete` — requires `cycle`, `session`
+- `/admin/cycles/list` — requires `session`
 - `/admin/cycles/remove-group` — requires `cycle`, `group`, `session`
 - `/admin/cycles/set-runs` — requires `cycle`, `runs`, `session`
 - `/admin/groups/add-post` — requires `group`, `post`, `session`
@@ -1354,5 +1457,6 @@ not listed here have no explicit input contract.
 - `/posts/create` — requires `content`, `group`, `session`
 - `/posts/delete` — requires `post`, `session`
 - `/posts/get` — requires `post`
+- `/posts/my-votes` — requires `group`, `session`
 - `/posts/unvote` — requires `post`, `session`
 - `/posts/vote` — requires `post`, `session`

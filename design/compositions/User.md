@@ -36,3 +36,11 @@ only when it is in season and they do not own it. Otherwise the request answers
 User.Vote at /posts/vote
 User.Unvote at /posts/unvote
 ```
+
+A person may [list their own votes in a group](reaction:User.ListMyVotes), which
+answers [the posts in the group they have upvoted](former:User.MyVotes), so a page can
+show whether each post is upvoted.
+
+```endpoints
+User.ListMyVotes at /posts/my-votes
+```

@@ -1,0 +1,28 @@
+<script setup lang="ts">
+import { onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { ADMIN, client, me, refreshMe } from "./api.ts";
+
+const router = useRouter();
+onMounted(refreshMe);
+
+async function signOut() {
+  await client.auth["sign-out"]({});
+  me.value = null;
+  router.push("/");
+}
+</script>
+
+<template>
+  <header>
+    <RouterLink to="/">The Moment</RouterLink>
+    <template v-if="me">
+      | Signed in as {{ me }}
+      <template v-if="me === ADMIN"> | <RouterLink to="/admin">Admin</RouterLink></template>
+      | <button @click="signOut">Sign out</button>
+    </template>
+    <template v-else> | <RouterLink to="/login">Log in or register</RouterLink></template>
+  </header>
+  <hr />
+  <RouterView />
+</template>
