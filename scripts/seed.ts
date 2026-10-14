@@ -15,17 +15,17 @@ if (!adminPassword) throw new Error("Set ADMIN_PASSWORD to milin's password.");
 const DAY = 24 * 60 * 60 * 1000;
 const CYCLE = { period: 7 * DAY, runs: 1 }; // one week-long season
 const GROUPS = ["Figure Drawing", "Doodles"];
-const USERS = ["ari", "bea", "cam"]; // all get DUMMY_PASSWORD
+const USERS = ["gigi", "sid", "sash"]; // all get DUMMY_PASSWORD
 const DUMMY_PASSWORD = "password123";
 
 // Paste image URLs here: [owner, group, image URL].
 const POSTS: Array<[string, string, string]> = [
-  ["ari", "Figure Drawing", "PASTE_IMAGE_URL"],
-  ["bea", "Figure Drawing", "PASTE_IMAGE_URL"],
-  ["cam", "Figure Drawing", "PASTE_IMAGE_URL"],
-  ["ari", "Doodles", "PASTE_IMAGE_URL"],
-  ["bea", "Doodles", "PASTE_IMAGE_URL"],
-  ["cam", "Doodles", "PASTE_IMAGE_URL"],
+  ["gigi", "Figure Drawing", "https://i.pinimg.com/1200x/7a/c3/8b/7ac38b11c3f76092e3b35d415e9363b5.jpg"],
+  ["sid", "Figure Drawing", "https://i.pinimg.com/1200x/22/53/e3/2253e3d2f9bcb9f4a424596a06330b14.jpg"],
+  ["sash", "Figure Drawing", "https://i.pinimg.com/736x/ed/be/03/edbe032e22b71640245aa8c2467d9acb.jpg"],
+  ["gigi", "Doodles", "https://i.pinimg.com/736x/28/cd/f5/28cdf5990d8316a1457679b3b61e84bb.jpg"],
+  ["sid", "Doodles", "https://i.pinimg.com/736x/ec/86/0c/ec860c090756c02d09b8d579158cb33a.jpg"],
+  ["sash", "Doodles", "https://i.pinimg.com/736x/d8/9c/cd/d89ccd2da14edc4fc0fd6238b27f413c.jpg"],
 ];
 
 // A client that keeps its own session cookie, like one browser would.
