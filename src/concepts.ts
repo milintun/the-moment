@@ -13,6 +13,8 @@ import postingSpec from "@design/concepts/Posting.md" with {type: "text"};
 import { PostingConcept, NoSuchPost, NotOwner } from "./concepts/Posting.ts";
 import upvotingSpec from "@design/concepts/Upvoting.md" with { type: "text" };
 import { AlreadyVoted, NotVoted, UpvotingConcept } from "./concepts/Upvoting.ts";
+import groupingSpec from "@design/concepts/Grouping.md" with { type: "text" };
+import { AlreadyInGroup, GroupingConcept, NameTaken, NoSuchGroup, NotInGroup } from "./concepts/Grouping.ts";
 
   const posting = registerConcept({
     class: PostingConcept,
@@ -43,10 +45,22 @@ const upvoting = registerConcept({
   refusals: { ALREADY_VOTED: AlreadyVoted, NOT_VOTED: NotVoted },
 });
 
+const grouping = registerConcept({
+  class: GroupingConcept,
+  spec: groupingSpec,
+  refusals: {
+    NAME_TAKEN: NameTaken,
+    NO_SUCH_GROUP: NoSuchGroup,
+    ALREADY_IN_GROUP: AlreadyInGroup,
+    NOT_IN_GROUP: NotInGroup,
+  },
+});
+
 export const applicationConceptSet = conceptSet({
   Authenticating: authenticating,
   Sessioning: sessioning,
   Posting: posting,
   Upvoting: upvoting,
+  Grouping: grouping,
 });
 export const { concepts } = applicationConceptSet;

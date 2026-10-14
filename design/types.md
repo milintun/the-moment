@@ -24,4 +24,7 @@ instantiate Posting with
 instantiate Upvoting with
   User is Authenticating.Account
   Item is Posting.Post
+
+instantiate Grouping with
+  Item is Posting.Post
 ```

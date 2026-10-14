@@ -5,6 +5,7 @@ import { AuthenticatingConcept } from "./concepts/Authenticating.ts";
 import { SessioningConcept } from "./concepts/Sessioning.ts";
 import { PostingConcept } from "./concepts/Posting.ts";
 import { UpvotingConcept } from "./concepts/Upvoting.ts";
+import { GroupingConcept } from "./concepts/Grouping.ts";
 import { db } from "./db.ts";
 
 export function assembleApplication() {
@@ -15,6 +16,7 @@ export function assembleApplication() {
       Sessioning: new SessioningConcept(db),
       Posting: new PostingConcept(db),
       Upvoting: new UpvotingConcept(db),
+      Grouping: new GroupingConcept(db),
       // TODO: <Concept>: new <Concept>Concept(db),
     },
     composition: {

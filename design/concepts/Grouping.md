@@ -1,39 +1,85 @@
-### concept Grouping
+# Grouping
 
-**purpose** organize items with shared characteristics to prevent being overwhelmed by many unrelated items
+## Purpose
 
-**principle** users create items, administrator users can create/delete groups, and users add/remove items to the groups
+Organize items with shared characteristics, so people are not overwhelmed by many
+unrelated items.
 
-**state**
+## Principle
 
+A group is created with a name. Items are added to it and removed from it, and the
+group lists the items it holds. Deleting the group leaves its items untouched.
+
+## Types
+
+```types
+external Item
+  The thing being grouped.
+```
+
+## State
+
+```state
 a set of Groups with
+  a unique name String
+  an items set of Item
+```
 
-&emsp;&emsp;a name String
+## Actions
 
-&emsp;&emsp;a set of Items
+```actions
+create (name: String) : returns (group: Group)
+  where a group with this name exists
+  then
+    refuses NAME_TAKEN "A group with this name already exists."
+  where no group has this name
+  then
+    create a new group with this name and no items
+    returns group
 
-**actions**
+delete (group: Group) : returns ()
+  where group is not in Groups
+  then
+    refuses NO_SUCH_GROUP "There is no such group."
+  where group is in Groups
+  then
+    delete group
+    returns
 
-create (User, name: String) : return (Group)
+addItem (group: Group, item: Item) : returns ()
+  where group is not in Groups
+  then
+    refuses NO_SUCH_GROUP "There is no such group."
+  where item is already in group
+  then
+    refuses ALREADY_IN_GROUP "This item is already in the group."
+  where group is in Groups and item is not in group
+  then
+    add item to group
+    returns
 
-&emsp;&emsp;**where** the given user is an administrator and a group with this name doesn’t exist
+removeItem (group: Group, item: Item) : returns ()
+  where group is not in Groups
+  then
+    refuses NO_SUCH_GROUP "There is no such group."
+  where item is not in group
+  then
+    refuses NOT_IN_GROUP "This item is not in the group."
+  where group is in Groups and item is in group
+  then
+    remove item from group
+    returns
+```
 
-&emsp;&emsp;**then** create a new Group with this name and an empty set of items then return it
+## Queries
 
-delete (User, name: String)
+```queries
+_groups () : many (group: Group, name: String)
+  answers every group with its name, ordered by name, and no rows when there are none
 
-&emsp;&emsp;**where** the given user is an administrator and a group with the given name exists
+_items (group: Group) : many (item: Item)
+  answers the items in group ordered by item, and no rows when group is not in Groups or holds no items
 
-&emsp;&emsp;**then** delete the group with the given name
-
-addItem (Group, Item)
-
-&emsp;&emsp;**where** the group exists, the item exists, and the item is not already in this group
-
-&emsp;&emsp;**then** add this item to this group
-
-removeItem (Group, Item)
-
-&emsp;&emsp;**where** the group exists, the item exists, and the item is in this group
-
-&emsp;&emsp;**then** remove the item from this group
+_byName (name: String) : optional (group: Group)
+  answers the group with this name, and no row when no group has it
+```
