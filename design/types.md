@@ -20,4 +20,8 @@ instantiate Sessioning with
 instantiate Posting with
   User is Authenticating.Account
   Content is ArtworkSource
+
+instantiate Upvoting with
+  User is Authenticating.Account
+  Item is Posting.Post
 ```

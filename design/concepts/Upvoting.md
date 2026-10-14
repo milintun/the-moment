@@ -60,5 +60,5 @@ _voted (voter: User, target: Item) : one (voted: Flag)
   answers whether voter has a vote for target, and false when it does not
 
 _counts () : many (target: Item, votes: Number)
-  answers every item with at least one vote and its number of votes, ordered by votes from most to fewest
+  answers every item with at least one vote and its number of votes, ordered by votes from most to fewest, then by target
 ```

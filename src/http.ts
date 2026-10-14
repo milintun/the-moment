@@ -11,6 +11,10 @@ export const policy = httpPolicy({
     USERNAME_TAKEN: "CONFLICT",
     INVALID_CREDENTIALS: "UNAUTHORIZED",
     UNKNOWN_SESSION: "UNAUTHORIZED",
+    NO_SUCH_POST: "NOT_FOUND",
+    NOT_OWNER: "FORBIDDEN",
+    ALREADY_VOTED: "CONFLICT",
+    NOT_VOTED: "NOT_FOUND",
   },
   cookies: {
     session: {

@@ -11,6 +11,8 @@ import sessioningSpec from "@design/concepts/Sessioning.md" with { type: "text" 
 import { SessioningConcept, UnknownSession } from "./concepts/Sessioning.ts";
 import postingSpec from "@design/concepts/Posting.md" with {type: "text"};
 import { PostingConcept, NoSuchPost, NotOwner } from "./concepts/Posting.ts";
+import upvotingSpec from "@design/concepts/Upvoting.md" with { type: "text" };
+import { AlreadyVoted, NotVoted, UpvotingConcept } from "./concepts/Upvoting.ts";
 
   const posting = registerConcept({
     class: PostingConcept,
@@ -35,9 +37,16 @@ const sessioning = registerConcept({
   refusals: { UNKNOWN_SESSION: UnknownSession },
 });
 
+const upvoting = registerConcept({
+  class: UpvotingConcept,
+  spec: upvotingSpec,
+  refusals: { ALREADY_VOTED: AlreadyVoted, NOT_VOTED: NotVoted },
+});
+
 export const applicationConceptSet = conceptSet({
   Authenticating: authenticating,
   Sessioning: sessioning,
-  Posting: posting
+  Posting: posting,
+  Upvoting: upvoting,
 });
 export const { concepts } = applicationConceptSet;
