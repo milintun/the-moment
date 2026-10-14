@@ -1,44 +1,39 @@
-# Grouping
+### concept Grouping
 
-## Purpose
+**purpose** organize items with shared characteristics to prevent being overwhelmed by many unrelated items
 
-TODO: why this concept exists, in one or two sentences.
+**principle** users create items, administrator users can create/delete groups, and users add/remove items to the groups
 
-## Principle
+**state**
 
-TODO: a short scenario that shows the concept fulfilling its purpose.
+a set of Groups with
 
-## Types
+&emsp;&emsp;a name String
 
-```types
-TODO: external type parameters, e.g.
-external User
-  The person who ...
-```
+&emsp;&emsp;a set of Items
 
-## State
+**actions**
 
-```state
-TODO: e.g.
-a set of Things with
-  a User
-```
+create (User, name: String) : return (Group)
 
-## Actions
+&emsp;&emsp;**where** the given user is an administrator and a group with this name doesn’t exist
 
-```actions
-TODO: e.g.
-action(input: Type) : returns (result: Type)
-  where ...
-  then
-    ...
-    returns result
-```
+&emsp;&emsp;**then** create a new Group with this name and an empty set of items then return it
 
-## Queries
+delete (User, name: String)
 
-```queries
-TODO: e.g.
-_query(input: Type) : many (field: Type)
-  Answers ...
-```
+&emsp;&emsp;**where** the given user is an administrator and a group with the given name exists
+
+&emsp;&emsp;**then** delete the group with the given name
+
+addItem (Group, Item)
+
+&emsp;&emsp;**where** the group exists, the item exists, and the item is not already in this group
+
+&emsp;&emsp;**then** add this item to this group
+
+removeItem (Group, Item)
+
+&emsp;&emsp;**where** the group exists, the item exists, and the item is in this group
+
+&emsp;&emsp;**then** remove the item from this group

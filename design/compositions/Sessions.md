@@ -1,7 +1,6 @@
 # Sessions
 
-Sessions connect accepted account credentials to opaque, independently expiring
-sessions.
+Sessions connect accepted account credentials to opaque, independently expiring sessions.
 
 Registration [establishes a new account and starts a session](reaction:Sessions.Register)
 for the returned account reference, which is that account's username.

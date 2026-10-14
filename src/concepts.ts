@@ -9,10 +9,14 @@ import {
 } from "./concepts/Authenticating.ts";
 import sessioningSpec from "@design/concepts/Sessioning.md" with { type: "text" };
 import { SessioningConcept, UnknownSession } from "./concepts/Sessioning.ts";
+import postingSpec from "@design/concepts/Posting.md" with {type: "text"};
+import { PostingConcept, NoSuchPost, NotOwner } from "./concepts/Posting.ts";
 
-// TODO: for each concept, import its spec and class, then register it:
-// import spec from "@design/concepts/<Concept>.md" with { type: "text" };
-// const <concept> = registerConcept({ class: <Concept>Concept, spec, refusals: { ... } });
+  const posting = registerConcept({
+    class: PostingConcept,
+    spec: postingSpec,                               
+    refusals: { NO_SUCH_POST: NoSuchPost, NOT_OWNER: NotOwner },
+  });
 
 const authenticating = registerConcept({
   class: AuthenticatingConcept,
@@ -34,6 +38,6 @@ const sessioning = registerConcept({
 export const applicationConceptSet = conceptSet({
   Authenticating: authenticating,
   Sessioning: sessioning,
-  // TODO: <Concept>: <concept>,
+  Posting: posting
 });
 export const { concepts } = applicationConceptSet;

@@ -19,7 +19,10 @@ export class SessioningConcept {
 
   async start({ subject }: { subject: string }): Promise<{ session: string; expiresAt: Date }> {
     const now = new Date();
+    // delete every expired session
     await this.sessions.deleteMany({ expiresAt: { $lte: now } });
+
+    // create new session for this subject expiring SESSION LIFETIME from now
     const session = crypto.randomUUID();
     const expiresAt = new Date(now.getTime() + SESSION_LIFETIME_MS);
     await this.sessions.insertOne({ _id: session, subject, expiresAt });
@@ -48,7 +51,9 @@ export class SessioningConcept {
 
   // The session is unknown, ended, or expired: delete it if it is expired, then refuse.
   async #refuse(session: string, now: Date): Promise<never> {
+    // deletes this session if it exists and is expired 
     await this.sessions.deleteOne({ _id: session, expiresAt: { $lte: now } });
+    // if not, throw unknown session
     throw new UnknownSession("This session is not active.");
   }
 }

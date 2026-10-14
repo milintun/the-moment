@@ -3,6 +3,7 @@ import { composition as sessionsComposition } from "./compositions/Sessions.ts";
 import { applicationConceptSet } from "./concepts.ts";
 import { AuthenticatingConcept } from "./concepts/Authenticating.ts";
 import { SessioningConcept } from "./concepts/Sessioning.ts";
+import { PostingConcept } from "./concepts/Posting.ts";
 import { db } from "./db.ts";
 
 export function assembleApplication() {
@@ -11,6 +12,7 @@ export function assembleApplication() {
     instances: {
       Authenticating: new AuthenticatingConcept(db),
       Sessioning: new SessioningConcept(db),
+      Posting: new PostingConcept(db),
       // TODO: <Concept>: new <Concept>Concept(db),
     },
     composition: {
