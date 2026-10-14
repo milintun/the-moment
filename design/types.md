@@ -27,4 +27,7 @@ instantiate Upvoting with
 
 instantiate Grouping with
   Item is Posting.Post
+
+instantiate Cycling with
+  Item is Grouping.Group
 ```

@@ -19,6 +19,9 @@ export const policy = httpPolicy({
     NO_SUCH_GROUP: "NOT_FOUND",
     ALREADY_IN_GROUP: "CONFLICT",
     NOT_IN_GROUP: "NOT_FOUND",
+    INVALID_CYCLE: "INVALID_REQUEST",
+    ALREADY_CYCLING: "CONFLICT",
+    NO_SUCH_CYCLE: "NOT_FOUND",
   },
   cookies: {
     session: {
