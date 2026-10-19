@@ -32,27 +32,27 @@ const GroupList = former("every group at (now)", ({ now }, { group, name }) =>
 // Empty when the group is closed.
 const GroupFeed = former(
   "the feed of (group) at (now)",
-  ({ group, now }, { post, owner, content, createdAt, start, end, votes }) =>
+  ({ group, now }, { post, owner, content, caption, createdAt, start, end, votes }) =>
     form({
       posts: each(Grouping._items({ group }).is({ item: post }))
         .where(
           Cycling._currentRun({ item: group, now }).is({ start, end }),
-          Posting._get({ post }).is({ owner, content, createdAt }),
+          Posting._get({ post }).is({ owner, content, caption, createdAt }),
           is.ge(createdAt, start),
           is.lt(createdAt, end),
           Upvoting._count({ target: post }).is({ votes }),
         )
         .arranged(votes, "descending")
-        .form({ post, owner, content, createdAt, votes }),
+        .form({ post, owner, content, caption, createdAt, votes }),
     }),
 );
 
 // One post with its vote count, whether or not it is still in a group.
-const PostDetails = former("the details of (post)", ({ post }, { owner, content, createdAt, votes }) =>
+const PostDetails = former("the details of (post)", ({ post }, { owner, content, caption, createdAt, votes }) =>
   where(
-    Posting._get({ post }).is({ owner, content, createdAt }),
+    Posting._get({ post }).is({ owner, content, caption, createdAt }),
     Upvoting._count({ target: post }).is({ votes }),
-  ).form({ post, owner, content, createdAt, votes }),
+  ).form({ post, owner, content, caption, createdAt, votes }),
 ).optional();
 
 // Every nomination category, with its current round left blank when it is closed.

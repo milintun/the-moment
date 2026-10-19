@@ -252,6 +252,7 @@ export type TheMomentWire = {
     output: {
       "feed": {
         "posts": {
+          "caption": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["caption"]>>;
           "content": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["content"]>>;
           "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["createdAt"]>>;
           "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["owner"]>>;
@@ -374,6 +375,7 @@ export type TheMomentWire = {
   };
   "/posts/create": {
     input: {
+      "caption"?: Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["create"]>[0], ["caption"]>>;
       "content": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["create"]>[0], ["content"]>>;
       "group": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_get"]>[0], ["group"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["addItem"]>[0], ["group"]>]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
@@ -399,6 +401,7 @@ export type TheMomentWire = {
     };
     output: {
       "post": {
+        "caption": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["caption"]>>;
         "content": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["content"]>>;
         "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["createdAt"]>>;
         "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["owner"]>>;
@@ -660,6 +663,7 @@ export type TheMomentWireHttp = {
     output: {
       "feed": {
         "posts": {
+          "caption": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["caption"]>>;
           "content": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["content"]>>;
           "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["createdAt"]>>;
           "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["owner"]>>;
@@ -777,6 +781,7 @@ export type TheMomentWireHttp = {
   };
   "/posts/create": {
     input: {
+      "caption"?: Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["create"]>[0], ["caption"]>>;
       "content": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["create"]>[0], ["content"]>>;
       "group": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_get"]>[0], ["group"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["addItem"]>[0], ["group"]>]>>;
     };
@@ -800,6 +805,7 @@ export type TheMomentWireHttp = {
     };
     output: {
       "post": {
+        "caption": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["caption"]>>;
         "content": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["content"]>>;
         "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["createdAt"]>>;
         "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["owner"]>>;

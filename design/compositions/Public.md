@@ -19,8 +19,8 @@ Public.ListGroups at /groups/list
 
 A [group's feed](reaction:Public.Feed) shows
 [the posts of its current run](former:Public.GroupFeed): the posts in the group
-created during the run happening now, each with its owner, content, creation time,
-and vote count. Posts are ranked by votes, most upvoted first, and among posts with the
+created during the run happening now, each with its owner, content, caption (empty when
+it has none), creation time, and vote count. Posts are ranked by votes, most upvoted first, and among posts with the
 same number of votes the newest comes first. A closed group's feed is empty.
 
 ```endpoints
@@ -30,7 +30,7 @@ Public.Feed at /groups/feed
 ## Posts
 
 A [single post](reaction:Public.GetPost) shows [its details](former:Public.PostDetails),
-including its vote count, even when it no longer appears in any group. A post that
+including its caption and vote count, even when it no longer appears in any group. A post that
 does not exist answers `NO_SUCH_POST`.
 
 ```endpoints

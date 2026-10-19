@@ -7,6 +7,7 @@ interface Post {
   _id: string;
   owner: string;
   content: string;
+  caption: string; // "" when the post has none
   createdAt: Date;
 }
 
@@ -17,9 +18,10 @@ export class PostingConcept {
     this.posts = db.collection<Post>("posting.posts");
   }
 
-  async create({owner, content, createdAt}: {owner: string, content: string, createdAt: Date}) {
+  async create({owner, content, caption, createdAt}: {owner: string, content: string, caption: string, createdAt: Date}) {
     const post = crypto.randomUUID();
-    await this.posts.insertOne({ _id: post, owner, content, createdAt });
+    // Trimming makes a caption of only spaces empty, which means no caption.
+    await this.posts.insertOne({ _id: post, owner, content, caption: caption.trim(), createdAt });
     return { post };
   }
 
@@ -33,7 +35,8 @@ export class PostingConcept {
 
   async _get({post}: {post: string}) {
     const doc = await (this.posts.findOne({ _id: post }));
-    return (doc === null) ? [] : [{owner: doc.owner, content: doc.content, createdAt: doc.createdAt}];
+    // Posts made before captions existed have no caption field.
+    return (doc === null) ? [] : [{owner: doc.owner, content: doc.content, caption: doc.caption ?? "", createdAt: doc.createdAt}];
   }
 
 }

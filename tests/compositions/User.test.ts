@@ -53,6 +53,17 @@ describe("posts/create", () => {
     expect(feed[0]?.owner).toBe("gigi");
   });
 
+  test("a caption is optional, trimmed, and only spaces means none", async () => {
+    const captioned = async (caption?: string) => {
+      const input = caption === undefined ? { session: people.gigi, group, content: "x" } : { session: people.gigi, group, content: "x", caption };
+      const { post: p } = ok(await app.api.posts.create(input));
+      return ok(await app.api.posts.get({ post: p })).post?.caption;
+    };
+    expect(await captioned("  A quiet morning  ")).toBe("A quiet morning");
+    expect(await captioned()).toBe("");
+    expect(await captioned("    ")).toBe("");
+  });
+
   test("refuses GROUP_CLOSED for a category's identifier and creates no post", async () => {
     const category = await openCategory(app.api, people.milin, "Future galleries", cycle);
     expect(await app.api.posts.create({ session: people.gigi, group: category, content: "x" })).toEqual({

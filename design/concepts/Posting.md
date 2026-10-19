@@ -24,16 +24,19 @@ external Content
 a set of Posts with
   an owner User
   a content Content
+  a caption String
   a createdAt DateTime
+  Rule: a post has at most one caption; an empty caption means the post has none
 ```
 
 ## Actions
 
 ```actions
-create (owner: User, content: Content, createdAt: DateTime) : returns (post: Post)
+create (owner: User, content: Content, caption: String, createdAt: DateTime) : returns (post: Post)
   where true
   then
-    create a new post with this owner, content, and createdAt
+    create a new post with this owner, content, and createdAt, and with caption trimmed of
+    outer spaces, so a caption of only spaces leaves the post with none
     returns post
 
 delete (user: User, post: Post) : returns ()
@@ -52,6 +55,6 @@ delete (user: User, post: Post) : returns ()
 ## Queries
 
 ```queries
-_get (post: Post) : optional (owner: User, content: Content, createdAt: DateTime)
-  answers the post's owner, content, and createdAt, and no row when the post is not in Posts
+_get (post: Post) : optional (owner: User, content: Content, caption: String, createdAt: DateTime)
+  answers the post's owner, content, caption (empty when it has none), and createdAt, and no row when the post is not in Posts
 ```

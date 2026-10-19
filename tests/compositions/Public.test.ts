@@ -62,6 +62,16 @@ describe("groups/feed", () => {
     expect((await feed(group)).map((p) => p.content)).toEqual(["new"]);
   });
 
+  test("each post carries its caption, empty when it has none", async () => {
+    ok(await app.api.posts.create({ session: people.gigi, group, content: "a", caption: "Morning light" }));
+    app.clock.advance(MINUTE);
+    await post(people.sid, group, "b");
+    expect((await feed(group)).map((p) => [p.content, p.caption])).toEqual([
+      ["b", ""],
+      ["a", "Morning light"],
+    ]);
+  });
+
   test("ranks by votes, newest first among ties", async () => {
     const first = await post(people.gigi, group, "first");
     app.clock.advance(MINUTE);
@@ -86,10 +96,19 @@ describe("groups/feed", () => {
 describe("posts/get", () => {
   test("details with the vote count, still readable after leaving every group", async () => {
     const group = await openGroup(app.api, people.milin, "Doodles", cycle);
-    const p = await post(people.gigi, group, "https://img/hands.png");
+    const { post: p } = ok(
+      await app.api.posts.create({ session: people.gigi, group, content: "https://img/hands.png", caption: "Hands" }),
+    );
     ok(await app.api.posts.vote({ session: people.sid, post: p }));
     const expected = {
-      post: { post: p, owner: "gigi", content: "https://img/hands.png", createdAt: T0.toISOString(), votes: 1 },
+      post: {
+        post: p,
+        owner: "gigi",
+        content: "https://img/hands.png",
+        caption: "Hands",
+        createdAt: T0.toISOString(),
+        votes: 1,
+      },
     };
     expect(await app.api.posts.get({ post: p })).toEqual(expected);
     ok(await app.api.admin.groups["remove-post"]({ session: people.milin, group, post: p }));

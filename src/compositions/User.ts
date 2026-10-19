@@ -60,12 +60,12 @@ const PostInSeason = view(
 // created. A cycle also holds nomination categories, so a current run alone is not enough.
 const CreatePost = endpoint(
   "/posts/create",
-  ({ session, group, content, user, createdAt, post }) =>
-    receive({ session, group, content })
+  ({ session, group, content, caption, user, createdAt, post }) =>
+    receive({ session, group, content, caption })
       .then(Sessioning.current({ session }).responds({ subject: user }))
       .then(
         where(now(createdAt), Grouping._get({ group }), Cycling._currentRun({ item: group, now: createdAt }))
-          .then(Posting.create({ owner: user, content, createdAt }).responds({ post }))
+          .then(Posting.create({ owner: user, content, caption, createdAt }).responds({ post }))
           .then(Grouping.addItem({ group, item: post }).responds({}))
           .then(respond({ post }))
           .named("open"),
@@ -76,6 +76,8 @@ const CreatePost = endpoint(
           .then(respond({ error: "GROUP_CLOSED" }))
           .named("closed"),
       ),
+  // The caption is optional; leaving it out means no caption.
+  { input: { required: ["session", "group", "content"], defaults: { caption: "" } } },
 );
 
 const DeletePost = endpoint(

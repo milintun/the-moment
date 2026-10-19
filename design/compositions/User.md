@@ -32,8 +32,9 @@ User.SignOut at /auth/sign-out
 ## Posting
 
 A person may [create a post in a group](reaction:User.CreatePost) only when the
-identifier names an existing group whose cycle has a run happening. The post is
-created with the request's time as its creation time and added to the group. An
+identifier names an existing group whose cycle has a run happening. A post may carry one
+optional caption; leaving it out, or sending only spaces, means the post has none. The
+post is created with the request's time as its creation time and added to the group. An
 identifier that is not a group, or a group that has no cycle, has not started, or has
 finished every run, answers `GROUP_CLOSED` before anything is created. If the group is
 deleted between that check and the post being added, the request is refused and the
