@@ -14,17 +14,64 @@ export type Json = null | boolean | number | string | Json[] | { [key: string]: 
 export type AppWideError = never;
 
 export type TheMomentWire = {
-  "/admin/cycles/add-group": {
+  "/admin/admins/add": {
+    input: {
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Administrating"]["addAdmin"]>[0], ["user"]>>;
+    };
+    output: {
+      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Administrating"]["addAdmin"]>[0], ["user"]>>;
+    };
+    error: { error: AppWideError | "ALREADY_ADMIN" | "INVALID_INPUT" | "OWNER_ONLY" | "UNKNOWN_SESSION" };
+  };
+  "/admin/admins/list": {
+    input: {
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "list": {
+        "admins": {
+          "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Administrating"]["_admins"]>>>, ["owner"]>>;
+          "user": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Administrating"]["_admins"]>>>, ["user"]>>;
+        }[];
+      };
+    };
+    error: { error: AppWideError | "ADMIN_ONLY" | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
+  "/admin/admins/remove": {
+    input: {
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Administrating"]["removeAdmin"]>[0], ["user"]>>;
+    };
+    output: {
+      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Administrating"]["removeAdmin"]>[0], ["user"]>>;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "NOT_ADMIN" | "OWNER_ONLY" | "OWNER_PROTECTED" | "UNKNOWN_SESSION" };
+  };
+  "/admin/categories/create": {
+    input: {
+      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Nominating"]["createCategory"]>[0], ["name"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "category": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["createCategory"]>>, ["category"]>>;
+    };
+    error: { error: AppWideError | "ADMIN_ONLY" | "INVALID_INPUT" | "NAME_TAKEN" | "UNKNOWN_SESSION" };
+  };
+  "/admin/cycles/add-item": {
     input: {
       "cycle": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["addItem"]>[0], ["cycle"]>>;
-      "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["addItem"]>[0], ["item"]>>;
+      "item": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["addItem"]>[0], ["item"]>, AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_get"]>[0], ["group"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Nominating"]["_category"]>[0], ["category"]>]>]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
     };
     output: {
       "cycle": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["addItem"]>[0], ["cycle"]>>;
-      "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["addItem"]>[0], ["item"]>>;
+      "item": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["addItem"]>[0], ["item"]>>;
+    } | {
+      "cycle": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["addItem"]>[0], ["cycle"]>>;
+      "item": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["addItem"]>[0], ["item"]>>;
     };
-    error: { error: AppWideError | "ADMIN_ONLY" | "ALREADY_CYCLING" | "INVALID_INPUT" | "NO_SUCH_CYCLE" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "ADMIN_ONLY" | "ALREADY_CYCLING" | "INVALID_INPUT" | "NO_SUCH_CYCLE" | "NO_SUCH_ITEM" | "UNKNOWN_SESSION" };
   };
   "/admin/cycles/create": {
     input: {
@@ -55,8 +102,8 @@ export type TheMomentWire = {
       "list": {
         "cycles": {
           "cycle": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_all"]>>>, ["cycle"]>>;
-          "groups": {
-            "group": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_items"]>>>, ["item"]>>;
+          "items": {
+            "item": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_items"]>>>, ["item"]>>;
           }[];
           "period": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_all"]>>>, ["period"]>>;
           "runs": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_all"]>>>, ["runs"]>>;
@@ -66,15 +113,15 @@ export type TheMomentWire = {
     };
     error: { error: AppWideError | "ADMIN_ONLY" | "INVALID_INPUT" | "UNKNOWN_SESSION" };
   };
-  "/admin/cycles/remove-group": {
+  "/admin/cycles/remove-item": {
     input: {
       "cycle": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["removeItem"]>[0], ["cycle"]>>;
-      "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["removeItem"]>[0], ["item"]>>;
+      "item": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["removeItem"]>[0], ["item"]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
     };
     output: {
       "cycle": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["removeItem"]>[0], ["cycle"]>>;
-      "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["removeItem"]>[0], ["item"]>>;
+      "item": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["removeItem"]>[0], ["item"]>>;
     };
     error: { error: AppWideError | "ADMIN_ONLY" | "INVALID_INPUT" | "NOT_IN_CYCLE" | "NO_SUCH_CYCLE" | "UNKNOWN_SESSION" };
   };
@@ -133,6 +180,28 @@ export type TheMomentWire = {
       "post": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["removeItem"]>[0], ["item"]>>;
     };
     error: { error: AppWideError | "ADMIN_ONLY" | "INVALID_INPUT" | "NOT_IN_GROUP" | "NO_SUCH_GROUP" | "UNKNOWN_SESSION" };
+  };
+  "/admin/nominations/previous": {
+    input: {
+      "category": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["_previousRun"]>[0], ["item"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "ranking": {
+        "nominations": {
+          "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_nominations"]>>>, ["createdAt"]>>;
+          "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_nominations"]>>>, ["name"]>>;
+          "nomination": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["_count"]>[0], ["target"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_nominations"]>>>, ["nomination"]>]>>;
+          "nominator": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_nominations"]>>>, ["nominator"]>>;
+          "votes": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["_count"]>>>, ["votes"]>>;
+        }[];
+      };
+    } | {
+      "ranking": {
+        "nominations": never[];
+      };
+    };
+    error: { error: AppWideError | "ADMIN_ONLY" | "INVALID_INPUT" | "UNKNOWN_SESSION" };
   };
   "/auth/current": {
     input: {
@@ -212,10 +281,101 @@ export type TheMomentWire = {
     };
     error: { error: AppWideError };
   };
+  "/nominations/categories": {
+    input: Record<string, never>;
+    output: {
+      "list": {
+        "categories": ({
+          "category": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_categories"]>>>, ["category"]>>;
+          "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_categories"]>>>, ["name"]>>;
+          "run": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_currentRun"]>>>, ["run"]>> | null;
+          "runEnd": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_currentRun"]>>>, ["end"]>> | null;
+          "runStart": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_currentRun"]>>>, ["start"]>> | null;
+        })[];
+      };
+    };
+    error: { error: AppWideError };
+  };
+  "/nominations/create": {
+    input: {
+      "category": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["_currentRun"]>[0], ["item"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Nominating"]["nominate"]>[0], ["category"]>]>>;
+      "name": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Nominating"]["_equivalent"]>[0], ["name"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Nominating"]["nominate"]>[0], ["name"]>]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "nomination": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["nominate"]>>, ["nomination"]>>;
+    };
+    error: { error: AppWideError | "ALREADY_NOMINATED" | "CATEGORY_CLOSED" | "INVALID_INPUT" | "INVALID_NAME" | "NO_SUCH_CATEGORY" | "TOO_SOON" | "UNKNOWN_SESSION" };
+  };
+  "/nominations/list": {
+    input: {
+      "category": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["_currentRun"]>[0], ["item"]>>;
+    };
+    output: {
+      "ranking": {
+        "nominations": never[];
+      };
+    } | {
+      "ranking": {
+        "nominations": {
+          "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_nominations"]>>>, ["createdAt"]>>;
+          "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_nominations"]>>>, ["name"]>>;
+          "nomination": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["_count"]>[0], ["target"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_nominations"]>>>, ["nomination"]>]>>;
+          "nominator": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_nominations"]>>>, ["nominator"]>>;
+          "votes": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["_count"]>>>, ["votes"]>>;
+        }[];
+      };
+    };
+    error: { error: AppWideError | "INVALID_INPUT" };
+  };
+  "/nominations/my-votes": {
+    input: {
+      "category": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["_currentRun"]>[0], ["item"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Nominating"]["_nominations"]>[0], ["category"]>]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "votes": {
+        "nominations": {
+          "nomination": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["_voted"]>[0], ["target"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_nominations"]>>>, ["nomination"]>]>>;
+        }[];
+      };
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
+  "/nominations/unvote": {
+    input: {
+      "nomination": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["unvote"]>[0], ["target"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Nominating"]["_get"]>[0], ["nomination"]>]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "nomination": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["unvote"]>[0], ["target"]>>;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "NOT_ACTIVE" | "NOT_VOTED" | "NO_SUCH_NOMINATION" | "OWN_NOMINATION" | "UNKNOWN_SESSION" };
+  };
+  "/nominations/vote": {
+    input: {
+      "nomination": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["upvote"]>[0], ["target"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Nominating"]["_get"]>[0], ["nomination"]>]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "nomination": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["upvote"]>[0], ["target"]>>;
+    };
+    error: { error: AppWideError | "ALREADY_VOTED" | "INVALID_INPUT" | "NOT_ACTIVE" | "NO_SUCH_NOMINATION" | "OWN_NOMINATION" | "UNKNOWN_SESSION" };
+  };
+  "/nominations/withdraw": {
+    input: {
+      "nomination": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Nominating"]["withdraw"]>[0], ["nomination"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "nomination": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Nominating"]["withdraw"]>[0], ["nomination"]>>;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "NOT_NOMINATOR" | "NO_SUCH_NOMINATION" | "UNKNOWN_SESSION" };
+  };
   "/posts/create": {
     input: {
       "content": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["create"]>[0], ["content"]>>;
-      "group": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["_currentRun"]>[0], ["item"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["addItem"]>[0], ["group"]>]>>;
+      "group": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_get"]>[0], ["group"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["addItem"]>[0], ["group"]>]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
     };
     output: {
@@ -287,14 +447,56 @@ export type TheMomentWire = {
 export type HttpAppWideError = never;
 
 export type TheMomentWireHttp = {
-  "/admin/cycles/add-group": {
+  "/admin/admins/add": {
+    input: {
+      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Administrating"]["addAdmin"]>[0], ["user"]>>;
+    };
+    output: {
+      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Administrating"]["addAdmin"]>[0], ["user"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/admin/admins/list": {
+    input: Record<string, never>;
+    output: {
+      "list": {
+        "admins": {
+          "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Administrating"]["_admins"]>>>, ["owner"]>>;
+          "user": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Administrating"]["_admins"]>>>, ["user"]>>;
+        }[];
+      };
+    };
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/admin/admins/remove": {
+    input: {
+      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Administrating"]["removeAdmin"]>[0], ["user"]>>;
+    };
+    output: {
+      "user": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Administrating"]["removeAdmin"]>[0], ["user"]>>;
+    };
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/admin/categories/create": {
+    input: {
+      "name": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Nominating"]["createCategory"]>[0], ["name"]>>;
+    };
+    output: {
+      "category": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["createCategory"]>>, ["category"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/admin/cycles/add-item": {
     input: {
       "cycle": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["addItem"]>[0], ["cycle"]>>;
-      "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["addItem"]>[0], ["item"]>>;
+      "item": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["addItem"]>[0], ["item"]>, AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_get"]>[0], ["group"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Nominating"]["_category"]>[0], ["category"]>]>]>>;
     };
     output: {
       "cycle": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["addItem"]>[0], ["cycle"]>>;
-      "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["addItem"]>[0], ["item"]>>;
+      "item": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["addItem"]>[0], ["item"]>>;
+    } | {
+      "cycle": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["addItem"]>[0], ["cycle"]>>;
+      "item": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["addItem"]>[0], ["item"]>>;
     };
     error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
   };
@@ -323,8 +525,8 @@ export type TheMomentWireHttp = {
       "list": {
         "cycles": {
           "cycle": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_all"]>>>, ["cycle"]>>;
-          "groups": {
-            "group": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_items"]>>>, ["item"]>>;
+          "items": {
+            "item": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_items"]>>>, ["item"]>>;
           }[];
           "period": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_all"]>>>, ["period"]>>;
           "runs": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_all"]>>>, ["runs"]>>;
@@ -334,14 +536,14 @@ export type TheMomentWireHttp = {
     };
     error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
-  "/admin/cycles/remove-group": {
+  "/admin/cycles/remove-item": {
     input: {
       "cycle": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["removeItem"]>[0], ["cycle"]>>;
-      "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["removeItem"]>[0], ["item"]>>;
+      "item": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["removeItem"]>[0], ["item"]>>;
     };
     output: {
       "cycle": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["removeItem"]>[0], ["cycle"]>>;
-      "group": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["removeItem"]>[0], ["item"]>>;
+      "item": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["removeItem"]>[0], ["item"]>>;
     };
     error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
   };
@@ -395,6 +597,27 @@ export type TheMomentWireHttp = {
       "post": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["removeItem"]>[0], ["item"]>>;
     };
     error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/admin/nominations/previous": {
+    input: {
+      "category": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["_previousRun"]>[0], ["item"]>>;
+    };
+    output: {
+      "ranking": {
+        "nominations": {
+          "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_nominations"]>>>, ["createdAt"]>>;
+          "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_nominations"]>>>, ["name"]>>;
+          "nomination": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["_count"]>[0], ["target"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_nominations"]>>>, ["nomination"]>]>>;
+          "nominator": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_nominations"]>>>, ["nominator"]>>;
+          "votes": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["_count"]>>>, ["votes"]>>;
+        }[];
+      };
+    } | {
+      "ranking": {
+        "nominations": never[];
+      };
+    };
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
   "/auth/current": {
     input: Record<string, never>;
@@ -466,10 +689,96 @@ export type TheMomentWireHttp = {
     };
     error: { error: HttpAppWideError };
   };
+  "/nominations/categories": {
+    input: Record<string, never>;
+    output: {
+      "list": {
+        "categories": ({
+          "category": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_categories"]>>>, ["category"]>>;
+          "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_categories"]>>>, ["name"]>>;
+          "run": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_currentRun"]>>>, ["run"]>> | null;
+          "runEnd": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_currentRun"]>>>, ["end"]>> | null;
+          "runStart": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_currentRun"]>>>, ["start"]>> | null;
+        })[];
+      };
+    };
+    error: { error: HttpAppWideError };
+  };
+  "/nominations/create": {
+    input: {
+      "category": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["_currentRun"]>[0], ["item"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Nominating"]["nominate"]>[0], ["category"]>]>>;
+      "name": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Nominating"]["_equivalent"]>[0], ["name"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Nominating"]["nominate"]>[0], ["name"]>]>>;
+    };
+    output: {
+      "nomination": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["nominate"]>>, ["nomination"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/nominations/list": {
+    input: {
+      "category": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["_currentRun"]>[0], ["item"]>>;
+    };
+    output: {
+      "ranking": {
+        "nominations": never[];
+      };
+    } | {
+      "ranking": {
+        "nominations": {
+          "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_nominations"]>>>, ["createdAt"]>>;
+          "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_nominations"]>>>, ["name"]>>;
+          "nomination": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["_count"]>[0], ["target"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_nominations"]>>>, ["nomination"]>]>>;
+          "nominator": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_nominations"]>>>, ["nominator"]>>;
+          "votes": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["_count"]>>>, ["votes"]>>;
+        }[];
+      };
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" };
+  };
+  "/nominations/my-votes": {
+    input: {
+      "category": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["_currentRun"]>[0], ["item"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Nominating"]["_nominations"]>[0], ["category"]>]>>;
+    };
+    output: {
+      "votes": {
+        "nominations": {
+          "nomination": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["_voted"]>[0], ["target"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_nominations"]>>>, ["nomination"]>]>>;
+        }[];
+      };
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
+  };
+  "/nominations/unvote": {
+    input: {
+      "nomination": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["unvote"]>[0], ["target"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Nominating"]["_get"]>[0], ["nomination"]>]>>;
+    };
+    output: {
+      "nomination": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["unvote"]>[0], ["target"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/nominations/vote": {
+    input: {
+      "nomination": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["upvote"]>[0], ["target"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Nominating"]["_get"]>[0], ["nomination"]>]>>;
+    };
+    output: {
+      "nomination": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["upvote"]>[0], ["target"]>>;
+    };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/nominations/withdraw": {
+    input: {
+      "nomination": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Nominating"]["withdraw"]>[0], ["nomination"]>>;
+    };
+    output: {
+      "nomination": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Nominating"]["withdraw"]>[0], ["nomination"]>>;
+    };
+    error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
   "/posts/create": {
     input: {
       "content": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["create"]>[0], ["content"]>>;
-      "group": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["_currentRun"]>[0], ["item"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["addItem"]>[0], ["group"]>]>>;
+      "group": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_get"]>[0], ["group"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["addItem"]>[0], ["group"]>]>>;
     };
     output: {
       "post": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["addItem"]>[0], ["item"]>>;

@@ -86,6 +86,9 @@ withdraw (nominator: User, nomination: Nomination) : returns ()
 _categories () : many (category: Category, name: String)
   answers every category with its name, ordered by name, and no rows when there are none
 
+_category (category: Category) : optional (name: String)
+  answers the category's name, and no row when category is not in Categories
+
 _nominations (category: Category) : many (nomination: Nomination, nominator: User, name: String, createdAt: DateTime)
   answers every nomination in category, newest first, and no rows when there are none
 

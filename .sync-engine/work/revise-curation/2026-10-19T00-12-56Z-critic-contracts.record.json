@@ -1,0 +1,163 @@
+{
+  "state": "finalized",
+  "work": {
+    "slug": "revise-curation",
+    "path": "/Users/milintunsiricharoengul/Desktop/the-moment/.sync-engine/work/revise-curation"
+  },
+  "role": "critic",
+  "phase": "contracts",
+  "execution": "simulated",
+  "independent": false,
+  "harness": "coordinator",
+  "simulationReason": "User chose simulated execution for this work item",
+  "timeoutSeconds": 1800,
+  "prompt": {
+    "path": "/Users/milintunsiricharoengul/Desktop/the-moment/.sync-engine/work/revise-curation/2026-10-19T00-12-56Z-critic-contracts.prompt.md",
+    "sha256": "1b6b51249aa0ca3538dd6cbf4dcab281bd8ea4c0c5fe47138618d760f5ba8435"
+  },
+  "capabilities": {
+    "path": "/Users/milintunsiricharoengul/Desktop/the-moment/.sync-engine/work/revise-curation/2026-10-19T00-12-56Z-critic-contracts.capabilities.json",
+    "sha256": "d7cf3660e4b9a27975c910d26dbf5ec2b6f9684d8995b1beff878b70c33e26ce"
+  },
+  "grant": {
+    "readableAreas": [
+      {
+        "area": "design",
+        "path": "compositions"
+      },
+      {
+        "area": "design",
+        "path": "concepts"
+      },
+      {
+        "area": "design",
+        "path": "types.md"
+      }
+    ],
+    "writableAreas": [],
+    "toolKinds": [
+      "repository-read"
+    ],
+    "projectShell": "none",
+    "network": false,
+    "generatedOutput": false,
+    "longRunningProcesses": false
+  },
+  "response": {
+    "path": "/Users/milintunsiricharoengul/Desktop/the-moment/.sync-engine/work/revise-curation/2026-10-19T00-12-56Z-critic-contracts.response.md",
+    "sha256": "ecc91ee21c520277bc2a099be03b41e9efc2a4aa8ad149c4299f5b42bf09db1e",
+    "bytes": 4352
+  },
+  "retainedSources": [
+    {
+      "inputId": "brief",
+      "displayName": ".sync-engine/work/revise-curation/brief.md",
+      "sha256": "7c2eefeaf28ba98dd5068bc47c351f39f062fa87134403510a80988a375b67ce"
+    },
+    {
+      "inputId": "affected-contracts",
+      "displayName": "design/concepts/Authenticating.md",
+      "sha256": "95c7a33680d484e8640cba09d1e66f9a8bf47f7ad745450e5e7e8cf328d9ba08"
+    },
+    {
+      "inputId": "affected-contracts",
+      "displayName": "design/concepts/Grouping.md",
+      "sha256": "e018e8403a3a3e8935fd9d13b35cba2f7786dcbff7d8ccfb523726fd7e02b67d"
+    },
+    {
+      "inputId": "affected-contracts",
+      "displayName": "design/concepts/Posting.md",
+      "sha256": "0914b68c5face93646a99974aafc171c2ced8de344a32b624fbb820cfb7584f4"
+    },
+    {
+      "inputId": "affected-contracts",
+      "displayName": "design/concepts/Sessioning.md",
+      "sha256": "9ec6783b9c00a52bfb68e2cb99ef1a7b5077a8747d242169dbfa9531827237fe"
+    },
+    {
+      "inputId": "affected-contracts",
+      "displayName": "design/concepts/Upvoting.md",
+      "sha256": "8c51b85428a0afc41599c0fc095daa0308a20b44843ca7c4747490acb43e1e8f"
+    }
+  ],
+  "policy": {
+    "review": "required",
+    "execution": "simulated"
+  },
+  "workspace": {
+    "root": "/Users/milintunsiricharoengul/Desktop/the-moment",
+    "baseline": {
+      "path": "/Users/milintunsiricharoengul/Desktop/the-moment/.sync-engine/work/revise-curation/2026-10-19T00-12-56Z-critic-contracts.baseline.json",
+      "sha256": "fad008ea3202806d191fbd156686ef011f79ad2e8760d7e441f8ca7109b088e6"
+    }
+  },
+  "design": {
+    "root": "/Users/milintunsiricharoengul/Desktop/the-moment/design",
+    "before": "dffc26b1ded03c0d6c2083a64b42e7b4390db3da5d5121bc96e401e3d09d0fd5",
+    "beforeFiles": [
+      {
+        "path": "P1_Design.md",
+        "sha256": "6257ce893a76e14c51b764d489cc079745e14bae0e9788808c4d92355e62a2ea"
+      },
+      {
+        "path": "P2_user_journey.md",
+        "sha256": "d49e89d432567b4b7e7d6f23982ef59f9ad44dc9d43f4eac011a6793d909f20e"
+      },
+      {
+        "path": "compositions/Admin.md",
+        "sha256": "7f39b336b9a0b31f459be12ed38fa94306f80ec13c93e5ba3e970b98afd9a2a5"
+      },
+      {
+        "path": "compositions/Public.md",
+        "sha256": "b63f132264f8d03bdc4093a7babbfc5a335e80c8e377359207975da340b9d097"
+      },
+      {
+        "path": "compositions/User.md",
+        "sha256": "7ed62cd9f3dc7bf382d63daf603cacd3a8cefea8d830f2da7f5f889816c3eefb"
+      },
+      {
+        "path": "concepts/Administrating.md",
+        "sha256": "bf2610a8b3b3e796675a861876d961fbb0f2aef7f0f72c3e60fa132bcfd05168"
+      },
+      {
+        "path": "concepts/Authenticating.md",
+        "sha256": "95c7a33680d484e8640cba09d1e66f9a8bf47f7ad745450e5e7e8cf328d9ba08"
+      },
+      {
+        "path": "concepts/Cycling.md",
+        "sha256": "ae8d3b3bb37a38249c60138eb1deba6ae87ad772197f09873957ae2fd5d822a1"
+      },
+      {
+        "path": "concepts/Grouping.md",
+        "sha256": "e018e8403a3a3e8935fd9d13b35cba2f7786dcbff7d8ccfb523726fd7e02b67d"
+      },
+      {
+        "path": "concepts/Nominating.md",
+        "sha256": "e672993c5662c2771ab5f087cdcba264f0c3040a38731c3c886c7582714e5ffc"
+      },
+      {
+        "path": "concepts/Posting.md",
+        "sha256": "0914b68c5face93646a99974aafc171c2ced8de344a32b624fbb820cfb7584f4"
+      },
+      {
+        "path": "concepts/Sessioning.md",
+        "sha256": "9ec6783b9c00a52bfb68e2cb99ef1a7b5077a8747d242169dbfa9531827237fe"
+      },
+      {
+        "path": "concepts/Upvoting.md",
+        "sha256": "8c51b85428a0afc41599c0fc095daa0308a20b44843ca7c4747490acb43e1e8f"
+      },
+      {
+        "path": "types.md",
+        "sha256": "9b16971def0146286f2e0cc6094fad496943adffa4aecad8ab1a0c63ae7562c6"
+      }
+    ]
+  },
+  "review": {
+    "subject": "design",
+    "digest": "dffc26b1ded03c0d6c2083a64b42e7b4390db3da5d5121bc96e401e3d09d0fd5"
+  },
+  "status": "completed",
+  "result": "revise",
+  "enforcement": "prompt-guided"
+}

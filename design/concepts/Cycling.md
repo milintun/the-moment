@@ -102,6 +102,11 @@ _currentRun (item: Item, now: DateTime) : optional (run: Number, start: DateTime
   item belongs to no cycle, when now is before the cycle's start, or when every run
   has ended
 
+_previousRun (item: Item, now: DateTime) : optional (run: Number, start: DateTime, end: DateTime)
+  answers the most recent run of item's cycle that has ended by now: the run before the
+  current one, or the last run once every run has ended; no row when item belongs to no
+  cycle or no run has ended yet
+
 _all () : many (cycle: Cycle, start: DateTime, period: Number, runs: Number)
   answers every cycle ordered by start, and no rows when there are none
 

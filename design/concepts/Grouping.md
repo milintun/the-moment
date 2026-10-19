@@ -77,8 +77,11 @@ removeItem (group: Group, item: Item) : returns ()
 _groups () : many (group: Group, name: String)
   answers every group with its name, ordered by name, and no rows when there are none
 
+_get (group: Group) : optional (name: String)
+  answers the group's name, and no row when group is not in Groups
+
 _items (group: Group) : many (item: Item)
-  answers the items in group ordered by item, and no rows when group is not in Groups or holds no items
+  answers the items in group, most recently added first, and no rows when group is not in Groups or holds no items
 
 _groupsOf (item: Item) : many (group: Group)
   answers every group that holds item, ordered by group, and no rows when none does

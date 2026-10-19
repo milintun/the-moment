@@ -1,0 +1,24 @@
+{
+  "readableAreas": [
+    {
+      "area": "design",
+      "path": "compositions"
+    },
+    {
+      "area": "design",
+      "path": "concepts"
+    },
+    {
+      "area": "design",
+      "path": "types.md"
+    }
+  ],
+  "writableAreas": [],
+  "toolKinds": [
+    "repository-read"
+  ],
+  "projectShell": "none",
+  "network": false,
+  "generatedOutput": false,
+  "longRunningProcesses": false
+}

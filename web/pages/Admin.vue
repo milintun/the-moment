@@ -71,11 +71,11 @@ onMounted(load);
           Set runs
         </button>
       </p>
-      <p>Groups:</p>
+      <p>Items:</p>
       <ul>
-        <li v-for="m in c.groups" :key="m.group">
-          {{ groupName(m.group) }}
-          <button @click="run(client.admin.cycles['remove-group']({ cycle: c.cycle, group: m.group }))">Remove</button>
+        <li v-for="m in c.items" :key="m.item">
+          {{ groupName(m.item) }}
+          <button @click="run(client.admin.cycles['remove-item']({ cycle: c.cycle, item: m.item }))">Remove</button>
         </li>
       </ul>
       <p>
@@ -84,7 +84,7 @@ onMounted(load);
         </select>
         <button
           :disabled="!addGroupChoice[c.cycle]"
-          @click="run(client.admin.cycles['add-group']({ cycle: c.cycle, group: addGroupChoice[c.cycle]! }))"
+          @click="run(client.admin.cycles['add-item']({ cycle: c.cycle, item: addGroupChoice[c.cycle]! }))"
         >
           Add group
         </button>

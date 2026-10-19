@@ -12,8 +12,9 @@ export class UpvotingConcept {
   private readonly votes: Collection<Vote>;
   private indexed = false;
   
-  constructor(db: Db) {
-    this.votes = db.collection<Vote>("upvoting.votes");
+  // Each instance gets its own collection, e.g. "nominationvotes.votes" for NominationVotes.
+  constructor(db: Db, collection = "upvoting.votes") {
+    this.votes = db.collection<Vote>(collection);
   }
 
   async upvote({voter, target}: {voter: string, target: string}) {

@@ -93,6 +93,18 @@ export class CyclingConcept {
     return [{ run, start, end: new Date(start.getTime() + found.period) }];
   }
 
+  async _previousRun({ item, now }: { item: string; now: Date }): Promise<Array<{ run: number; start: Date; end: Date }>> {
+    const found = await this.#cycleOf(item);
+    if (found === null) return [];
+    const elapsed = now.getTime() - found.start.getTime();
+    if (elapsed < 0) return []; // not started yet
+    // The run before the current one, or the last run once every run has ended.
+    const run = Math.min(Math.floor(elapsed / found.period), found.runs) - 1;
+    if (run < 0) return []; // still in the first run
+    const start = new Date(found.start.getTime() + run * found.period);
+    return [{ run, start, end: new Date(start.getTime() + found.period) }];
+  }
+
   async _all(_input: Record<string, never>): Promise<Array<{ cycle: string; start: Date; period: number; runs: number }>> {
     const rows = await this.cycles.find().sort({ start: 1, _id: 1 }).toArray();
     return rows.map(({ _id, start, period, runs }) => ({ cycle: _id, start, period, runs }));

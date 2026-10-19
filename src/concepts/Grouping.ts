@@ -70,10 +70,16 @@ export class GroupingConcept {
     return rows.map(({ _id, name }) => ({ group: _id, name }));
   }
 
+  async _get({ group }: { group: string }): Promise<Array<{ name: string }>> {
+    const found = await this.groups.findOne({ _id: group });
+    return found === null ? [] : [{ name: found.name }];
+  }
+
   async _items({ group }: { group: string }): Promise<Array<{ item: string }>> {
     const found = await this.groups.findOne({ _id: group });
     if (found === null) return [];
-    return [...found.items].sort().map((item) => ({ item }));
+    // $addToSet appends, so reversing the array gives the most recently added first.
+    return [...found.items].reverse().map((item) => ({ item }));
   }
 
   async _groupsOf({ item }: { item: string }): Promise<Array<{ group: string }>> {

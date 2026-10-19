@@ -2,7 +2,7 @@ import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
 import { each, form, former, is, no, now, where, whether } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
 
-const { Posting, Grouping, Cycling, Upvoting } = concepts;
+const { Posting, Grouping, Cycling, Upvoting, Nominating, NominationVotes } = concepts;
 
 // The cycle a group belongs to, if any.
 const GroupCycle = former("the cycle of (group)", ({ group }, { cycle, start, period, runs }) =>
@@ -27,7 +27,9 @@ const GroupList = former("every group at (now)", ({ now }, { group, name }) =>
   }),
 );
 
-// The posts of a group's current run, most upvoted first. Empty when the group is closed.
+// The posts of a group's current run, most upvoted first and newest first among ties
+// (rows arrive newest first and the vote sort keeps that order for equal votes).
+// Empty when the group is closed.
 const GroupFeed = former(
   "the feed of (group) at (now)",
   ({ group, now }, { post, owner, content, createdAt, start, end, votes }) =>
@@ -53,6 +55,32 @@ const PostDetails = former("the details of (post)", ({ post }, { owner, content,
   ).form({ post, owner, content, createdAt, votes }),
 ).optional();
 
+// Every nomination category, with its current round left blank when it is closed.
+const CategoryList = former("every nomination category at (now)", ({ now }, { category, name }) =>
+  form({
+    categories: each(Nominating._categories({}).is({ category, name }))
+      .form({ category, name })
+      .splicing(whether(GroupRun({ group: category, now }))),
+  }),
+);
+
+// A category's nominations made between start and end, most upvoted first and newest
+// first among ties. Shared by the current ranking here and the admin's previous ranking.
+export const RoundRanking = former(
+  "the ranking of (category) from (start) to (end)",
+  ({ category, start, end }, { nomination, nominator, name, createdAt, votes }) =>
+    form({
+      nominations: each(Nominating._nominations({ category }).is({ nomination, nominator, name, createdAt }))
+        .where(
+          is.ge(createdAt, start),
+          is.lt(createdAt, end),
+          NominationVotes._count({ target: nomination }).is({ votes }),
+        )
+        .arranged(votes, "descending")
+        .form({ nomination, nominator, name, createdAt, votes }),
+    }),
+);
+
 const ListGroups = endpoint("/groups/list", ({ instant }) =>
   receive({})
     .where(now(instant))
@@ -72,6 +100,23 @@ const GetPost = endpoint("/posts/get", ({ post }) =>
   ),
 );
 
+const ListCategories = endpoint("/nominations/categories", ({ instant }) =>
+  receive({})
+    .where(now(instant))
+    .then(respond({ list: CategoryList({ now: instant }) })),
+);
+
+const ListNominations = endpoint("/nominations/list", ({ category, instant, start, end }) =>
+  receive({ category }).then(
+    where(now(instant), Cycling._currentRun({ item: category, now: instant }).is({ start, end }))
+      .then(respond({ ranking: RoundRanking({ category, start, end }) }))
+      .named("open"),
+    where(now(instant), no(Cycling._currentRun({ item: category, now: instant })))
+      .then(respond({ ranking: { nominations: [] } }))
+      .named("closed"),
+  ),
+);
+
 export const composition = {
   GroupCycle,
   GroupRun,
@@ -81,4 +126,8 @@ export const composition = {
   ListGroups,
   Feed,
   GetPost,
+  CategoryList,
+  RoundRanking,
+  ListCategories,
+  ListNominations,
 };

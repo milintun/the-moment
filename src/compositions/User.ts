@@ -2,7 +2,45 @@ import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
 import { each, form, former, is, no, now, reaction, view, when, where } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
 
-const { Sessioning, Posting, Grouping, Cycling, Upvoting } = concepts;
+const { Authenticating, Sessioning, Posting, Grouping, Cycling, Upvoting, Nominating, NominationVotes } = concepts;
+
+// ---------- Account ----------
+
+const Register = endpoint(
+  "/auth/register",
+  ({ username, password, account, session, expiresAt }) =>
+    receive({ username, password })
+      .then(Authenticating.register({ username, password }).responds({ account }))
+      .then(Sessioning.start({ subject: account }).responds({ session, expiresAt }))
+      .then(respond({ account, session, expiresAt })),
+);
+
+const SignIn = endpoint(
+  "/auth/sign-in",
+  ({ username, password, account, session, expiresAt }) =>
+    receive({ username, password })
+      .then(Authenticating.authenticate({ username, password }).responds({ account }))
+      .then(Sessioning.start({ subject: account }).responds({ session, expiresAt }))
+      .then(respond({ account, session, expiresAt })),
+);
+
+const CurrentUser = endpoint(
+  "/auth/current",
+  ({ session, username }) =>
+    receive({ session })
+      .then(Sessioning.current({ session }).responds({ subject: username }))
+      .then(respond({ username })),
+);
+
+const SignOut = endpoint(
+  "/auth/sign-out",
+  ({ session, signedOut }) =>
+    receive({ session })
+      .then(Sessioning.end({ session }).responds({ ended: signedOut }))
+      .then(respond({ signedOut })),
+);
+
+// ---------- Posting ----------
 
 // A post is in season when one of its groups has a run happening now and the post
 // was created during that run.
@@ -18,18 +56,23 @@ const PostInSeason = view(
     ),
 ).holds();
 
+// Posting requires an existing group with a run happening, checked before anything is
+// created. A cycle also holds nomination categories, so a current run alone is not enough.
 const CreatePost = endpoint(
   "/posts/create",
   ({ session, group, content, user, createdAt, post }) =>
     receive({ session, group, content })
       .then(Sessioning.current({ session }).responds({ subject: user }))
       .then(
-        where(now(createdAt), Cycling._currentRun({ item: group, now: createdAt }))
+        where(now(createdAt), Grouping._get({ group }), Cycling._currentRun({ item: group, now: createdAt }))
           .then(Posting.create({ owner: user, content, createdAt }).responds({ post }))
           .then(Grouping.addItem({ group, item: post }).responds({}))
           .then(respond({ post }))
           .named("open"),
-        where(now(createdAt), no(Cycling._currentRun({ item: group, now: createdAt })))
+        where(no(Grouping._get({ group })))
+          .then(respond({ error: "GROUP_CLOSED" }))
+          .named("not-a-group"),
+        where(now(createdAt), Grouping._get({ group }), no(Cycling._currentRun({ item: group, now: createdAt })))
           .then(respond({ error: "GROUP_CLOSED" }))
           .named("closed"),
       ),
@@ -43,6 +86,19 @@ const DeletePost = endpoint(
       .then(Posting.delete({ user, post }).responds({}))
       .then(respond({ post })),
 );
+
+// Cleanup: a deleted post leaves every group it was in, and its votes are cleared.
+const DeletedPostLeavesGroups = reaction(({ post, group }) =>
+  when(Posting.delete({ post }).responds({}))
+    .where(Grouping._groupsOf({ item: post }).is({ group }))
+    .then(Grouping.removeItem({ group, item: post })),
+);
+
+const DeletedPostLosesVotes = reaction(({ post }) =>
+  when(Posting.delete({ post }).responds({})).then(Upvoting.clear({ target: post })),
+);
+
+// ---------- Voting on posts ----------
 
 const Vote = endpoint(
   "/posts/vote",
@@ -105,25 +161,183 @@ const ListMyVotes = endpoint(
       .then(respond({ votes: MyVotes({ group, user }) })),
 );
 
-// Cleanup: a deleted post leaves every group it was in, and its votes are cleared.
-const DeletedPostLeavesGroups = reaction(({ post, group }) =>
-  when(Posting.delete({ post }).responds({}))
-    .where(Grouping._groupsOf({ item: post }).is({ group }))
-    .then(Grouping.removeItem({ group, item: post })),
+// ---------- Nominating ----------
+
+// A nomination is active while its category's cycle has a run happening and the
+// nomination was made during that run, exactly like a post in season.
+const NominationActive = view(
+  "(nomination) is active at (now)",
+  ({ nomination, now }, _outputs, { category, createdAt, start, end }) =>
+    where(
+      Nominating._get({ nomination }).is({ category, createdAt }),
+      Cycling._currentRun({ item: category, now }).is({ start, end }),
+      is.ge(createdAt, start),
+      is.lt(createdAt, end),
+    ),
+).holds();
+
+// An equivalent name was nominated in the category's current round.
+const EquivalentActive = view(
+  "an idea equivalent to (name) is active in (category) at (now)",
+  ({ category, name, now }, _outputs, { createdAt, start, end }) =>
+    where(
+      Cycling._currentRun({ item: category, now }).is({ start, end }),
+      Nominating._equivalent({ category, name }).is({ createdAt }),
+      is.ge(createdAt, start),
+      is.lt(createdAt, end),
+    ),
+).holds();
+
+// ponytail: the duplicate check is a read before the write, so two simultaneous
+// nominations of the same idea can both succeed; accepted by design.
+const CreateNomination = endpoint(
+  "/nominations/create",
+  ({ session, category, name, user, createdAt, nomination }) =>
+    receive({ session, category, name })
+      .then(Sessioning.current({ session }).responds({ subject: user }))
+      .then(
+        where(
+          now(createdAt),
+          Cycling._currentRun({ item: category, now: createdAt }),
+          no(EquivalentActive({ category, name, now: createdAt })),
+        )
+          .then(Nominating.nominate({ nominator: user, category, name, createdAt }).responds({ nomination }))
+          .then(respond({ nomination }))
+          .named("open"),
+        where(now(createdAt), EquivalentActive({ category, name, now: createdAt }))
+          .then(respond({ error: "ALREADY_NOMINATED" }))
+          .named("duplicate"),
+        where(now(createdAt), no(Cycling._currentRun({ item: category, now: createdAt })))
+          .then(respond({ error: "CATEGORY_CLOSED" }))
+          .named("closed"),
+      ),
 );
 
-const DeletedPostLosesVotes = reaction(({ post }) =>
-  when(Posting.delete({ post }).responds({})).then(Upvoting.clear({ target: post })),
+const WithdrawNomination = endpoint(
+  "/nominations/withdraw",
+  ({ session, nomination, user }) =>
+    receive({ session, nomination })
+      .then(Sessioning.current({ session }).responds({ subject: user }))
+      .then(Nominating.withdraw({ nominator: user, nomination }).responds({}))
+      .then(respond({ nomination })),
+);
+
+// Cleanup: a withdrawn nomination loses its votes.
+const WithdrawnNominationLosesVotes = reaction(({ nomination }) =>
+  when(Nominating.withdraw({ nomination }).responds({})).then(NominationVotes.clear({ target: nomination })),
+);
+
+// ---------- Voting on nominations ----------
+
+const VoteNomination = endpoint(
+  "/nominations/vote",
+  ({ session, nomination, user, instant }) =>
+    receive({ session, nomination })
+      .then(Sessioning.current({ session }).responds({ subject: user }))
+      .then(
+        where(
+          now(instant),
+          Nominating._get({ nomination }).is.not({ nominator: user }),
+          NominationActive({ nomination, now: instant }),
+        )
+          .then(NominationVotes.upvote({ voter: user, target: nomination }).responds({}))
+          .then(respond({ nomination }))
+          .named("allowed"),
+        where(Nominating._get({ nomination }).is({ nominator: user }))
+          .then(respond({ error: "OWN_NOMINATION" }))
+          .named("own-nomination"),
+        where(
+          now(instant),
+          Nominating._get({ nomination }).is.not({ nominator: user }),
+          no(NominationActive({ nomination, now: instant })),
+        )
+          .then(respond({ error: "NOT_ACTIVE" }))
+          .named("inactive"),
+        where(no(Nominating._get({ nomination })))
+          .then(respond({ error: "NO_SUCH_NOMINATION" }))
+          .named("missing"),
+      ),
+);
+
+const UnvoteNomination = endpoint(
+  "/nominations/unvote",
+  ({ session, nomination, user, instant }) =>
+    receive({ session, nomination })
+      .then(Sessioning.current({ session }).responds({ subject: user }))
+      .then(
+        where(
+          now(instant),
+          Nominating._get({ nomination }).is.not({ nominator: user }),
+          NominationActive({ nomination, now: instant }),
+        )
+          .then(NominationVotes.unvote({ voter: user, target: nomination }).responds({}))
+          .then(respond({ nomination }))
+          .named("allowed"),
+        where(Nominating._get({ nomination }).is({ nominator: user }))
+          .then(respond({ error: "OWN_NOMINATION" }))
+          .named("own-nomination"),
+        where(
+          now(instant),
+          Nominating._get({ nomination }).is.not({ nominator: user }),
+          no(NominationActive({ nomination, now: instant })),
+        )
+          .then(respond({ error: "NOT_ACTIVE" }))
+          .named("inactive"),
+        where(no(Nominating._get({ nomination })))
+          .then(respond({ error: "NO_SUCH_NOMINATION" }))
+          .named("missing"),
+      ),
+);
+
+// The active nominations in a category that a person has upvoted.
+const MyNominationVotes = former(
+  "the active nominations in (category) upvoted by (user) at (now)",
+  ({ category, user, now }, { nomination, createdAt, start, end }) =>
+    form({
+      nominations: each(Nominating._nominations({ category }).is({ nomination, createdAt }))
+        .where(
+          Cycling._currentRun({ item: category, now }).is({ start, end }),
+          is.ge(createdAt, start),
+          is.lt(createdAt, end),
+          NominationVotes._voted({ voter: user, target: nomination }).is({ voted: true }),
+        )
+        .form({ nomination }),
+    }),
+);
+
+const ListMyNominationVotes = endpoint(
+  "/nominations/my-votes",
+  ({ session, category, user, instant }) =>
+    receive({ session, category })
+      .then(Sessioning.current({ session }).responds({ subject: user }))
+      .then(
+        where(now(instant))
+          .then(respond({ votes: MyNominationVotes({ category, user, now: instant }) }))
+          .named("list"),
+      ),
 );
 
 export const composition = {
+  Register,
+  SignIn,
+  CurrentUser,
+  SignOut,
   PostInSeason,
   CreatePost,
   DeletePost,
+  DeletedPostLeavesGroups,
+  DeletedPostLosesVotes,
   Vote,
   Unvote,
   MyVotes,
   ListMyVotes,
-  DeletedPostLeavesGroups,
-  DeletedPostLosesVotes,
+  NominationActive,
+  EquivalentActive,
+  CreateNomination,
+  WithdrawNomination,
+  WithdrawnNominationLosesVotes,
+  VoteNomination,
+  UnvoteNomination,
+  MyNominationVotes,
+  ListMyNominationVotes,
 };

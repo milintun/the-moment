@@ -3,7 +3,8 @@
 //
 //   ADMIN_PASSWORD=... bun scripts/seed.ts [http://127.0.0.1:8080]
 //
-// milin must already be registered. Running it twice creates a second cycle and
+// milin must already be registered and made the owner (scripts/set-owner.ts).
+// Running it twice creates a second cycle and
 // duplicate posts, so reset the database first if you want a clean slate.
 import { createHttpClient } from "@mit-sdg/sync-engine-http/client";
 import type { TheMomentWireHttp } from "../generated/wire.ts";
@@ -61,7 +62,7 @@ for (const name of GROUPS) {
 }
 const { cycle } = ok("create cycle", await admin.admin.cycles.create(CYCLE));
 for (const [name, group] of groupIds) {
-  ok(`add ${name} to cycle`, await admin.admin.cycles["add-group"]({ cycle, group }));
+  ok(`add ${name} to cycle`, await admin.admin.cycles["add-item"]({ cycle, item: group }));
 }
 console.log(`Created ${GROUPS.join(" and ")} in a ${CYCLE.period / DAY}-day cycle.`);
 

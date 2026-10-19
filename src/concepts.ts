@@ -17,6 +17,18 @@ import groupingSpec from "@design/concepts/Grouping.md" with { type: "text" };
 import { AlreadyInGroup, GroupingConcept, NameTaken, NoSuchGroup, NotInGroup } from "./concepts/Grouping.ts";
 import cyclingSpec from "@design/concepts/Cycling.md" with { type: "text" };
 import { AlreadyCycling, CyclingConcept, InvalidCycle, NoSuchCycle, NotInCycle } from "./concepts/Cycling.ts";
+import administratingSpec from "@design/concepts/Administrating.md" with { type: "text" };
+import { AdministratingConcept, AlreadyAdmin, NotAdmin, OwnerExists, OwnerProtected } from "./concepts/Administrating.ts";
+import nominatingSpec from "@design/concepts/Nominating.md" with { type: "text" };
+import {
+  InvalidName,
+  NominatingConcept,
+  NameTaken as CategoryNameTaken,
+  NoSuchCategory,
+  NoSuchNomination,
+  NotNominator,
+  TooSoon,
+} from "./concepts/Nominating.ts";
 
   const posting = registerConcept({
     class: PostingConcept,
@@ -69,6 +81,30 @@ const cycling = registerConcept({
   },
 });
 
+const administrating = registerConcept({
+  class: AdministratingConcept,
+  spec: administratingSpec,
+  refusals: {
+    OWNER_EXISTS: OwnerExists,
+    ALREADY_ADMIN: AlreadyAdmin,
+    NOT_ADMIN: NotAdmin,
+    OWNER_PROTECTED: OwnerProtected,
+  },
+});
+
+const nominating = registerConcept({
+  class: NominatingConcept,
+  spec: nominatingSpec,
+  refusals: {
+    NAME_TAKEN: CategoryNameTaken,
+    NO_SUCH_CATEGORY: NoSuchCategory,
+    INVALID_NAME: InvalidName,
+    TOO_SOON: TooSoon,
+    NO_SUCH_NOMINATION: NoSuchNomination,
+    NOT_NOMINATOR: NotNominator,
+  },
+});
+
 export const applicationConceptSet = conceptSet({
   Authenticating: authenticating,
   Sessioning: sessioning,
@@ -76,5 +112,8 @@ export const applicationConceptSet = conceptSet({
   Upvoting: upvoting,
   Grouping: grouping,
   Cycling: cycling,
+  Administrating: administrating,
+  Nominating: nominating,
+  NominationVotes: upvoting,
 });
 export const { concepts } = applicationConceptSet;
