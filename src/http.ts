@@ -1,9 +1,9 @@
 import { httpPolicy } from "@mit-sdg/sync-engine-http/policy";
 
 export const policy = httpPolicy({
-  // The address the browser uses (the frontend, which forwards /api to the backend).
-  // Cookies require it, and requests from any other origin are refused.
-  publicOrigin: "http://127.0.0.1:8080",
+  // The address the browser uses. Cookies require it, and requests from any other origin
+  // are refused. Deployed, PUBLIC_ORIGIN is the app's address; locally, the dev frontend.
+  publicOrigin: process.env.PUBLIC_ORIGIN ?? "http://127.0.0.1:8080",
   basePath: "/api",
   publicErrors: {
     INVALID_USERNAME: "INVALID_REQUEST",

@@ -1,17 +1,35 @@
 import { createGateway } from "@mit-sdg/sync-engine/boundary";
 import { createHttpHandler } from "@mit-sdg/sync-engine-http/handler";
 import { assembleApplication } from "./assembly.ts";
+import { db } from "./db.ts";
 import { policy } from "./http.ts";
 
 const application = assembleApplication();
 const gateway = createGateway({ application });
 const api = createHttpHandler({ application, gateway, policy });
 
+// The built Vue app (`bun run build`), served by this same server when deployed.
+const dist = `${import.meta.dir}/../web/dist`;
+
 const server = Bun.serve({
   hostname: process.env.HOST ?? "127.0.0.1",
   port: Number(process.env.PORT ?? 3000),
   routes: {
     "/api/*": api,
+    // The platform's health check: ok only while MongoDB answers.
+    "/health": async () => {
+      try {
+        await db.command({ ping: 1 }, { timeoutMS: 3000 });
+        return Response.json({ status: "ok" }, { headers: { "Cache-Control": "no-store" } });
+      } catch {
+        return Response.json({ status: "unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
+      }
+    },
+  },
+  // Any other path: a built file if one exists, otherwise index.html so Vue Router shows the page.
+  async fetch(request) {
+    const file = Bun.file(dist + new URL(request.url).pathname);
+    return new Response((await file.exists()) ? file : Bun.file(`${dist}/index.html`));
   },
 });
 
