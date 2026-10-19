@@ -13,8 +13,10 @@ import { AdministratingConcept } from "./concepts/Administrating.ts";
 import { NominatingConcept } from "./concepts/Nominating.ts";
 import { db } from "./db.ts";
 
-export function assembleApplication() {
+// The clock supplies `now` to compositions; tests pass a fake one to move between runs.
+export function assembleApplication({ clock }: { clock?: () => Date } = {}) {
   return assemble({
+    ...(clock ? { clock } : {}),
     conceptSet: applicationConceptSet,
     instances: {
       Authenticating: new AuthenticatingConcept(db),
@@ -26,7 +28,6 @@ export function assembleApplication() {
       Administrating: new AdministratingConcept(db),
       Nominating: new NominatingConcept(db),
       NominationVotes: new UpvotingConcept(db, "nominationvotes.votes"),
-      // TODO: <Concept>: new <Concept>Concept(db),
     },
     composition: {
       User: userComposition,

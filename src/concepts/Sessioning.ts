@@ -13,12 +13,16 @@ const SESSION_LIFETIME_MS = 30 * 60 * 1000;
 export class SessioningConcept {
   private readonly sessions: Collection<Session>;
 
-  constructor(db: Db) {
+  readonly #clock: () => Date;
+
+  // The clock defaults to the real time; tests pass a fake one to control expiry.
+  constructor(db: Db, clock: () => Date = () => new Date()) {
     this.sessions = db.collection<Session>("sessioning.sessions");
+    this.#clock = clock;
   }
 
   async start({ subject }: { subject: string }): Promise<{ session: string; expiresAt: Date }> {
-    const now = new Date();
+    const now = this.#clock();
     // delete every expired session
     await this.sessions.deleteMany({ expiresAt: { $lte: now } });
 
@@ -30,14 +34,14 @@ export class SessioningConcept {
   }
 
   async current({ session }: { session: string }): Promise<{ subject: string }> {
-    const now = new Date();
+    const now = this.#clock();
     const found = await this.sessions.findOne({ _id: session, expiresAt: { $gt: now } });
     if (found === null) return this.#refuse(session, now);
     return { subject: found.subject };
   }
 
   async end({ session }: { session: string }): Promise<{ ended: boolean }> {
-    const now = new Date();
+    const now = this.#clock();
     // Deleting only an active session in one step means two concurrent ends can't both succeed.
     const { deletedCount } = await this.sessions.deleteOne({ _id: session, expiresAt: { $gt: now } });
     if (deletedCount === 0) return this.#refuse(session, now);
@@ -45,7 +49,7 @@ export class SessioningConcept {
   }
 
   async _active({ session }: { session: string }): Promise<Array<{ subject: string; expiresAt: Date }>> {
-    const found = await this.sessions.findOne({ _id: session, expiresAt: { $gt: new Date() } });
+    const found = await this.sessions.findOne({ _id: session, expiresAt: { $gt: this.#clock() } });
     return found === null ? [] : [{ subject: found.subject, expiresAt: found.expiresAt }];
   }
 

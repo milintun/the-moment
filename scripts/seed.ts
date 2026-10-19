@@ -34,14 +34,14 @@ function clientFor() {
   let cookie = "";
   return createHttpClient<TheMomentWireHttp>({
     baseUrl: `${address}/api`,
-    fetch: async (input, init) => {
+    fetch: (async (input: RequestInfo | URL, init?: RequestInit) => {
       const headers = new Headers(init?.headers);
       if (cookie) headers.set("Cookie", cookie);
       const response = await fetch(input, { ...init, headers });
       const set = response.headers.get("set-cookie");
       if (set) cookie = set.split(";")[0]!;
       return response;
-    },
+    }) as typeof fetch,
   });
 }
 
