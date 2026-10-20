@@ -118,7 +118,7 @@ Times are fixed dates, never the real clock.
   - refuses `NO_SUCH_GROUP`
   - refuses `NOT_IN_GROUP`; items unchanged
 - **queries**
-  - `_groups` ordered by name
+  - `_groups` lists the oldest first, then by name
   - `_get` gives the name, or no row when unknown
   - `_items` most recently added first, and empty for an unknown group
   - `_groupsOf` lists every group holding the item, ordered
@@ -168,6 +168,7 @@ Times are fixed dates, never the real clock.
 - **queries**
   - `_nominations` newest first, per category
   - `_equivalent` matches spacing and case variants but not "Hand", and only in its own category
+  - `_byNominator` lists one person's nominations from every category, newest first
   - `_categories` ordered by name
   - `_category` and `_get` give no row when unknown
 
@@ -252,6 +253,8 @@ Runs against local storage (RustFS), in the `the-moment-test` bucket.
   - refuses `OWN_NOMINATION`
   - refuses `NOT_ACTIVE` after the round rolls over
   - refuses `NO_SUCH_NOMINATION`
+- **nominations/mine**
+  - your nominations from every round with votes, the current round's marked current; empty for someone with none; refuses `UNKNOWN_SESSION`
 - **nominations/my-votes**
   - lists only active nominations you upvoted
 
@@ -319,7 +322,7 @@ Runs against local storage (RustFS), in the `the-moment-test` bucket.
 | Nominating | createCategory, nominate, withdraw | NAME_TAKEN, NO_SUCH_CATEGORY, INVALID_NAME, TOO_SOON, NO_SUCH_NOMINATION, NOT_NOMINATOR |
 | Uploading | requestUpload, verify, remove, link | NO_SUCH_UPLOAD, NOT_YOUR_UPLOAD, NOT_UPLOADED, INVALID_FILE |
 
-Every endpoint (37) is called at least once in the composition tests, and every
+Every endpoint (38) is called at least once in the composition tests, and every
 composition-authored error (GROUP_CLOSED, OWN_POST, NOT_IN_SEASON, ADMIN_ONLY,
 OWNER_ONLY, CATEGORY_CLOSED, ALREADY_NOMINATED, OWN_NOMINATION, NOT_ACTIVE,
 NO_SUCH_ITEM, UNSUPPORTED_TYPE) is triggered at least once.

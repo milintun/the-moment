@@ -312,6 +312,36 @@ const WithdrawnNominationLosesVotes = reaction(({ nomination }) =>
   when(Nominating.withdraw({ nomination }).responds({})).then(NominationVotes.clear({ target: nomination })),
 );
 
+// ---------- My nominations ----------
+
+// Marks a nomination that is still in its round, so it can still be voted on.
+const NominationCurrent = former("whether (nomination) is active at (now)", ({ nomination, now }, _bindings) =>
+  where(NominationActive({ nomination, now })).form({ current: true }),
+).optional();
+
+// A person's nominations from every round, newest first, each with its votes and whether it
+// is still in the current round (current is null when not).
+const MyNominations = former(
+  "the nominations of (user) at (now)",
+  ({ user, now }, { nomination, name, createdAt, votes }) =>
+    form({
+      nominations: each(Nominating._byNominator({ nominator: user }).is({ nomination, name, createdAt }))
+        .where(NominationVotes._count({ target: nomination }).is({ votes }))
+        .form({ nomination, name, createdAt, votes })
+        .splicing(whether(NominationCurrent({ nomination, now }))),
+    }),
+);
+
+const ListMyNominations = endpoint(
+  "/nominations/mine",
+  ({ session, user, instant }) =>
+    receive({ session })
+      .then(Sessioning.current({ session }).responds({ subject: user }))
+      .then(
+        where(now(instant)).then(respond({ mine: MyNominations({ user, now: instant }) })).named("list"),
+      ),
+);
+
 // ---------- Voting on nominations ----------
 
 const VoteNomination = endpoint(
@@ -429,6 +459,9 @@ export const composition = {
   CreateNomination,
   WithdrawNomination,
   WithdrawnNominationLosesVotes,
+  NominationCurrent,
+  MyNominations,
+  ListMyNominations,
   VoteNomination,
   UnvoteNomination,
   MyNominationVotes,

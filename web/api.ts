@@ -42,3 +42,6 @@ export function finishedSeasons(
   }
   return seasons;
 }
+
+/** Browser storage key set once a visitor clicks through the entrance. */
+export const ENTERED_KEY = "the-moment.entered";

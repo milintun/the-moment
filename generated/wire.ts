@@ -351,6 +351,23 @@ export type TheMomentWire = {
     };
     error: { error: AppWideError | "INVALID_INPUT" };
   };
+  "/nominations/mine": {
+    input: {
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "mine": {
+        "nominations": ({
+          "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_byNominator"]>>>, ["createdAt"]>>;
+          "current": true | null;
+          "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_byNominator"]>>>, ["name"]>>;
+          "nomination": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["_count"]>[0], ["target"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_byNominator"]>>>, ["nomination"]>]>>;
+          "votes": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["_count"]>>>, ["votes"]>>;
+        })[];
+      };
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" };
+  };
   "/nominations/my-votes": {
     input: {
       "category": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Cycling"]["_currentRun"]>[0], ["item"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Nominating"]["_nominations"]>[0], ["category"]>]>>;
@@ -817,6 +834,21 @@ export type TheMomentWireHttp = {
       };
     };
     error: { error: HttpAppWideError | "INVALID_REQUEST" };
+  };
+  "/nominations/mine": {
+    input: Record<string, never>;
+    output: {
+      "mine": {
+        "nominations": ({
+          "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_byNominator"]>>>, ["createdAt"]>>;
+          "current": true | null;
+          "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_byNominator"]>>>, ["name"]>>;
+          "nomination": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["_count"]>[0], ["target"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Nominating"]["_byNominator"]>>>, ["nomination"]>]>>;
+          "votes": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["NominationVotes"]["_count"]>>>, ["votes"]>>;
+        })[];
+      };
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
   "/nominations/my-votes": {
     input: {

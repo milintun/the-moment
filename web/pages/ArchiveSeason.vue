@@ -11,27 +11,32 @@ const season = Number(route.params.season);
 const title = ref("");
 const posts = ref<Post[]>([]);
 const error = ref("");
+const loaded = ref(false);
 
 onMounted(async () => {
   const [list, archive] = await Promise.all([client.groups.list({}), client.groups.archive({ group, season })]);
   const found = "error" in list ? undefined : list.list.groups.find((g) => g.group === group);
   const dates = found ? finishedSeasons(found).find((s) => s.season === season) : undefined;
-  title.value = `${found?.name ?? "Unknown gallery"}, season ${season + 1}`;
+  title.value = `${found?.name ?? "unknown gallery"}, season ${season + 1}`;
   if (dates) title.value += ` (${dates.start.toLocaleDateString()} to ${dates.end.toLocaleDateString()})`;
-  if ("error" in archive) error.value = archive.error === "NOT_FOUND" ? "This season isn't in the archive." : archive.error;
+  if ("error" in archive) error.value = archive.error === "NOT_FOUND" ? "this season isn't in the archive." : archive.error;
   else posts.value = archive.archive.posts;
+  loaded.value = true;
 });
 </script>
 
 <template>
   <h1>{{ title }}</h1>
-  <p v-if="error">{{ error }}</p>
-  <p v-else-if="!posts.length">No posts this season.</p>
-  <div v-for="p in posts" :key="p.post">
-    <hr />
-    <p><img :src="`/api/images/${p.content}`" :alt="p.caption || `Post by ${p.owner}`" width="300" /></p>
-    <p v-if="p.caption">{{ p.caption }}</p>
-    <p>by {{ p.owner }} | {{ p.votes }} vote(s)</p>
+  <p v-if="error" class="error">{{ error }}</p>
+  <p v-else-if="loaded && !posts.length">no art was hung this season.</p>
+  <div class="walk">
+    <figure v-for="p in posts" :key="p.post" class="artwork">
+      <img :src="`/api/images/${p.content}`" :alt="p.caption || `post by ${p.owner}`" />
+      <figcaption>
+        <p v-if="p.caption">{{ p.caption }}</p>
+        <p class="meta">by {{ p.owner }} · {{ p.votes }} vote(s)</p>
+      </figcaption>
+    </figure>
   </div>
-  <p><RouterLink to="/archive">Back to the archive</RouterLink></p>
+  <p><RouterLink :to="`/archive/${group}`">← all seasons</RouterLink></p>
 </template>

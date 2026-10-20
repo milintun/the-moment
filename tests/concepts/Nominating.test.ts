@@ -128,6 +128,18 @@ describe("queries", () => {
     expect(await nominating._equivalent({ category, name: "Rainy day" })).toEqual([]);
   });
 
+  test("_byNominator lists one person's nominations from every category, newest first", async () => {
+    const { category: other } = await nominating.createCategory({ name: "Future wings" });
+    const { nomination: a } = await nominating.nominate({ nominator: "gigi", category, name: "A", createdAt: T0 });
+    await nominating.nominate({ nominator: "sid", category, name: "B", createdAt: at(HOUR) });
+    const { nomination: c } = await nominating.nominate({ nominator: "gigi", category: other, name: "C", createdAt: at(DAY) });
+    expect(await nominating._byNominator({ nominator: "gigi" })).toEqual([
+      { nomination: c, category: other, name: "C", createdAt: at(DAY) },
+      { nomination: a, category, name: "A", createdAt: T0 },
+    ]);
+    expect(await nominating._byNominator({ nominator: "sasha" })).toEqual([]);
+  });
+
   test("_categories is ordered by name", async () => {
     await nominating.createCategory({ name: "Archive ideas" });
     expect((await nominating._categories({})).map((c) => c.name)).toEqual(["Archive ideas", "Future galleries"]);

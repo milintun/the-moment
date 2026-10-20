@@ -23,18 +23,19 @@ external Item
 a set of Groups with
   a unique name String
   an items set of Item
+  a createdAt DateTime
 ```
 
 ## Actions
 
 ```actions
-create (name: String) : returns (group: Group)
+create (name: String, createdAt: DateTime) : returns (group: Group)
   where a group with this name exists
   then
     refuses NAME_TAKEN "A group with this name already exists."
   where no group has this name
   then
-    create a new group with this name and no items
+    create a new group with this name, createdAt, and no items
     returns group
 
 delete (group: Group) : returns ()
@@ -75,7 +76,7 @@ removeItem (group: Group, item: Item) : returns ()
 
 ```queries
 _groups () : many (group: Group, name: String)
-  answers every group with its name, ordered by name, and no rows when there are none
+  answers every group with its name, oldest first and then by name, and no rows when there are none
 
 _get (group: Group) : optional (name: String)
   answers the group's name, and no row when group is not in Groups

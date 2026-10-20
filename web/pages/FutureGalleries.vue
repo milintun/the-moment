@@ -12,6 +12,7 @@ const newName = ref("");
 const confirming = ref<string | null>(null); // the nomination waiting for "Yes, withdraw"
 const message = ref("");
 const error = ref("");
+const loaded = ref(false); // render the round once the first load is done, so nothing flashes
 
 async function load() {
   const categories = await client.nominations.categories({});
@@ -62,7 +63,10 @@ async function withdraw(nomination: string) {
   await load();
 }
 
-onMounted(load);
+onMounted(async () => {
+  await load();
+  loaded.value = true;
+});
 </script>
 
 <template>
@@ -71,6 +75,7 @@ onMounted(load);
     Name the galleries you want to see next. Each round lasts one season, and the most upvoted
     ideas help decide the next galleries.
   </p>
+  <template v-if="loaded">
   <p>{{ roundEnd ? `This round is open until ${new Date(roundEnd).toLocaleString()}.` : "Nominations are closed right now." }}</p>
 
   <template v-if="roundEnd">
@@ -78,7 +83,7 @@ onMounted(load);
       <label>Your idea <input v-model="newName" required maxlength="100" /></label>
       <button type="submit">Nominate</button> (once a day)
     </form>
-    <p v-else><RouterLink to="/login">Log in to nominate and vote</RouterLink></p>
+    <p v-else><RouterLink to="/auth">log in to nominate and vote</RouterLink></p>
   </template>
   <p v-if="message">{{ message }}</p>
   <p v-if="error">Error: {{ error }}</p>
@@ -88,7 +93,7 @@ onMounted(load);
   <ol>
     <li v-for="n in ranking" :key="n.nomination">
       {{ n.name }} by {{ n.nominator }} | {{ n.votes }} vote(s)
-      <button v-if="me && me !== n.nominator" @click="toggle(n.nomination)">
+      <button v-if="me && me !== n.nominator" :class="{ voted: voted.has(n.nomination) }" @click="toggle(n.nomination)">
         {{ voted.has(n.nomination) ? "Unvote" : "Upvote" }}
       </button>
       <template v-if="me === n.nominator">
@@ -101,4 +106,5 @@ onMounted(load);
       </template>
     </li>
   </ol>
+  </template>
 </template>

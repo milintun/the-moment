@@ -95,6 +95,9 @@ _nominations (category: Category) : many (nomination: Nomination, nominator: Use
 _equivalent (category: Category, name: String) : many (nomination: Nomination, createdAt: DateTime)
   answers the nominations in category whose names are equivalent to name, newest first, and no rows when there are none
 
+_byNominator (nominator: User) : many (nomination: Nomination, category: Category, name: String, createdAt: DateTime)
+  answers every nomination by nominator in any category, newest first, and no rows when they have none
+
 _get (nomination: Nomination) : optional (nominator: User, category: Category, name: String, createdAt: DateTime)
   answers the nomination's details, and no row when nomination is not in Nominations
 ```

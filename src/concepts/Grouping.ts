@@ -9,6 +9,7 @@ interface Group {
   _id: string;
   name: string;
   items: string[];
+  createdAt?: Date; // absent on groups made before creation times were recorded
 }
 
 export class GroupingConcept {
@@ -19,7 +20,7 @@ export class GroupingConcept {
     this.groups = db.collection<Group>("grouping.groups");
   }
 
-  async create({ name }: { name: string }): Promise<{ group: string }> {
+  async create({ name, createdAt }: { name: string; createdAt: Date }): Promise<{ group: string }> {
     if (!this.indexed) {
       // The unique index stops two groups from sharing a name.
       await this.groups.createIndex({ name: 1 }, { unique: true });
@@ -27,7 +28,7 @@ export class GroupingConcept {
     }
     const group = crypto.randomUUID();
     try {
-      await this.groups.insertOne({ _id: group, name, items: [] });
+      await this.groups.insertOne({ _id: group, name, items: [], createdAt });
     } catch (error) {
       if (error instanceof MongoServerError && error.code === 11000) {
         throw new NameTaken("A group with this name already exists.");
@@ -66,7 +67,7 @@ export class GroupingConcept {
   }
 
   async _groups(_input: Record<string, never>): Promise<Array<{ group: string; name: string }>> {
-    const rows = await this.groups.find().sort({ name: 1 }).toArray();
+    const rows = await this.groups.find().sort({ createdAt: 1, name: 1 }).toArray();
     return rows.map(({ _id, name }) => ({ group: _id, name }));
   }
 

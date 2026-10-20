@@ -135,6 +135,17 @@ else is refused by Nominating. A withdrawn nomination
 User.WithdrawNomination at /nominations/withdraw
 ```
 
+## My nominations
+
+A person may [list their own nominations](reaction:User.ListMyNominations), which answers
+[their nominations from every round, newest first](former:User.MyNominations), each
+with its vote count, and marks one that
+[is still in the current round](former:User.NominationCurrent) as current.
+
+```endpoints
+User.ListMyNominations at /nominations/mine
+```
+
 ## Voting on nominations
 
 A person may [upvote](reaction:User.VoteNomination) or

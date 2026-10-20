@@ -75,12 +75,12 @@ const ListAdmins = endpoint(
 
 const CreateGroup = endpoint(
   "/admin/groups/create",
-  ({ session, name, group }) =>
+  ({ session, name, group, createdAt }) =>
     receive({ session, name })
       .then(Sessioning.current({ session }).responds({}))
       .then(
-        where(IsAdmin({ session }))
-          .then(Grouping.create({ name }).responds({ group }))
+        where(now(createdAt), IsAdmin({ session }))
+          .then(Grouping.create({ name, createdAt }).responds({ group }))
           .then(respond({ group }))
           .named("admin"),
         where(IsNotAdmin({ session })).then(respond({ error: "ADMIN_ONLY" })).named("not-admin"),

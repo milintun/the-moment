@@ -1,29 +1,22 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
-import { useRouter } from "vue-router";
-import { client, isAdmin, me, refreshMe } from "./api.ts";
+import { computed } from "vue";
+import { useRoute } from "vue-router";
+import { me } from "./api.ts";
 
-const router = useRouter();
-onMounted(refreshMe);
-
-async function signOut() {
-  await client.auth["sign-out"]({});
-  await refreshMe();
-  router.push("/");
-}
+const route = useRoute();
+// The entrance is a full-screen landing page with its own account link.
+const atEntrance = computed(() => route.path === "/");
 </script>
 
 <template>
-  <header>
-    <RouterLink to="/">The Moment</RouterLink> | <RouterLink to="/archive">Archive</RouterLink> |
-    <RouterLink to="/nominations">Future galleries</RouterLink>
-    <template v-if="me">
-      | <RouterLink to="/me">My posts</RouterLink> | Signed in as {{ me }}
-      <template v-if="isAdmin"> | <RouterLink to="/admin">Admin</RouterLink></template>
-      | <button @click="signOut">Sign out</button>
-    </template>
-    <template v-else> | <RouterLink to="/login">Log in or register</RouterLink></template>
-  </header>
-  <hr />
-  <RouterView />
+  <RouterView v-if="atEntrance" />
+  <template v-else>
+    <header class="topbar">
+      <RouterLink to="/map" class="brand">the moment · map</RouterLink>
+      <RouterLink :to="me ? '/home' : '/auth'">{{ me ? `home (${me})` : "register / log in" }}</RouterLink>
+    </header>
+    <main class="page">
+      <RouterView :key="route.fullPath" />
+    </main>
+  </template>
 </template>

@@ -17,6 +17,7 @@ const nominations = ref<Category | null>(null); // the Future galleries category
 const cycles = ref<Cycle[]>([]);
 const previous = ref<Nomination[]>([]);
 const error = ref("");
+const loaded = ref(false); // render once the first load is done, so nothing flashes
 
 async function load() {
   const [a, g, k, c] = await Promise.all([
@@ -150,13 +151,16 @@ const confirmingCycle = ref<string | null>(null);
 
 const newAdmin = ref("");
 
-onMounted(load);
+onMounted(async () => {
+  await load();
+  loaded.value = true;
+});
 </script>
 
 <template>
   <h1>Admin</h1>
   <p v-if="!isAdmin">Only admins can use this page.</p>
-  <template v-else>
+  <template v-else-if="loaded">
     <p>
       Sections follow the usual order of work: review what people nominated, build the next galleries from it,
       then manage galleries, seasons, and admins.
@@ -245,7 +249,7 @@ onMounted(load);
     </form>
     <ul>
       <li v-for="g in groups" :key="g.group">
-        <RouterLink :to="`/groups/${g.group}`">{{ g.name }}</RouterLink>
+        <RouterLink :to="`/galleries/${g.group}`">{{ g.name }}</RouterLink>
         {{ kind(g) ? `(${kind(g)})` : "" }}: {{ galleryStatus(g) }}
         <button v-if="confirmingGroup !== g.group" @click="confirmingGroup = g.group">Delete</button>
         <template v-else>

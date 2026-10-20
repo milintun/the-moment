@@ -1,0 +1,466 @@
+/* The Moment: black and white, Ubuntu Mono. Titles are ALL CAPS and everything else is
+   lowercase, including what people write; fields show text exactly as it is typed.
+   Artwork keeps its colour. */
+
+:root {
+  --ink: #000;
+  --paper: #fff;
+  --faint: #6b6b6b; /* secondary text, still black-and-white */
+  --line: 1px solid var(--ink);
+  --gutter: 16px;
+  --font: "Ubuntu Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.5;
+  text-transform: lowercase;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  line-height: 1.15;
+  margin: 0 0 0.6em;
+  text-wrap: balance;
+}
+h1 {
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
+}
+h2 {
+  font-size: 1.25rem;
+  margin-top: 2.4em;
+  padding-bottom: 0.3em;
+  border-bottom: var(--line);
+}
+h3 {
+  font-size: 1rem;
+  margin-top: 1.6em;
+}
+
+p {
+  margin: 0 0 0.8em;
+  max-width: 70ch;
+}
+
+a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+}
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+hr {
+  border: 0;
+  border-top: var(--line);
+}
+
+strong {
+  font-weight: 700;
+}
+
+.meta,
+.lede {
+  color: var(--faint);
+}
+.lede {
+  margin-bottom: 1.6em;
+}
+.error {
+  border: var(--line);
+  padding: 0.4em 0.7em;
+  display: inline-block;
+}
+.error::before {
+  content: "! ";
+  font-weight: 700;
+}
+
+/* ---------- controls ---------- */
+
+button,
+.button {
+  font: inherit;
+  text-transform: lowercase;
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--line);
+  border-radius: 0;
+  padding: 0.25em 0.8em;
+  margin: 0 0.3em 0.3em 0;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  line-height: 1.4;
+}
+button:hover:not(:disabled),
+.button:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+/* An upvote you've given: filled in, and the button offers to take it back. */
+button.voted {
+  background: var(--ink);
+  color: var(--paper);
+}
+button.voted:hover:not(:disabled) {
+  background: var(--paper);
+  color: var(--ink);
+}
+.link-button {
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  background: none;
+}
+.link-button:hover:not(:disabled) {
+  background: none;
+  color: var(--ink);
+  text-decoration-thickness: 2px;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+  text-transform: none; /* show what people type, as they type it */
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--line);
+  border-radius: 0;
+  padding: 0.3em 0.5em;
+  max-width: 100%;
+}
+textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.3em;
+}
+label {
+  display: inline-block;
+  margin-right: 0.6em;
+}
+form p {
+  max-width: none;
+}
+
+/* ---------- shell ---------- */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+  padding: 0.7em var(--gutter);
+  border-bottom: var(--line);
+  background: var(--paper);
+}
+.brand {
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding-inline: var(--gutter);
+  padding-block: 2rem 4rem;
+}
+
+section + section {
+  margin-top: 1rem;
+}
+
+/* ---------- entrance ---------- */
+
+.entrance {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: var(--gutter);
+  cursor: pointer;
+  position: relative;
+}
+.entrance-account {
+  position: absolute;
+  top: var(--gutter);
+  right: var(--gutter);
+}
+.entrance-body {
+  max-width: 60ch;
+}
+.entrance h1 {
+  font-size: clamp(2rem, 6vw, 3.2rem);
+}
+.enter-hint {
+  margin-top: 3em;
+  animation: blink 1.6s steps(2, start) infinite;
+}
+@keyframes blink {
+  to {
+    visibility: hidden;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .enter-hint {
+    animation: none;
+  }
+}
+
+/* ---------- rooms (the stand-in map) ---------- */
+
+.rooms {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-left: var(--line);
+}
+.room {
+  position: relative;
+  padding: 0.55em 0 0.55em 1.6em;
+}
+.room::before {
+  /* a corridor tick joining each room to the path */
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 1.25em;
+  width: 1em;
+  border-top: var(--line);
+}
+.room-name {
+  font: inherit;
+  text-transform: lowercase;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
+}
+.kind {
+  color: var(--faint);
+  font-size: 0.85em;
+  margin-left: 0.4em;
+}
+.room.kind-wing > .room-name,
+.room.kind-gallery > .room-name {
+  font-weight: 700;
+}
+.room.here > .room-name {
+  font-weight: 700;
+  text-decoration: none;
+}
+.room.here::before {
+  border-top-width: 3px;
+}
+
+.rooms.compact {
+  font-size: 0.85em;
+}
+.rooms.compact .room {
+  padding-block: 0.15em;
+  padding-left: 1.2em;
+}
+.rooms.compact .room::before {
+  top: 0.85em;
+  width: 0.8em;
+}
+.rooms.compact .room-name {
+  text-decoration: none;
+  color: var(--faint);
+}
+.rooms.compact .room.here .room-name {
+  color: var(--ink);
+}
+
+/* ---------- view / walk ---------- */
+
+.view {
+  position: relative;
+}
+.view-head {
+  max-width: calc(100% - 260px);
+}
+.minimap {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 230px;
+  max-height: 260px;
+  overflow-y: auto;
+  border: var(--line);
+  padding: 0.6em 0.8em;
+  background: var(--paper);
+}
+.walk {
+  display: flex;
+  gap: 3rem;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding: 2rem 0 1.5rem;
+  margin-top: 1rem;
+  border-top: var(--line);
+  border-bottom: var(--line);
+}
+.artwork {
+  flex: 0 0 auto;
+  width: min(78vw, 440px);
+  margin: 0;
+  scroll-snap-align: center;
+}
+.artwork img {
+  width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+  border: var(--line);
+  background: var(--paper);
+}
+.artwork figcaption {
+  margin-top: 0.8em;
+}
+.empty {
+  padding: 2rem 0;
+}
+.neighbours {
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+  margin-top: 1.4rem;
+}
+.neighbours .after {
+  text-align: right;
+  margin-left: auto;
+}
+
+/* ---------- lists on home and admin ---------- */
+
+.cards {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+.card {
+  border: var(--line);
+  padding: 0.8em;
+  min-width: 0;
+}
+.card img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  margin-bottom: 0.6em;
+}
+.rows {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.rows li {
+  padding: 0.5em 0;
+  border-bottom: var(--line);
+}
+.rows li button {
+  margin-left: 0.6em;
+}
+
+/* ---------- posting ---------- */
+
+.dropzone {
+  display: block;
+  border: 1px dashed var(--ink);
+  padding: 2rem 1rem;
+  margin: 0 0 1em;
+  text-align: center;
+  cursor: pointer;
+  max-width: 560px;
+}
+.dropzone.dragging {
+  background: var(--ink);
+  color: var(--paper);
+}
+.dropzone img {
+  max-height: 320px;
+  margin: 0 auto;
+}
+.dropzone input[type="file"] {
+  display: block;
+  margin: 1em auto 0;
+  border: 0;
+  padding: 0;
+}
+.post-form,
+.auth {
+  max-width: 560px;
+}
+
+/* ---------- small screens ---------- */
+
+@media (max-width: 720px) {
+  body {
+    font-size: 16px;
+  }
+  .view-head {
+    max-width: none;
+  }
+  .minimap {
+    position: static;
+    width: auto;
+    max-height: 180px;
+    margin-top: 1rem;
+  }
+  .walk {
+    gap: 1.5rem;
+  }
+  .neighbours {
+    flex-direction: column;
+  }
+  .neighbours .after {
+    text-align: left;
+    margin-left: 0;
+  }
+}

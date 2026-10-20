@@ -129,6 +129,13 @@ export class NominatingConcept {
     return rows.map(({ _id, createdAt }) => ({ nomination: _id, createdAt }));
   }
 
+  async _byNominator({ nominator }: { nominator: string }): Promise<
+    Array<{ nomination: string; category: string; name: string; createdAt: Date }>
+  > {
+    const rows = await this.nominations.find({ nominator }).sort({ createdAt: -1, _id: 1 }).toArray();
+    return rows.map(({ _id, category, name, createdAt }) => ({ nomination: _id, category, name, createdAt }));
+  }
+
   async _get({ nomination }: { nomination: string }): Promise<
     Array<{ nominator: string; category: string; name: string; createdAt: Date }>
   > {

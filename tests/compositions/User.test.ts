@@ -405,6 +405,19 @@ describe("nominations: withdraw, vote, unvote, my-votes", () => {
     });
   });
 
+  test("mine lists your nominations from every round with votes, marking the current round's", async () => {
+    ok(await app.api.nominations.vote({ session: people.sid, nomination: hands }));
+    expect(await app.api.nominations.mine({ session: people.gigi })).toEqual({
+      mine: { nominations: [{ nomination: hands, name: "Hands", createdAt: expect.any(String), votes: 1, current: true }] },
+    });
+    app.clock.advance(HOUR + MINUTE); // the next round: Hands is from a past round now
+    expect(ok(await app.api.nominations.mine({ session: people.gigi })).mine.nominations).toEqual([
+      { nomination: hands, name: "Hands", createdAt: expect.any(String), votes: 1, current: null },
+    ]);
+    expect(await app.api.nominations.mine({ session: people.sasha })).toEqual({ mine: { nominations: [] } });
+    expect(await app.api.nominations.mine({ session: "invented" })).toEqual({ error: "UNKNOWN_SESSION" });
+  });
+
   test("my-votes lists only active nominations you upvoted", async () => {
     ok(await app.api.nominations.vote({ session: people.sid, nomination: hands }));
     expect(await app.api.nominations["my-votes"]({ session: people.sid, category })).toEqual({
