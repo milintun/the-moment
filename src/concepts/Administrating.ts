@@ -25,8 +25,10 @@ export class AdministratingConcept {
       this.indexed = true;
     }
     try {
-      // Makes user an admin if they aren't one, and marks them as the owner.
-      await this.admins.updateOne({ _id: user }, { $set: { owner: true } }, { upsert: true });
+      // Makes user an admin if they aren't one, and marks them as the owner. Matching only a
+      // non-owner record means an existing owner (this user or another) always collides:
+      // with the user's own _id, or with the one-owner index.
+      await this.admins.updateOne({ _id: user, owner: { $ne: true } }, { $set: { owner: true } }, { upsert: true });
     } catch (error) {
       if (error instanceof MongoServerError && error.code === 11000) {
         throw new OwnerExists("The application already has an owner.");

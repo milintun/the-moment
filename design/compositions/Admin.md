@@ -15,8 +15,10 @@ The owner may [add an admin](reaction:Admin.AddAdmin) and
 [remove an admin](reaction:Admin.RemoveAdmin); Administrating refuses removing the
 owner. Any admin may [list the admins](reaction:Admin.ListAdmins) as
 [every admin and whether they are the owner](former:Admin.AdminList). The owner itself
-is set once outside the application: a setup script calls Administrating's
-`setOwner` directly, before the application is used. Running it again is refused with
+is set once outside the application, for an account that is already registered:
+either a setup script, or, when the server starts with an `OWNER` setting naming that
+account, the server itself calls Administrating's `setOwner` directly. An unregistered
+name is never made owner, so registering that name later grants nothing. Running it again is refused with
 `OWNER_EXISTS` and changes nothing. Until it has run there is no owner and no admin,
 so every owner-only and admin-only request answers `OWNER_ONLY` or `ADMIN_ONLY`.
 

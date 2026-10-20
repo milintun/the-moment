@@ -3,6 +3,7 @@ import { createHttpHandler } from "@mit-sdg/sync-engine-http/handler";
 import { assembleApplication } from "./assembly.ts";
 import { db } from "./db.ts";
 import { policy } from "./http.ts";
+import { makeOwner } from "./owner.ts";
 
 const application = assembleApplication();
 const gateway = createGateway({ application });
@@ -34,3 +35,16 @@ const server = Bun.serve({
 });
 
 console.log(`Backend ready on ${server.url}`);
+
+// Setting OWNER makes that registered account the owner when the app starts, if there is no
+// owner yet. On the platform, register the account first, then set OWNER and restart.
+if (process.env.OWNER) {
+  const result = await makeOwner(db, process.env.OWNER);
+  console.log(
+    result === "made-owner"
+      ? `${process.env.OWNER} is now the owner.`
+      : result === "no-account"
+        ? `OWNER is ${process.env.OWNER}, but there is no such account yet; register it, then restart.`
+        : "OWNER is set, but the application already has an owner; nothing changed.",
+  );
+}

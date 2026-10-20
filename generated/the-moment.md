@@ -386,7 +386,7 @@ Former "every admin" — inputs (); bindings (user, owner); promises exactly one
 ### every cycle
 
 Authored path: `Admin.CycleList`.
-- Covered by [Admin](../design/compositions/Admin.md), line 75.
+- Covered by [Admin](../design/compositions/Admin.md), line 77.
 
 ```former
 Former "every cycle" — inputs (); bindings (cycle, start, period, runs, item); promises exactly one record — forms:
@@ -538,7 +538,7 @@ Former "the posts in (group) upvoted by (user)" — inputs (group, user); bindin
 ### the ranking of (category) from (start) to (end)
 
 Authored path: `Public.RoundRanking`.
-- Covered by [Admin](../design/compositions/Admin.md), line 62.
+- Covered by [Admin](../design/compositions/Admin.md), line 64.
 - Covered by [Public](../design/compositions/Public.md), line 61.
 
 ```former
@@ -563,7 +563,7 @@ Former "the ranking of (category) from (start) to (end)" — inputs (category, s
 
 Authored path: `Admin.AddAdmin`.
 - Covered by [Admin](../design/compositions/Admin.md), line 14.
-- Covered by [Admin](../design/compositions/Admin.md), line 24.
+- Covered by [Admin](../design/compositions/Admin.md), line 26.
 
 ```reaction
 when RequestBoundary.request (path: "/admin/admins/add", requestId, session, user)
@@ -575,7 +575,7 @@ then
 
 Authored path: `Admin.AddAdmin`.
 - Covered by [Admin](../design/compositions/Admin.md), line 14.
-- Covered by [Admin](../design/compositions/Admin.md), line 24.
+- Covered by [Admin](../design/compositions/Admin.md), line 26.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.AddAdmin
@@ -590,7 +590,7 @@ then
 
 Authored path: `Admin.AddAdmin`.
 - Covered by [Admin](../design/compositions/Admin.md), line 14.
-- Covered by [Admin](../design/compositions/Admin.md), line 24.
+- Covered by [Admin](../design/compositions/Admin.md), line 26.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.AddAdmin
@@ -605,7 +605,7 @@ then
 
 Authored path: `Admin.AddAdmin`.
 - Covered by [Admin](../design/compositions/Admin.md), line 14.
-- Covered by [Admin](../design/compositions/Admin.md), line 24.
+- Covered by [Admin](../design/compositions/Admin.md), line 26.
 
 ```reaction
 when Administrating.addAdmin (user), asked by Admin.AddAdmin:owner#2
@@ -618,8 +618,8 @@ then
 ### Admin.AddItemToCycle
 
 Authored path: `Admin.AddItemToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 87.
-- Covered by [Admin](../design/compositions/Admin.md), line 95.
+- Covered by [Admin](../design/compositions/Admin.md), line 89.
+- Covered by [Admin](../design/compositions/Admin.md), line 97.
 
 ```reaction
 when RequestBoundary.request (cycle, item, path: "/admin/cycles/add-item", requestId, session)
@@ -630,8 +630,8 @@ then
 ### Admin.AddItemToCycle:category#2
 
 Authored path: `Admin.AddItemToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 87.
-- Covered by [Admin](../design/compositions/Admin.md), line 95.
+- Covered by [Admin](../design/compositions/Admin.md), line 89.
+- Covered by [Admin](../design/compositions/Admin.md), line 97.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.AddItemToCycle
@@ -646,8 +646,8 @@ then
 ### Admin.AddItemToCycle:category#3
 
 Authored path: `Admin.AddItemToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 87.
-- Covered by [Admin](../design/compositions/Admin.md), line 95.
+- Covered by [Admin](../design/compositions/Admin.md), line 89.
+- Covered by [Admin](../design/compositions/Admin.md), line 97.
 
 ```reaction
 when Cycling.addItem (cycle, item), asked by Admin.AddItemToCycle:category#2
@@ -660,8 +660,8 @@ then
 ### Admin.AddItemToCycle:group#2
 
 Authored path: `Admin.AddItemToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 87.
-- Covered by [Admin](../design/compositions/Admin.md), line 95.
+- Covered by [Admin](../design/compositions/Admin.md), line 89.
+- Covered by [Admin](../design/compositions/Admin.md), line 97.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.AddItemToCycle
@@ -676,8 +676,8 @@ then
 ### Admin.AddItemToCycle:group#3
 
 Authored path: `Admin.AddItemToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 87.
-- Covered by [Admin](../design/compositions/Admin.md), line 95.
+- Covered by [Admin](../design/compositions/Admin.md), line 89.
+- Covered by [Admin](../design/compositions/Admin.md), line 97.
 
 ```reaction
 when Cycling.addItem (cycle, item), asked by Admin.AddItemToCycle:group#2
@@ -690,8 +690,8 @@ then
 ### Admin.AddItemToCycle:neither#2
 
 Authored path: `Admin.AddItemToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 87.
-- Covered by [Admin](../design/compositions/Admin.md), line 95.
+- Covered by [Admin](../design/compositions/Admin.md), line 89.
+- Covered by [Admin](../design/compositions/Admin.md), line 97.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.AddItemToCycle
@@ -707,8 +707,8 @@ then
 ### Admin.AddItemToCycle:not-admin#2
 
 Authored path: `Admin.AddItemToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 87.
-- Covered by [Admin](../design/compositions/Admin.md), line 95.
+- Covered by [Admin](../design/compositions/Admin.md), line 89.
+- Covered by [Admin](../design/compositions/Admin.md), line 97.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.AddItemToCycle
@@ -722,8 +722,8 @@ then
 ### Admin.AddPostToGroup
 
 Authored path: `Admin.AddPostToGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 42.
-- Covered by [Admin](../design/compositions/Admin.md), line 46.
+- Covered by [Admin](../design/compositions/Admin.md), line 44.
+- Covered by [Admin](../design/compositions/Admin.md), line 48.
 
 ```reaction
 when RequestBoundary.request (group, path: "/admin/groups/add-post", post, requestId, session)
@@ -734,8 +734,8 @@ then
 ### Admin.AddPostToGroup:admin#2
 
 Authored path: `Admin.AddPostToGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 42.
-- Covered by [Admin](../design/compositions/Admin.md), line 46.
+- Covered by [Admin](../design/compositions/Admin.md), line 44.
+- Covered by [Admin](../design/compositions/Admin.md), line 48.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.AddPostToGroup
@@ -749,8 +749,8 @@ then
 ### Admin.AddPostToGroup:admin#3
 
 Authored path: `Admin.AddPostToGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 42.
-- Covered by [Admin](../design/compositions/Admin.md), line 46.
+- Covered by [Admin](../design/compositions/Admin.md), line 44.
+- Covered by [Admin](../design/compositions/Admin.md), line 48.
 
 ```reaction
 when Grouping.addItem (group, item: post), asked by Admin.AddPostToGroup:admin#2
@@ -763,8 +763,8 @@ then
 ### Admin.AddPostToGroup:not-admin#2
 
 Authored path: `Admin.AddPostToGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 42.
-- Covered by [Admin](../design/compositions/Admin.md), line 46.
+- Covered by [Admin](../design/compositions/Admin.md), line 44.
+- Covered by [Admin](../design/compositions/Admin.md), line 48.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.AddPostToGroup
@@ -778,8 +778,8 @@ then
 ### Admin.CreateCategory
 
 Authored path: `Admin.CreateCategory`.
-- Covered by [Admin](../design/compositions/Admin.md), line 52.
-- Covered by [Admin](../design/compositions/Admin.md), line 57.
+- Covered by [Admin](../design/compositions/Admin.md), line 54.
+- Covered by [Admin](../design/compositions/Admin.md), line 59.
 
 ```reaction
 when RequestBoundary.request (name, path: "/admin/categories/create", requestId, session)
@@ -790,8 +790,8 @@ then
 ### Admin.CreateCategory:admin#2
 
 Authored path: `Admin.CreateCategory`.
-- Covered by [Admin](../design/compositions/Admin.md), line 52.
-- Covered by [Admin](../design/compositions/Admin.md), line 57.
+- Covered by [Admin](../design/compositions/Admin.md), line 54.
+- Covered by [Admin](../design/compositions/Admin.md), line 59.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.CreateCategory
@@ -805,8 +805,8 @@ then
 ### Admin.CreateCategory:admin#3
 
 Authored path: `Admin.CreateCategory`.
-- Covered by [Admin](../design/compositions/Admin.md), line 52.
-- Covered by [Admin](../design/compositions/Admin.md), line 57.
+- Covered by [Admin](../design/compositions/Admin.md), line 54.
+- Covered by [Admin](../design/compositions/Admin.md), line 59.
 
 ```reaction
 when Nominating.createCategory (name, category), asked by Admin.CreateCategory:admin#2
@@ -819,8 +819,8 @@ then
 ### Admin.CreateCategory:not-admin#2
 
 Authored path: `Admin.CreateCategory`.
-- Covered by [Admin](../design/compositions/Admin.md), line 52.
-- Covered by [Admin](../design/compositions/Admin.md), line 57.
+- Covered by [Admin](../design/compositions/Admin.md), line 54.
+- Covered by [Admin](../design/compositions/Admin.md), line 59.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.CreateCategory
@@ -834,8 +834,8 @@ then
 ### Admin.CreateCycle
 
 Authored path: `Admin.CreateCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 76.
-- Covered by [Admin](../design/compositions/Admin.md), line 82.
+- Covered by [Admin](../design/compositions/Admin.md), line 78.
+- Covered by [Admin](../design/compositions/Admin.md), line 84.
 
 ```reaction
 when RequestBoundary.request (path: "/admin/cycles/create", period, requestId, runs, session)
@@ -846,8 +846,8 @@ then
 ### Admin.CreateCycle:admin#2
 
 Authored path: `Admin.CreateCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 76.
-- Covered by [Admin](../design/compositions/Admin.md), line 82.
+- Covered by [Admin](../design/compositions/Admin.md), line 78.
+- Covered by [Admin](../design/compositions/Admin.md), line 84.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.CreateCycle
@@ -862,8 +862,8 @@ then
 ### Admin.CreateCycle:admin#3
 
 Authored path: `Admin.CreateCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 76.
-- Covered by [Admin](../design/compositions/Admin.md), line 82.
+- Covered by [Admin](../design/compositions/Admin.md), line 78.
+- Covered by [Admin](../design/compositions/Admin.md), line 84.
 
 ```reaction
 when Cycling.create (period, runs, start, cycle), asked by Admin.CreateCycle:admin#2
@@ -876,8 +876,8 @@ then
 ### Admin.CreateCycle:not-admin#2
 
 Authored path: `Admin.CreateCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 76.
-- Covered by [Admin](../design/compositions/Admin.md), line 82.
+- Covered by [Admin](../design/compositions/Admin.md), line 78.
+- Covered by [Admin](../design/compositions/Admin.md), line 84.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.CreateCycle
@@ -891,8 +891,8 @@ then
 ### Admin.CreateGroup
 
 Authored path: `Admin.CreateGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 31.
-- Covered by [Admin](../design/compositions/Admin.md), line 38.
+- Covered by [Admin](../design/compositions/Admin.md), line 33.
+- Covered by [Admin](../design/compositions/Admin.md), line 40.
 
 ```reaction
 when RequestBoundary.request (name, path: "/admin/groups/create", requestId, session)
@@ -903,8 +903,8 @@ then
 ### Admin.CreateGroup:admin#2
 
 Authored path: `Admin.CreateGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 31.
-- Covered by [Admin](../design/compositions/Admin.md), line 38.
+- Covered by [Admin](../design/compositions/Admin.md), line 33.
+- Covered by [Admin](../design/compositions/Admin.md), line 40.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.CreateGroup
@@ -918,8 +918,8 @@ then
 ### Admin.CreateGroup:admin#3
 
 Authored path: `Admin.CreateGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 31.
-- Covered by [Admin](../design/compositions/Admin.md), line 38.
+- Covered by [Admin](../design/compositions/Admin.md), line 33.
+- Covered by [Admin](../design/compositions/Admin.md), line 40.
 
 ```reaction
 when Grouping.create (name, group), asked by Admin.CreateGroup:admin#2
@@ -932,8 +932,8 @@ then
 ### Admin.CreateGroup:not-admin#2
 
 Authored path: `Admin.CreateGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 31.
-- Covered by [Admin](../design/compositions/Admin.md), line 38.
+- Covered by [Admin](../design/compositions/Admin.md), line 33.
+- Covered by [Admin](../design/compositions/Admin.md), line 40.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.CreateGroup
@@ -947,8 +947,8 @@ then
 ### Admin.DeleteCycle
 
 Authored path: `Admin.DeleteCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 77.
-- Covered by [Admin](../design/compositions/Admin.md), line 83.
+- Covered by [Admin](../design/compositions/Admin.md), line 79.
+- Covered by [Admin](../design/compositions/Admin.md), line 85.
 
 ```reaction
 when RequestBoundary.request (cycle, path: "/admin/cycles/delete", requestId, session)
@@ -959,8 +959,8 @@ then
 ### Admin.DeleteCycle:admin#2
 
 Authored path: `Admin.DeleteCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 77.
-- Covered by [Admin](../design/compositions/Admin.md), line 83.
+- Covered by [Admin](../design/compositions/Admin.md), line 79.
+- Covered by [Admin](../design/compositions/Admin.md), line 85.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.DeleteCycle
@@ -974,8 +974,8 @@ then
 ### Admin.DeleteCycle:admin#3
 
 Authored path: `Admin.DeleteCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 77.
-- Covered by [Admin](../design/compositions/Admin.md), line 83.
+- Covered by [Admin](../design/compositions/Admin.md), line 79.
+- Covered by [Admin](../design/compositions/Admin.md), line 85.
 
 ```reaction
 when Cycling.delete (cycle), asked by Admin.DeleteCycle:admin#2
@@ -988,8 +988,8 @@ then
 ### Admin.DeleteCycle:not-admin#2
 
 Authored path: `Admin.DeleteCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 77.
-- Covered by [Admin](../design/compositions/Admin.md), line 83.
+- Covered by [Admin](../design/compositions/Admin.md), line 79.
+- Covered by [Admin](../design/compositions/Admin.md), line 85.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.DeleteCycle
@@ -1003,8 +1003,8 @@ then
 ### Admin.DeleteGroup
 
 Authored path: `Admin.DeleteGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 32.
-- Covered by [Admin](../design/compositions/Admin.md), line 39.
+- Covered by [Admin](../design/compositions/Admin.md), line 34.
+- Covered by [Admin](../design/compositions/Admin.md), line 41.
 
 ```reaction
 when RequestBoundary.request (group, path: "/admin/groups/delete", requestId, session)
@@ -1015,8 +1015,8 @@ then
 ### Admin.DeleteGroup:admin#2
 
 Authored path: `Admin.DeleteGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 32.
-- Covered by [Admin](../design/compositions/Admin.md), line 39.
+- Covered by [Admin](../design/compositions/Admin.md), line 34.
+- Covered by [Admin](../design/compositions/Admin.md), line 41.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.DeleteGroup
@@ -1030,8 +1030,8 @@ then
 ### Admin.DeleteGroup:admin#3
 
 Authored path: `Admin.DeleteGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 32.
-- Covered by [Admin](../design/compositions/Admin.md), line 39.
+- Covered by [Admin](../design/compositions/Admin.md), line 34.
+- Covered by [Admin](../design/compositions/Admin.md), line 41.
 
 ```reaction
 when Grouping.delete (group), asked by Admin.DeleteGroup:admin#2
@@ -1044,8 +1044,8 @@ then
 ### Admin.DeleteGroup:not-admin#2
 
 Authored path: `Admin.DeleteGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 32.
-- Covered by [Admin](../design/compositions/Admin.md), line 39.
+- Covered by [Admin](../design/compositions/Admin.md), line 34.
+- Covered by [Admin](../design/compositions/Admin.md), line 41.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.DeleteGroup
@@ -1059,7 +1059,7 @@ then
 ### Admin.DeletedGroupLeavesCycle
 
 Authored path: `Admin.DeletedGroupLeavesCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 35.
+- Covered by [Admin](../design/compositions/Admin.md), line 37.
 
 ```reaction
 when Grouping.delete (group)
@@ -1073,7 +1073,7 @@ then
 
 Authored path: `Admin.ListAdmins`.
 - Covered by [Admin](../design/compositions/Admin.md), line 16.
-- Covered by [Admin](../design/compositions/Admin.md), line 26.
+- Covered by [Admin](../design/compositions/Admin.md), line 28.
 
 ```reaction
 when RequestBoundary.request (path: "/admin/admins/list", requestId, session)
@@ -1085,7 +1085,7 @@ then
 
 Authored path: `Admin.ListAdmins`.
 - Covered by [Admin](../design/compositions/Admin.md), line 16.
-- Covered by [Admin](../design/compositions/Admin.md), line 26.
+- Covered by [Admin](../design/compositions/Admin.md), line 28.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.ListAdmins
@@ -1100,7 +1100,7 @@ then
 
 Authored path: `Admin.ListAdmins`.
 - Covered by [Admin](../design/compositions/Admin.md), line 16.
-- Covered by [Admin](../design/compositions/Admin.md), line 26.
+- Covered by [Admin](../design/compositions/Admin.md), line 28.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.ListAdmins
@@ -1114,8 +1114,8 @@ then
 ### Admin.ListCycles
 
 Authored path: `Admin.ListCycles`.
-- Covered by [Admin](../design/compositions/Admin.md), line 74.
-- Covered by [Admin](../design/compositions/Admin.md), line 81.
+- Covered by [Admin](../design/compositions/Admin.md), line 76.
+- Covered by [Admin](../design/compositions/Admin.md), line 83.
 
 ```reaction
 when RequestBoundary.request (path: "/admin/cycles/list", requestId, session)
@@ -1126,8 +1126,8 @@ then
 ### Admin.ListCycles:admin#2
 
 Authored path: `Admin.ListCycles`.
-- Covered by [Admin](../design/compositions/Admin.md), line 74.
-- Covered by [Admin](../design/compositions/Admin.md), line 81.
+- Covered by [Admin](../design/compositions/Admin.md), line 76.
+- Covered by [Admin](../design/compositions/Admin.md), line 83.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.ListCycles
@@ -1141,8 +1141,8 @@ then
 ### Admin.ListCycles:not-admin#2
 
 Authored path: `Admin.ListCycles`.
-- Covered by [Admin](../design/compositions/Admin.md), line 74.
-- Covered by [Admin](../design/compositions/Admin.md), line 81.
+- Covered by [Admin](../design/compositions/Admin.md), line 76.
+- Covered by [Admin](../design/compositions/Admin.md), line 83.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.ListCycles
@@ -1156,8 +1156,8 @@ then
 ### Admin.PreviousRanking
 
 Authored path: `Admin.PreviousRanking`.
-- Covered by [Admin](../design/compositions/Admin.md), line 61.
-- Covered by [Admin](../design/compositions/Admin.md), line 67.
+- Covered by [Admin](../design/compositions/Admin.md), line 63.
+- Covered by [Admin](../design/compositions/Admin.md), line 69.
 
 ```reaction
 when RequestBoundary.request (category, path: "/admin/nominations/previous", requestId, session)
@@ -1168,8 +1168,8 @@ then
 ### Admin.PreviousRanking:admin#2
 
 Authored path: `Admin.PreviousRanking`.
-- Covered by [Admin](../design/compositions/Admin.md), line 61.
-- Covered by [Admin](../design/compositions/Admin.md), line 67.
+- Covered by [Admin](../design/compositions/Admin.md), line 63.
+- Covered by [Admin](../design/compositions/Admin.md), line 69.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.PreviousRanking
@@ -1185,8 +1185,8 @@ then
 ### Admin.PreviousRanking:no-previous-round#2
 
 Authored path: `Admin.PreviousRanking`.
-- Covered by [Admin](../design/compositions/Admin.md), line 61.
-- Covered by [Admin](../design/compositions/Admin.md), line 67.
+- Covered by [Admin](../design/compositions/Admin.md), line 63.
+- Covered by [Admin](../design/compositions/Admin.md), line 69.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.PreviousRanking
@@ -1202,8 +1202,8 @@ then
 ### Admin.PreviousRanking:not-admin#2
 
 Authored path: `Admin.PreviousRanking`.
-- Covered by [Admin](../design/compositions/Admin.md), line 61.
-- Covered by [Admin](../design/compositions/Admin.md), line 67.
+- Covered by [Admin](../design/compositions/Admin.md), line 63.
+- Covered by [Admin](../design/compositions/Admin.md), line 69.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.PreviousRanking
@@ -1218,7 +1218,7 @@ then
 
 Authored path: `Admin.RemoveAdmin`.
 - Covered by [Admin](../design/compositions/Admin.md), line 15.
-- Covered by [Admin](../design/compositions/Admin.md), line 25.
+- Covered by [Admin](../design/compositions/Admin.md), line 27.
 
 ```reaction
 when RequestBoundary.request (path: "/admin/admins/remove", requestId, session, user)
@@ -1230,7 +1230,7 @@ then
 
 Authored path: `Admin.RemoveAdmin`.
 - Covered by [Admin](../design/compositions/Admin.md), line 15.
-- Covered by [Admin](../design/compositions/Admin.md), line 25.
+- Covered by [Admin](../design/compositions/Admin.md), line 27.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.RemoveAdmin
@@ -1245,7 +1245,7 @@ then
 
 Authored path: `Admin.RemoveAdmin`.
 - Covered by [Admin](../design/compositions/Admin.md), line 15.
-- Covered by [Admin](../design/compositions/Admin.md), line 25.
+- Covered by [Admin](../design/compositions/Admin.md), line 27.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.RemoveAdmin
@@ -1260,7 +1260,7 @@ then
 
 Authored path: `Admin.RemoveAdmin`.
 - Covered by [Admin](../design/compositions/Admin.md), line 15.
-- Covered by [Admin](../design/compositions/Admin.md), line 25.
+- Covered by [Admin](../design/compositions/Admin.md), line 27.
 
 ```reaction
 when Administrating.removeAdmin (user), asked by Admin.RemoveAdmin:owner#2
@@ -1273,8 +1273,8 @@ then
 ### Admin.RemoveItemFromCycle
 
 Authored path: `Admin.RemoveItemFromCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 88.
-- Covered by [Admin](../design/compositions/Admin.md), line 96.
+- Covered by [Admin](../design/compositions/Admin.md), line 90.
+- Covered by [Admin](../design/compositions/Admin.md), line 98.
 
 ```reaction
 when RequestBoundary.request (cycle, item, path: "/admin/cycles/remove-item", requestId, session)
@@ -1285,8 +1285,8 @@ then
 ### Admin.RemoveItemFromCycle:admin#2
 
 Authored path: `Admin.RemoveItemFromCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 88.
-- Covered by [Admin](../design/compositions/Admin.md), line 96.
+- Covered by [Admin](../design/compositions/Admin.md), line 90.
+- Covered by [Admin](../design/compositions/Admin.md), line 98.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.RemoveItemFromCycle
@@ -1300,8 +1300,8 @@ then
 ### Admin.RemoveItemFromCycle:admin#3
 
 Authored path: `Admin.RemoveItemFromCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 88.
-- Covered by [Admin](../design/compositions/Admin.md), line 96.
+- Covered by [Admin](../design/compositions/Admin.md), line 90.
+- Covered by [Admin](../design/compositions/Admin.md), line 98.
 
 ```reaction
 when Cycling.removeItem (cycle, item), asked by Admin.RemoveItemFromCycle:admin#2
@@ -1314,8 +1314,8 @@ then
 ### Admin.RemoveItemFromCycle:not-admin#2
 
 Authored path: `Admin.RemoveItemFromCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 88.
-- Covered by [Admin](../design/compositions/Admin.md), line 96.
+- Covered by [Admin](../design/compositions/Admin.md), line 90.
+- Covered by [Admin](../design/compositions/Admin.md), line 98.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.RemoveItemFromCycle
@@ -1329,8 +1329,8 @@ then
 ### Admin.RemovePostFromGroup
 
 Authored path: `Admin.RemovePostFromGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 43.
-- Covered by [Admin](../design/compositions/Admin.md), line 47.
+- Covered by [Admin](../design/compositions/Admin.md), line 45.
+- Covered by [Admin](../design/compositions/Admin.md), line 49.
 
 ```reaction
 when RequestBoundary.request (group, path: "/admin/groups/remove-post", post, requestId, session)
@@ -1341,8 +1341,8 @@ then
 ### Admin.RemovePostFromGroup:admin#2
 
 Authored path: `Admin.RemovePostFromGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 43.
-- Covered by [Admin](../design/compositions/Admin.md), line 47.
+- Covered by [Admin](../design/compositions/Admin.md), line 45.
+- Covered by [Admin](../design/compositions/Admin.md), line 49.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.RemovePostFromGroup
@@ -1356,8 +1356,8 @@ then
 ### Admin.RemovePostFromGroup:admin#3
 
 Authored path: `Admin.RemovePostFromGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 43.
-- Covered by [Admin](../design/compositions/Admin.md), line 47.
+- Covered by [Admin](../design/compositions/Admin.md), line 45.
+- Covered by [Admin](../design/compositions/Admin.md), line 49.
 
 ```reaction
 when Grouping.removeItem (group, item: post), asked by Admin.RemovePostFromGroup:admin#2
@@ -1370,8 +1370,8 @@ then
 ### Admin.RemovePostFromGroup:not-admin#2
 
 Authored path: `Admin.RemovePostFromGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 43.
-- Covered by [Admin](../design/compositions/Admin.md), line 47.
+- Covered by [Admin](../design/compositions/Admin.md), line 45.
+- Covered by [Admin](../design/compositions/Admin.md), line 49.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.RemovePostFromGroup
@@ -1385,8 +1385,8 @@ then
 ### Admin.SetCycleRuns
 
 Authored path: `Admin.SetCycleRuns`.
-- Covered by [Admin](../design/compositions/Admin.md), line 91.
-- Covered by [Admin](../design/compositions/Admin.md), line 97.
+- Covered by [Admin](../design/compositions/Admin.md), line 93.
+- Covered by [Admin](../design/compositions/Admin.md), line 99.
 
 ```reaction
 when RequestBoundary.request (cycle, path: "/admin/cycles/set-runs", requestId, runs, session)
@@ -1397,8 +1397,8 @@ then
 ### Admin.SetCycleRuns:admin#2
 
 Authored path: `Admin.SetCycleRuns`.
-- Covered by [Admin](../design/compositions/Admin.md), line 91.
-- Covered by [Admin](../design/compositions/Admin.md), line 97.
+- Covered by [Admin](../design/compositions/Admin.md), line 93.
+- Covered by [Admin](../design/compositions/Admin.md), line 99.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.SetCycleRuns
@@ -1412,8 +1412,8 @@ then
 ### Admin.SetCycleRuns:admin#3
 
 Authored path: `Admin.SetCycleRuns`.
-- Covered by [Admin](../design/compositions/Admin.md), line 91.
-- Covered by [Admin](../design/compositions/Admin.md), line 97.
+- Covered by [Admin](../design/compositions/Admin.md), line 93.
+- Covered by [Admin](../design/compositions/Admin.md), line 99.
 
 ```reaction
 when Cycling.setRuns (cycle, runs), asked by Admin.SetCycleRuns:admin#2
@@ -1426,8 +1426,8 @@ then
 ### Admin.SetCycleRuns:not-admin#2
 
 Authored path: `Admin.SetCycleRuns`.
-- Covered by [Admin](../design/compositions/Admin.md), line 91.
-- Covered by [Admin](../design/compositions/Admin.md), line 97.
+- Covered by [Admin](../design/compositions/Admin.md), line 93.
+- Covered by [Admin](../design/compositions/Admin.md), line 99.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.SetCycleRuns

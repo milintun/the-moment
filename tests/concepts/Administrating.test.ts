@@ -50,6 +50,12 @@ describe("setOwner", () => {
     expect(await admins._admins({})).toEqual([{ user: "gigi", owner: true }]);
   });
 
+  test("refuses OWNER_EXISTS for the current owner too", async () => {
+    await admins.setOwner({ user: "milin" });
+    await expect(admins.setOwner({ user: "milin" })).rejects.toBeInstanceOf(OwnerExists);
+    expect(await admins._admins({})).toEqual([{ user: "milin", owner: true }]);
+  });
+
   test("refuses OWNER_EXISTS and leaves the other user unchanged", async () => {
     await admins.setOwner({ user: "milin" });
     await expect(admins.setOwner({ user: "sasha" })).rejects.toBeInstanceOf(OwnerExists);
