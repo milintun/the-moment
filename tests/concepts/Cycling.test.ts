@@ -151,6 +151,15 @@ describe("queries", () => {
     expect(await previousAt("not-cycled", at(DAY + HOUR))).toBeNull();
   });
 
+  test("_run gives any run's window, past or future, and nothing for runs the cycle doesn't have", async () => {
+    const { cycle } = await cycling.create({ start: T0, period: DAY, runs: 3 });
+    await cycling.addItem({ cycle, item: "g" });
+    expect(await cycling._run({ item: "g", run: 0 })).toEqual([{ start: T0, end: at(DAY) }]);
+    expect(await cycling._run({ item: "g", run: 2 })).toEqual([{ start: at(2 * DAY), end: at(3 * DAY) }]);
+    for (const run of [-1, 3, 1.5]) expect(await cycling._run({ item: "g", run })).toEqual([]);
+    expect(await cycling._run({ item: "not-cycled", run: 0 })).toEqual([]);
+  });
+
   test("_cycle and _items for members and non-members", async () => {
     const { cycle } = await cycling.create({ start: T0, period: DAY, runs: 2 });
     await cycling.addItem({ cycle, item: "b" });

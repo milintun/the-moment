@@ -79,6 +79,7 @@ Defined in [Cycling](../design/concepts/Cycling.md), line 1.
 - `_cycle(item: Item) : optional (cycle: Cycle, start: DateTime, period: Number, runs: Number)`
 - `_currentRun(item: Item, now: DateTime) : optional (run: Number, start: DateTime, end: DateTime)`
 - `_previousRun(item: Item, now: DateTime) : optional (run: Number, start: DateTime, end: DateTime)`
+- `_run(item: Item, run: Number) : optional (start: DateTime, end: DateTime)`
 - `_all() : many (cycle: Cycle, start: DateTime, period: Number, runs: Number)`
 - `_items(cycle: Cycle) : many (item: Item)`
 
@@ -160,6 +161,7 @@ Defined in [Posting](../design/concepts/Posting.md), line 1.
 #### Queries
 
 - `_get(post: Post) : optional (owner: User, content: Content, caption: String, createdAt: DateTime)`
+- `_byOwner(owner: User) : many (post: Post, content: Content, caption: String, createdAt: DateTime)`
 
 #### Instances
 
@@ -276,7 +278,7 @@ Authored path: `User.GroupOpen`.
 ### (nomination) is active at (now)
 
 Authored path: `User.NominationActive`.
-- Covered by [User](../design/compositions/User.md), line 99.
+- Covered by [User](../design/compositions/User.md), line 113.
 
 ```view
 (nomination) is active at (now) — inputs (nomination, now); outputs (); bindings (category, createdAt, start, end)
@@ -353,7 +355,7 @@ Authored path: `Admin.IsNotOwner`.
 ### an idea equivalent to (name) is active in (category) at (now)
 
 Authored path: `User.EquivalentActive`.
-- Covered by [User](../design/compositions/User.md), line 107.
+- Covered by [User](../design/compositions/User.md), line 121.
 
 ```view
 an idea equivalent to (name) is active in (category) at (now) — inputs (category, name, now); outputs (); bindings (createdAt, start, end)
@@ -386,7 +388,7 @@ Former "every admin" — inputs (); bindings (user, owner); promises exactly one
 ### every cycle
 
 Authored path: `Admin.CycleList`.
-- Covered by [Admin](../design/compositions/Admin.md), line 77.
+- Covered by [Admin](../design/compositions/Admin.md), line 74.
 
 ```former
 Former "every cycle" — inputs (); bindings (cycle, start, period, runs, item); promises exactly one record — forms:
@@ -450,7 +452,7 @@ Former "every group at (now)" — inputs (now); bindings (group, name); promises
 ### every nomination category at (now)
 
 Authored path: `Public.CategoryList`.
-- Covered by [Public](../design/compositions/Public.md), line 53.
+- Covered by [Public](../design/compositions/Public.md), line 62.
 
 ```former
 Former "every nomination category at (now)" — inputs (now); bindings (category, name); promises exactly one record — forms:
@@ -465,7 +467,7 @@ Former "every nomination category at (now)" — inputs (now); bindings (category
 ### the active nominations in (category) upvoted by (user) at (now)
 
 Authored path: `User.MyNominationVotes`.
-- Covered by [User](../design/compositions/User.md), line 131.
+- Covered by [User](../design/compositions/User.md), line 145.
 
 ```former
 Former "the active nominations in (category) upvoted by (user) at (now)" — inputs (category, user, now); bindings (nomination, createdAt, start, end); promises exactly one record — forms:
@@ -482,7 +484,7 @@ Former "the active nominations in (category) upvoted by (user) at (now)" — inp
 ### the details of (post)
 
 Authored path: `Public.PostDetails`.
-- Covered by [Public](../design/compositions/Public.md), line 42.
+- Covered by [Public](../design/compositions/Public.md), line 51.
 
 ```former
 Former "the details of (post)" — inputs (post); bindings (owner, content, caption, createdAt, votes); promises at most one record — forms:
@@ -495,30 +497,6 @@ Former "the details of (post)" — inputs (post); bindings (owner, content, capt
     owner
     post
     votes
-```
-
-### the feed of (group) at (now)
-
-Authored path: `Public.GroupFeed`.
-- Covered by [Public](../design/compositions/Public.md), line 21.
-
-```former
-Former "the feed of (group) at (now)" — inputs (group, now); bindings (post, owner, content, caption, createdAt, start, end, votes); promises exactly one record — forms:
-  a record of
-    posts: each Grouping._items (group) has (item: post)
-      where Cycling._currentRun (item: group, now) has (end, start)
-      where Posting._get (post) has (caption, content, createdAt, owner)
-      where createdAt is at least start
-      where createdAt is less than end
-      where Upvoting._count (target: post) has (votes)
-      arranged by votes, descending
-      form a record of
-        caption
-        content
-        createdAt
-        owner
-        post
-        votes
 ```
 
 ### the posts in (group) upvoted by (user)
@@ -535,11 +513,83 @@ Former "the posts in (group) upvoted by (user)" — inputs (group, user); bindin
         post
 ```
 
+### the posts of (group) from (start) to (end)
+
+Authored path: `Public.SeasonPosts`.
+- Covered by [Public](../design/compositions/Public.md), line 21.
+
+```former
+Former "the posts of (group) from (start) to (end)" — inputs (group, start, end); bindings (post, owner, content, caption, createdAt, votes); promises exactly one record — forms:
+  a record of
+    posts: each Grouping._items (group) has (item: post)
+      where Posting._get (post) has (caption, content, createdAt, owner)
+      where createdAt is at least start
+      where createdAt is less than end
+      where Upvoting._count (target: post) has (votes)
+      arranged by votes, descending
+      form a record of
+        caption
+        content
+        createdAt
+        owner
+        post
+        votes
+```
+
+### the season of (group) at (createdAt)
+
+Authored path: `User.PostedSeason`.
+- Covered by [User](../design/compositions/User.md), line 101.
+
+```former
+Former "the season of (group) at (createdAt)" — inputs (group, createdAt); bindings (run); promises at most one record — forms:
+  a record of
+    where Cycling._currentRun (item: group, now: createdAt) has (run)
+    season: run
+```
+
+### whether (post) is in season at (now)
+
+Authored path: `User.InSeason`.
+- Covered by [User](../design/compositions/User.md), line 103.
+
+```former
+Former "whether (post) is in season at (now)" — inputs (post, now); bindings (); promises at most one record — forms:
+  a record of
+    where view "(post) is in season at (now)" with (now, post)
+    current: true
+```
+
+### the posts of (user) at (now)
+
+Authored path: `User.MyPosts`.
+- Covered by [User](../design/compositions/User.md), line 99.
+
+```former
+Former "the posts of (user) at (now)" — inputs (user, now); bindings (post, content, caption, createdAt, votes, group, name); promises exactly one record — forms:
+  a record of
+    posts: each Posting._byOwner (owner: user) has (caption, content, createdAt, post)
+      where Upvoting._count (target: post) has (votes)
+      form a record of
+        caption
+        content
+        createdAt
+        galleries: each Grouping._groupsOf (item: post) has (group)
+          where Grouping._get (group) has (name)
+          form a record of
+            group
+            name
+            … former "the season of (group) at (createdAt)" with (createdAt, group), with blank leaves if absent
+        post
+        votes
+        … former "whether (post) is in season at (now)" with (now, post), with blank leaves if absent
+```
+
 ### the ranking of (category) from (start) to (end)
 
 Authored path: `Public.RoundRanking`.
-- Covered by [Admin](../design/compositions/Admin.md), line 64.
-- Covered by [Public](../design/compositions/Public.md), line 61.
+- Covered by [Admin](../design/compositions/Admin.md), line 61.
+- Covered by [Public](../design/compositions/Public.md), line 70.
 
 ```former
 Former "the ranking of (category) from (start) to (end)" — inputs (category, start, end); bindings (nomination, nominator, name, createdAt, votes); promises exactly one record — forms:
@@ -618,8 +668,8 @@ then
 ### Admin.AddItemToCycle
 
 Authored path: `Admin.AddItemToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 89.
-- Covered by [Admin](../design/compositions/Admin.md), line 97.
+- Covered by [Admin](../design/compositions/Admin.md), line 86.
+- Covered by [Admin](../design/compositions/Admin.md), line 94.
 
 ```reaction
 when RequestBoundary.request (cycle, item, path: "/admin/cycles/add-item", requestId, session)
@@ -630,8 +680,8 @@ then
 ### Admin.AddItemToCycle:category#2
 
 Authored path: `Admin.AddItemToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 89.
-- Covered by [Admin](../design/compositions/Admin.md), line 97.
+- Covered by [Admin](../design/compositions/Admin.md), line 86.
+- Covered by [Admin](../design/compositions/Admin.md), line 94.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.AddItemToCycle
@@ -646,8 +696,8 @@ then
 ### Admin.AddItemToCycle:category#3
 
 Authored path: `Admin.AddItemToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 89.
-- Covered by [Admin](../design/compositions/Admin.md), line 97.
+- Covered by [Admin](../design/compositions/Admin.md), line 86.
+- Covered by [Admin](../design/compositions/Admin.md), line 94.
 
 ```reaction
 when Cycling.addItem (cycle, item), asked by Admin.AddItemToCycle:category#2
@@ -660,8 +710,8 @@ then
 ### Admin.AddItemToCycle:group#2
 
 Authored path: `Admin.AddItemToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 89.
-- Covered by [Admin](../design/compositions/Admin.md), line 97.
+- Covered by [Admin](../design/compositions/Admin.md), line 86.
+- Covered by [Admin](../design/compositions/Admin.md), line 94.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.AddItemToCycle
@@ -676,8 +726,8 @@ then
 ### Admin.AddItemToCycle:group#3
 
 Authored path: `Admin.AddItemToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 89.
-- Covered by [Admin](../design/compositions/Admin.md), line 97.
+- Covered by [Admin](../design/compositions/Admin.md), line 86.
+- Covered by [Admin](../design/compositions/Admin.md), line 94.
 
 ```reaction
 when Cycling.addItem (cycle, item), asked by Admin.AddItemToCycle:group#2
@@ -690,8 +740,8 @@ then
 ### Admin.AddItemToCycle:neither#2
 
 Authored path: `Admin.AddItemToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 89.
-- Covered by [Admin](../design/compositions/Admin.md), line 97.
+- Covered by [Admin](../design/compositions/Admin.md), line 86.
+- Covered by [Admin](../design/compositions/Admin.md), line 94.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.AddItemToCycle
@@ -707,8 +757,8 @@ then
 ### Admin.AddItemToCycle:not-admin#2
 
 Authored path: `Admin.AddItemToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 89.
-- Covered by [Admin](../design/compositions/Admin.md), line 97.
+- Covered by [Admin](../design/compositions/Admin.md), line 86.
+- Covered by [Admin](../design/compositions/Admin.md), line 94.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.AddItemToCycle
@@ -775,67 +825,11 @@ then
   RequestBoundary.respond (error: "ADMIN_ONLY", requestId)
 ```
 
-### Admin.CreateCategory
-
-Authored path: `Admin.CreateCategory`.
-- Covered by [Admin](../design/compositions/Admin.md), line 54.
-- Covered by [Admin](../design/compositions/Admin.md), line 59.
-
-```reaction
-when RequestBoundary.request (name, path: "/admin/categories/create", requestId, session)
-then
-  Sessioning.current (session)
-```
-
-### Admin.CreateCategory:admin#2
-
-Authored path: `Admin.CreateCategory`.
-- Covered by [Admin](../design/compositions/Admin.md), line 54.
-- Covered by [Admin](../design/compositions/Admin.md), line 59.
-
-```reaction
-when Sessioning.current (session), asked by Admin.CreateCategory
-where
-  view "(session) belongs to an admin" with (session)
-  earlier, RequestBoundary.request (name, path: "/admin/categories/create", requestId, session)
-then
-  Nominating.createCategory (name)
-```
-
-### Admin.CreateCategory:admin#3
-
-Authored path: `Admin.CreateCategory`.
-- Covered by [Admin](../design/compositions/Admin.md), line 54.
-- Covered by [Admin](../design/compositions/Admin.md), line 59.
-
-```reaction
-when Nominating.createCategory (name, category), asked by Admin.CreateCategory:admin#2
-where
-  earlier, RequestBoundary.request (name, path: "/admin/categories/create", requestId, session)
-then
-  RequestBoundary.respond (category, requestId)
-```
-
-### Admin.CreateCategory:not-admin#2
-
-Authored path: `Admin.CreateCategory`.
-- Covered by [Admin](../design/compositions/Admin.md), line 54.
-- Covered by [Admin](../design/compositions/Admin.md), line 59.
-
-```reaction
-when Sessioning.current (session), asked by Admin.CreateCategory
-where
-  view "(session) does not belong to an admin" with (session)
-  earlier, RequestBoundary.request (name, path: "/admin/categories/create", requestId, session)
-then
-  RequestBoundary.respond (error: "ADMIN_ONLY", requestId)
-```
-
 ### Admin.CreateCycle
 
 Authored path: `Admin.CreateCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 78.
-- Covered by [Admin](../design/compositions/Admin.md), line 84.
+- Covered by [Admin](../design/compositions/Admin.md), line 75.
+- Covered by [Admin](../design/compositions/Admin.md), line 81.
 
 ```reaction
 when RequestBoundary.request (path: "/admin/cycles/create", period, requestId, runs, session)
@@ -846,8 +840,8 @@ then
 ### Admin.CreateCycle:admin#2
 
 Authored path: `Admin.CreateCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 78.
-- Covered by [Admin](../design/compositions/Admin.md), line 84.
+- Covered by [Admin](../design/compositions/Admin.md), line 75.
+- Covered by [Admin](../design/compositions/Admin.md), line 81.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.CreateCycle
@@ -862,8 +856,8 @@ then
 ### Admin.CreateCycle:admin#3
 
 Authored path: `Admin.CreateCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 78.
-- Covered by [Admin](../design/compositions/Admin.md), line 84.
+- Covered by [Admin](../design/compositions/Admin.md), line 75.
+- Covered by [Admin](../design/compositions/Admin.md), line 81.
 
 ```reaction
 when Cycling.create (period, runs, start, cycle), asked by Admin.CreateCycle:admin#2
@@ -876,8 +870,8 @@ then
 ### Admin.CreateCycle:not-admin#2
 
 Authored path: `Admin.CreateCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 78.
-- Covered by [Admin](../design/compositions/Admin.md), line 84.
+- Covered by [Admin](../design/compositions/Admin.md), line 75.
+- Covered by [Admin](../design/compositions/Admin.md), line 81.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.CreateCycle
@@ -947,8 +941,8 @@ then
 ### Admin.DeleteCycle
 
 Authored path: `Admin.DeleteCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 79.
-- Covered by [Admin](../design/compositions/Admin.md), line 85.
+- Covered by [Admin](../design/compositions/Admin.md), line 76.
+- Covered by [Admin](../design/compositions/Admin.md), line 82.
 
 ```reaction
 when RequestBoundary.request (cycle, path: "/admin/cycles/delete", requestId, session)
@@ -959,8 +953,8 @@ then
 ### Admin.DeleteCycle:admin#2
 
 Authored path: `Admin.DeleteCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 79.
-- Covered by [Admin](../design/compositions/Admin.md), line 85.
+- Covered by [Admin](../design/compositions/Admin.md), line 76.
+- Covered by [Admin](../design/compositions/Admin.md), line 82.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.DeleteCycle
@@ -974,8 +968,8 @@ then
 ### Admin.DeleteCycle:admin#3
 
 Authored path: `Admin.DeleteCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 79.
-- Covered by [Admin](../design/compositions/Admin.md), line 85.
+- Covered by [Admin](../design/compositions/Admin.md), line 76.
+- Covered by [Admin](../design/compositions/Admin.md), line 82.
 
 ```reaction
 when Cycling.delete (cycle), asked by Admin.DeleteCycle:admin#2
@@ -988,8 +982,8 @@ then
 ### Admin.DeleteCycle:not-admin#2
 
 Authored path: `Admin.DeleteCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 79.
-- Covered by [Admin](../design/compositions/Admin.md), line 85.
+- Covered by [Admin](../design/compositions/Admin.md), line 76.
+- Covered by [Admin](../design/compositions/Admin.md), line 82.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.DeleteCycle
@@ -1114,8 +1108,8 @@ then
 ### Admin.ListCycles
 
 Authored path: `Admin.ListCycles`.
-- Covered by [Admin](../design/compositions/Admin.md), line 76.
-- Covered by [Admin](../design/compositions/Admin.md), line 83.
+- Covered by [Admin](../design/compositions/Admin.md), line 73.
+- Covered by [Admin](../design/compositions/Admin.md), line 80.
 
 ```reaction
 when RequestBoundary.request (path: "/admin/cycles/list", requestId, session)
@@ -1126,8 +1120,8 @@ then
 ### Admin.ListCycles:admin#2
 
 Authored path: `Admin.ListCycles`.
-- Covered by [Admin](../design/compositions/Admin.md), line 76.
-- Covered by [Admin](../design/compositions/Admin.md), line 83.
+- Covered by [Admin](../design/compositions/Admin.md), line 73.
+- Covered by [Admin](../design/compositions/Admin.md), line 80.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.ListCycles
@@ -1141,8 +1135,8 @@ then
 ### Admin.ListCycles:not-admin#2
 
 Authored path: `Admin.ListCycles`.
-- Covered by [Admin](../design/compositions/Admin.md), line 76.
-- Covered by [Admin](../design/compositions/Admin.md), line 83.
+- Covered by [Admin](../design/compositions/Admin.md), line 73.
+- Covered by [Admin](../design/compositions/Admin.md), line 80.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.ListCycles
@@ -1156,8 +1150,8 @@ then
 ### Admin.PreviousRanking
 
 Authored path: `Admin.PreviousRanking`.
-- Covered by [Admin](../design/compositions/Admin.md), line 63.
-- Covered by [Admin](../design/compositions/Admin.md), line 69.
+- Covered by [Admin](../design/compositions/Admin.md), line 60.
+- Covered by [Admin](../design/compositions/Admin.md), line 66.
 
 ```reaction
 when RequestBoundary.request (category, path: "/admin/nominations/previous", requestId, session)
@@ -1168,8 +1162,8 @@ then
 ### Admin.PreviousRanking:admin#2
 
 Authored path: `Admin.PreviousRanking`.
-- Covered by [Admin](../design/compositions/Admin.md), line 63.
-- Covered by [Admin](../design/compositions/Admin.md), line 69.
+- Covered by [Admin](../design/compositions/Admin.md), line 60.
+- Covered by [Admin](../design/compositions/Admin.md), line 66.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.PreviousRanking
@@ -1185,8 +1179,8 @@ then
 ### Admin.PreviousRanking:no-previous-round#2
 
 Authored path: `Admin.PreviousRanking`.
-- Covered by [Admin](../design/compositions/Admin.md), line 63.
-- Covered by [Admin](../design/compositions/Admin.md), line 69.
+- Covered by [Admin](../design/compositions/Admin.md), line 60.
+- Covered by [Admin](../design/compositions/Admin.md), line 66.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.PreviousRanking
@@ -1202,8 +1196,8 @@ then
 ### Admin.PreviousRanking:not-admin#2
 
 Authored path: `Admin.PreviousRanking`.
-- Covered by [Admin](../design/compositions/Admin.md), line 63.
-- Covered by [Admin](../design/compositions/Admin.md), line 69.
+- Covered by [Admin](../design/compositions/Admin.md), line 60.
+- Covered by [Admin](../design/compositions/Admin.md), line 66.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.PreviousRanking
@@ -1273,8 +1267,8 @@ then
 ### Admin.RemoveItemFromCycle
 
 Authored path: `Admin.RemoveItemFromCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 90.
-- Covered by [Admin](../design/compositions/Admin.md), line 98.
+- Covered by [Admin](../design/compositions/Admin.md), line 87.
+- Covered by [Admin](../design/compositions/Admin.md), line 95.
 
 ```reaction
 when RequestBoundary.request (cycle, item, path: "/admin/cycles/remove-item", requestId, session)
@@ -1285,8 +1279,8 @@ then
 ### Admin.RemoveItemFromCycle:admin#2
 
 Authored path: `Admin.RemoveItemFromCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 90.
-- Covered by [Admin](../design/compositions/Admin.md), line 98.
+- Covered by [Admin](../design/compositions/Admin.md), line 87.
+- Covered by [Admin](../design/compositions/Admin.md), line 95.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.RemoveItemFromCycle
@@ -1300,8 +1294,8 @@ then
 ### Admin.RemoveItemFromCycle:admin#3
 
 Authored path: `Admin.RemoveItemFromCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 90.
-- Covered by [Admin](../design/compositions/Admin.md), line 98.
+- Covered by [Admin](../design/compositions/Admin.md), line 87.
+- Covered by [Admin](../design/compositions/Admin.md), line 95.
 
 ```reaction
 when Cycling.removeItem (cycle, item), asked by Admin.RemoveItemFromCycle:admin#2
@@ -1314,8 +1308,8 @@ then
 ### Admin.RemoveItemFromCycle:not-admin#2
 
 Authored path: `Admin.RemoveItemFromCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 90.
-- Covered by [Admin](../design/compositions/Admin.md), line 98.
+- Covered by [Admin](../design/compositions/Admin.md), line 87.
+- Covered by [Admin](../design/compositions/Admin.md), line 95.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.RemoveItemFromCycle
@@ -1385,8 +1379,8 @@ then
 ### Admin.SetCycleRuns
 
 Authored path: `Admin.SetCycleRuns`.
-- Covered by [Admin](../design/compositions/Admin.md), line 93.
-- Covered by [Admin](../design/compositions/Admin.md), line 99.
+- Covered by [Admin](../design/compositions/Admin.md), line 90.
+- Covered by [Admin](../design/compositions/Admin.md), line 96.
 
 ```reaction
 when RequestBoundary.request (cycle, path: "/admin/cycles/set-runs", requestId, runs, session)
@@ -1397,8 +1391,8 @@ then
 ### Admin.SetCycleRuns:admin#2
 
 Authored path: `Admin.SetCycleRuns`.
-- Covered by [Admin](../design/compositions/Admin.md), line 93.
-- Covered by [Admin](../design/compositions/Admin.md), line 99.
+- Covered by [Admin](../design/compositions/Admin.md), line 90.
+- Covered by [Admin](../design/compositions/Admin.md), line 96.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.SetCycleRuns
@@ -1412,8 +1406,8 @@ then
 ### Admin.SetCycleRuns:admin#3
 
 Authored path: `Admin.SetCycleRuns`.
-- Covered by [Admin](../design/compositions/Admin.md), line 93.
-- Covered by [Admin](../design/compositions/Admin.md), line 99.
+- Covered by [Admin](../design/compositions/Admin.md), line 90.
+- Covered by [Admin](../design/compositions/Admin.md), line 96.
 
 ```reaction
 when Cycling.setRuns (cycle, runs), asked by Admin.SetCycleRuns:admin#2
@@ -1426,8 +1420,8 @@ then
 ### Admin.SetCycleRuns:not-admin#2
 
 Authored path: `Admin.SetCycleRuns`.
-- Covered by [Admin](../design/compositions/Admin.md), line 93.
-- Covered by [Admin](../design/compositions/Admin.md), line 99.
+- Covered by [Admin](../design/compositions/Admin.md), line 90.
+- Covered by [Admin](../design/compositions/Admin.md), line 96.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.SetCycleRuns
@@ -1458,7 +1452,53 @@ then
   RequestBoundary.respond (error: message, requestId)
 ```
 
-### Public.Feed
+### Public.Archive:finished
+
+Authored path: `Public.Archive`.
+- Covered by [Public](../design/compositions/Public.md), line 30.
+- Covered by [Public](../design/compositions/Public.md), line 36.
+
+```reaction
+when RequestBoundary.request (group, path: "/groups/archive", requestId, season)
+where
+  instant is the current flow's instant
+  Cycling._run (item: group, run: season) has (end, start)
+  end is at most instant
+then
+  RequestBoundary.respond (archive: former "the posts of (group) from (start) to (end)" with (end, group, start), requestId)
+```
+
+### Public.Archive:no-such-season
+
+Authored path: `Public.Archive`.
+- Covered by [Public](../design/compositions/Public.md), line 30.
+- Covered by [Public](../design/compositions/Public.md), line 36.
+
+```reaction
+when RequestBoundary.request (group, path: "/groups/archive", requestId, season)
+where
+  no Cycling._run (item: group, run: season)
+then
+  RequestBoundary.respond (error: "NO_SUCH_SEASON", requestId)
+```
+
+### Public.Archive:not-finished
+
+Authored path: `Public.Archive`.
+- Covered by [Public](../design/compositions/Public.md), line 30.
+- Covered by [Public](../design/compositions/Public.md), line 36.
+
+```reaction
+when RequestBoundary.request (group, path: "/groups/archive", requestId, season)
+where
+  instant is the current flow's instant
+  Cycling._run (item: group, run: season) has (end)
+  end is greater than instant
+then
+  RequestBoundary.respond (error: "NO_SUCH_SEASON", requestId)
+```
+
+### Public.Feed:closed
 
 Authored path: `Public.Feed`.
 - Covered by [Public](../design/compositions/Public.md), line 20.
@@ -1468,15 +1508,31 @@ Authored path: `Public.Feed`.
 when RequestBoundary.request (group, path: "/groups/feed", requestId)
 where
   instant is the current flow's instant
+  no Cycling._currentRun (item: group, now: instant)
 then
-  RequestBoundary.respond (feed: former "the feed of (group) at (now)" with (group, now: instant), requestId)
+  RequestBoundary.respond (feed: (posts: []), requestId)
+```
+
+### Public.Feed:open
+
+Authored path: `Public.Feed`.
+- Covered by [Public](../design/compositions/Public.md), line 20.
+- Covered by [Public](../design/compositions/Public.md), line 27.
+
+```reaction
+when RequestBoundary.request (group, path: "/groups/feed", requestId)
+where
+  instant is the current flow's instant
+  Cycling._currentRun (item: group, now: instant) has (end, start)
+then
+  RequestBoundary.respond (feed: former "the posts of (group) from (start) to (end)" with (end, group, start), requestId)
 ```
 
 ### Public.GetPost:found
 
 Authored path: `Public.GetPost`.
-- Covered by [Public](../design/compositions/Public.md), line 42.
-- Covered by [Public](../design/compositions/Public.md), line 47.
+- Covered by [Public](../design/compositions/Public.md), line 51.
+- Covered by [Public](../design/compositions/Public.md), line 56.
 
 ```reaction
 when RequestBoundary.request (path: "/posts/get", post, requestId)
@@ -1489,8 +1545,8 @@ then
 ### Public.GetPost:missing
 
 Authored path: `Public.GetPost`.
-- Covered by [Public](../design/compositions/Public.md), line 42.
-- Covered by [Public](../design/compositions/Public.md), line 47.
+- Covered by [Public](../design/compositions/Public.md), line 51.
+- Covered by [Public](../design/compositions/Public.md), line 56.
 
 ```reaction
 when RequestBoundary.request (path: "/posts/get", post, requestId)
@@ -1503,8 +1559,8 @@ then
 ### Public.ImageLink
 
 Authored path: `Public.ImageLink`.
-- Covered by [Public](../design/compositions/Public.md), line 31.
-- Covered by [Public](../design/compositions/Public.md), line 37.
+- Covered by [Public](../design/compositions/Public.md), line 40.
+- Covered by [Public](../design/compositions/Public.md), line 46.
 
 ```reaction
 when RequestBoundary.request (path: "/images/link", requestId, upload)
@@ -1515,8 +1571,8 @@ then
 ### Public.ImageLink#2
 
 Authored path: `Public.ImageLink`.
-- Covered by [Public](../design/compositions/Public.md), line 31.
-- Covered by [Public](../design/compositions/Public.md), line 37.
+- Covered by [Public](../design/compositions/Public.md), line 40.
+- Covered by [Public](../design/compositions/Public.md), line 46.
 
 ```reaction
 when Uploading.link (upload, url), asked by Public.ImageLink
@@ -1529,8 +1585,8 @@ then
 ### Public.ListCategories
 
 Authored path: `Public.ListCategories`.
-- Covered by [Public](../design/compositions/Public.md), line 52.
-- Covered by [Public](../design/compositions/Public.md), line 57.
+- Covered by [Public](../design/compositions/Public.md), line 61.
+- Covered by [Public](../design/compositions/Public.md), line 66.
 
 ```reaction
 when RequestBoundary.request (path: "/nominations/categories", requestId)
@@ -1557,8 +1613,8 @@ then
 ### Public.ListNominations:closed
 
 Authored path: `Public.ListNominations`.
-- Covered by [Public](../design/compositions/Public.md), line 60.
-- Covered by [Public](../design/compositions/Public.md), line 67.
+- Covered by [Public](../design/compositions/Public.md), line 69.
+- Covered by [Public](../design/compositions/Public.md), line 76.
 
 ```reaction
 when RequestBoundary.request (category, path: "/nominations/list", requestId)
@@ -1572,8 +1628,8 @@ then
 ### Public.ListNominations:open
 
 Authored path: `Public.ListNominations`.
-- Covered by [Public](../design/compositions/Public.md), line 60.
-- Covered by [Public](../design/compositions/Public.md), line 67.
+- Covered by [Public](../design/compositions/Public.md), line 69.
+- Covered by [Public](../design/compositions/Public.md), line 76.
 
 ```reaction
 when RequestBoundary.request (category, path: "/nominations/list", requestId)
@@ -1587,8 +1643,8 @@ then
 ### User.CreateNomination
 
 Authored path: `User.CreateNomination`.
-- Covered by [User](../design/compositions/User.md), line 104.
-- Covered by [User](../design/compositions/User.md), line 113.
+- Covered by [User](../design/compositions/User.md), line 118.
+- Covered by [User](../design/compositions/User.md), line 127.
 
 ```reaction
 when RequestBoundary.request (category, name, path: "/nominations/create", requestId, session)
@@ -1599,8 +1655,8 @@ then
 ### User.CreateNomination:closed#2
 
 Authored path: `User.CreateNomination`.
-- Covered by [User](../design/compositions/User.md), line 104.
-- Covered by [User](../design/compositions/User.md), line 113.
+- Covered by [User](../design/compositions/User.md), line 118.
+- Covered by [User](../design/compositions/User.md), line 127.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.CreateNomination
@@ -1615,8 +1671,8 @@ then
 ### User.CreateNomination:duplicate#2
 
 Authored path: `User.CreateNomination`.
-- Covered by [User](../design/compositions/User.md), line 104.
-- Covered by [User](../design/compositions/User.md), line 113.
+- Covered by [User](../design/compositions/User.md), line 118.
+- Covered by [User](../design/compositions/User.md), line 127.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.CreateNomination
@@ -1631,8 +1687,8 @@ then
 ### User.CreateNomination:open#2
 
 Authored path: `User.CreateNomination`.
-- Covered by [User](../design/compositions/User.md), line 104.
-- Covered by [User](../design/compositions/User.md), line 113.
+- Covered by [User](../design/compositions/User.md), line 118.
+- Covered by [User](../design/compositions/User.md), line 127.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.CreateNomination
@@ -1648,8 +1704,8 @@ then
 ### User.CreateNomination:open#3
 
 Authored path: `User.CreateNomination`.
-- Covered by [User](../design/compositions/User.md), line 104.
-- Covered by [User](../design/compositions/User.md), line 113.
+- Covered by [User](../design/compositions/User.md), line 118.
+- Covered by [User](../design/compositions/User.md), line 127.
 
 ```reaction
 when Nominating.nominate (category, createdAt, name, nominator: user, nomination), asked by User.CreateNomination:open#2
@@ -1865,8 +1921,8 @@ then
 ### User.ListMyNominationVotes
 
 Authored path: `User.ListMyNominationVotes`.
-- Covered by [User](../design/compositions/User.md), line 130.
-- Covered by [User](../design/compositions/User.md), line 136.
+- Covered by [User](../design/compositions/User.md), line 144.
+- Covered by [User](../design/compositions/User.md), line 150.
 
 ```reaction
 when RequestBoundary.request (category, path: "/nominations/my-votes", requestId, session)
@@ -1877,8 +1933,8 @@ then
 ### User.ListMyNominationVotes#2
 
 Authored path: `User.ListMyNominationVotes`.
-- Covered by [User](../design/compositions/User.md), line 130.
-- Covered by [User](../design/compositions/User.md), line 136.
+- Covered by [User](../design/compositions/User.md), line 144.
+- Covered by [User](../design/compositions/User.md), line 150.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.ListMyNominationVotes
@@ -1887,6 +1943,33 @@ where
   earlier, RequestBoundary.request (category, path: "/nominations/my-votes", requestId, session)
 then
   RequestBoundary.respond (requestId, votes: former "the active nominations in (category) upvoted by (user) at (now)" with (category, now: instant, user))
+```
+
+### User.ListMyPosts
+
+Authored path: `User.ListMyPosts`.
+- Covered by [User](../design/compositions/User.md), line 98.
+- Covered by [User](../design/compositions/User.md), line 107.
+
+```reaction
+when RequestBoundary.request (path: "/posts/mine", requestId, session)
+then
+  Sessioning.current (session)
+```
+
+### User.ListMyPosts#2
+
+Authored path: `User.ListMyPosts`.
+- Covered by [User](../design/compositions/User.md), line 98.
+- Covered by [User](../design/compositions/User.md), line 107.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by User.ListMyPosts
+where
+  instant is the current flow's instant
+  earlier, RequestBoundary.request (path: "/posts/mine", requestId, session)
+then
+  RequestBoundary.respond (mine: former "the posts of (user) at (now)" with (now: instant, user), requestId)
 ```
 
 ### User.ListMyVotes
@@ -2167,8 +2250,8 @@ then
 ### User.UnvoteNomination
 
 Authored path: `User.UnvoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 127.
-- Covered by [User](../design/compositions/User.md), line 135.
+- Covered by [User](../design/compositions/User.md), line 141.
+- Covered by [User](../design/compositions/User.md), line 149.
 
 ```reaction
 when RequestBoundary.request (nomination, path: "/nominations/unvote", requestId, session)
@@ -2179,8 +2262,8 @@ then
 ### User.UnvoteNomination:allowed#2
 
 Authored path: `User.UnvoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 127.
-- Covered by [User](../design/compositions/User.md), line 135.
+- Covered by [User](../design/compositions/User.md), line 141.
+- Covered by [User](../design/compositions/User.md), line 149.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.UnvoteNomination
@@ -2196,8 +2279,8 @@ then
 ### User.UnvoteNomination:allowed#3
 
 Authored path: `User.UnvoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 127.
-- Covered by [User](../design/compositions/User.md), line 135.
+- Covered by [User](../design/compositions/User.md), line 141.
+- Covered by [User](../design/compositions/User.md), line 149.
 
 ```reaction
 when NominationVotes.unvote (target: nomination, voter: user), asked by User.UnvoteNomination:allowed#2
@@ -2210,8 +2293,8 @@ then
 ### User.UnvoteNomination:inactive#2
 
 Authored path: `User.UnvoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 127.
-- Covered by [User](../design/compositions/User.md), line 135.
+- Covered by [User](../design/compositions/User.md), line 141.
+- Covered by [User](../design/compositions/User.md), line 149.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.UnvoteNomination
@@ -2227,8 +2310,8 @@ then
 ### User.UnvoteNomination:missing#2
 
 Authored path: `User.UnvoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 127.
-- Covered by [User](../design/compositions/User.md), line 135.
+- Covered by [User](../design/compositions/User.md), line 141.
+- Covered by [User](../design/compositions/User.md), line 149.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.UnvoteNomination
@@ -2242,8 +2325,8 @@ then
 ### User.UnvoteNomination:own-nomination#2
 
 Authored path: `User.UnvoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 127.
-- Covered by [User](../design/compositions/User.md), line 135.
+- Covered by [User](../design/compositions/User.md), line 141.
+- Covered by [User](../design/compositions/User.md), line 149.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.UnvoteNomination
@@ -2347,8 +2430,8 @@ then
 ### User.VoteNomination
 
 Authored path: `User.VoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 126.
-- Covered by [User](../design/compositions/User.md), line 134.
+- Covered by [User](../design/compositions/User.md), line 140.
+- Covered by [User](../design/compositions/User.md), line 148.
 
 ```reaction
 when RequestBoundary.request (nomination, path: "/nominations/vote", requestId, session)
@@ -2359,8 +2442,8 @@ then
 ### User.VoteNomination:allowed#2
 
 Authored path: `User.VoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 126.
-- Covered by [User](../design/compositions/User.md), line 134.
+- Covered by [User](../design/compositions/User.md), line 140.
+- Covered by [User](../design/compositions/User.md), line 148.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.VoteNomination
@@ -2376,8 +2459,8 @@ then
 ### User.VoteNomination:allowed#3
 
 Authored path: `User.VoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 126.
-- Covered by [User](../design/compositions/User.md), line 134.
+- Covered by [User](../design/compositions/User.md), line 140.
+- Covered by [User](../design/compositions/User.md), line 148.
 
 ```reaction
 when NominationVotes.upvote (target: nomination, voter: user), asked by User.VoteNomination:allowed#2
@@ -2390,8 +2473,8 @@ then
 ### User.VoteNomination:inactive#2
 
 Authored path: `User.VoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 126.
-- Covered by [User](../design/compositions/User.md), line 134.
+- Covered by [User](../design/compositions/User.md), line 140.
+- Covered by [User](../design/compositions/User.md), line 148.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.VoteNomination
@@ -2407,8 +2490,8 @@ then
 ### User.VoteNomination:missing#2
 
 Authored path: `User.VoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 126.
-- Covered by [User](../design/compositions/User.md), line 134.
+- Covered by [User](../design/compositions/User.md), line 140.
+- Covered by [User](../design/compositions/User.md), line 148.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.VoteNomination
@@ -2422,8 +2505,8 @@ then
 ### User.VoteNomination:own-nomination#2
 
 Authored path: `User.VoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 126.
-- Covered by [User](../design/compositions/User.md), line 134.
+- Covered by [User](../design/compositions/User.md), line 140.
+- Covered by [User](../design/compositions/User.md), line 148.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.VoteNomination
@@ -2437,8 +2520,8 @@ then
 ### User.WithdrawNomination
 
 Authored path: `User.WithdrawNomination`.
-- Covered by [User](../design/compositions/User.md), line 116.
-- Covered by [User](../design/compositions/User.md), line 121.
+- Covered by [User](../design/compositions/User.md), line 130.
+- Covered by [User](../design/compositions/User.md), line 135.
 
 ```reaction
 when RequestBoundary.request (nomination, path: "/nominations/withdraw", requestId, session)
@@ -2449,8 +2532,8 @@ then
 ### User.WithdrawNomination#2
 
 Authored path: `User.WithdrawNomination`.
-- Covered by [User](../design/compositions/User.md), line 116.
-- Covered by [User](../design/compositions/User.md), line 121.
+- Covered by [User](../design/compositions/User.md), line 130.
+- Covered by [User](../design/compositions/User.md), line 135.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.WithdrawNomination
@@ -2463,8 +2546,8 @@ then
 ### User.WithdrawNomination#3
 
 Authored path: `User.WithdrawNomination`.
-- Covered by [User](../design/compositions/User.md), line 116.
-- Covered by [User](../design/compositions/User.md), line 121.
+- Covered by [User](../design/compositions/User.md), line 130.
+- Covered by [User](../design/compositions/User.md), line 135.
 
 ```reaction
 when Nominating.withdraw (nomination, nominator: user), asked by User.WithdrawNomination#2
@@ -2477,7 +2560,7 @@ then
 ### User.WithdrawnNominationLosesVotes
 
 Authored path: `User.WithdrawnNominationLosesVotes`.
-- Covered by [User](../design/compositions/User.md), line 118.
+- Covered by [User](../design/compositions/User.md), line 132.
 
 ```reaction
 when Nominating.withdraw (nomination)
@@ -2495,7 +2578,6 @@ not listed here have no explicit input contract.
 - `/admin/admins/add` — requires `session`, `user`
 - `/admin/admins/list` — requires `session`
 - `/admin/admins/remove` — requires `session`, `user`
-- `/admin/categories/create` — requires `name`, `session`
 - `/admin/cycles/add-item` — requires `cycle`, `item`, `session`
 - `/admin/cycles/create` — requires `period`, `runs`, `session`
 - `/admin/cycles/delete` — requires `cycle`, `session`
@@ -2511,6 +2593,7 @@ not listed here have no explicit input contract.
 - `/auth/register` — requires `password`, `username`
 - `/auth/sign-in` — requires `password`, `username`
 - `/auth/sign-out` — requires `session`
+- `/groups/archive` — requires `group`, `season`
 - `/groups/feed` — requires `group`
 - `/images/link` — requires `upload`
 - `/nominations/create` — requires `category`, `name`, `session`
@@ -2522,6 +2605,7 @@ not listed here have no explicit input contract.
 - `/posts/create` — requires `session`, `group`, `content`; fills `caption` with "" when absent
 - `/posts/delete` — requires `post`, `session`
 - `/posts/get` — requires `post`
+- `/posts/mine` — requires `session`
 - `/posts/my-votes` — requires `group`, `session`
 - `/posts/unvote` — requires `post`, `session`
 - `/posts/vote` — requires `post`, `session`

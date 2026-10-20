@@ -85,6 +85,7 @@ Times are fixed dates, never the real clock.
   - deleting twice refuses `NO_SUCH_POST`
 - **queries**
   - `_get` answers no row for an unknown post
+  - `_byOwner` lists only that owner's posts, newest first, and is empty for someone with none
 
 ### Upvoting.test.ts
 - **principle**: Gigi and Sid upvote p1, Gigi upvotes p2 → `_counts` ranks p1 (2) then p2 (1) → Gigi unvotes p1 → `_count(p1)` is 1.
@@ -144,6 +145,7 @@ Times are fixed dates, never the real clock.
   - refuses `NO_SUCH_CYCLE`
 - **queries**
   - `_currentRun` before start, at start, just before and at a run boundary, and after the last run
+  - `_run` gives any run's window, past or future, and nothing for runs the cycle doesn't have
   - `_previousRun` has none during run 0, gives run k−1 during run k, and gives the last run after the cycle ends
   - `_cycle` and `_items` for a member and a non-member
   - `_all` ordered by start
@@ -192,6 +194,10 @@ Runs against local storage (RustFS), in the `the-moment-test` bucket.
 
 ---
 
+## Setup steps (`tests/owner.test.ts`, `tests/nominations.test.ts`)
+- `makeOwner`: makes a registered account the owner; never an unregistered name; never replaces an owner
+- `ensureFutureGalleries`: creates the one Future galleries category; never a second one on restart
+
 ## Composition tests (`tests/compositions/`)
 
 ### User.test.ts
@@ -223,6 +229,12 @@ Runs against local storage (RustFS), in the `the-moment-test` bucket.
   - refuses `NO_SUCH_POST`
   - refuses `ALREADY_VOTED` and `NOT_VOTED`
   - vote counts unchanged after each refusal
+- **posts/mine**
+  - your posts newest first, with caption, time, votes, gallery, season, and current; others' posts excluded
+  - keeps the season a post was made in; stops marking it current once the season ends
+  - lists every gallery a post is in
+  - a post whose gallery was deleted is still listed, with no galleries
+  - empty for someone with no posts; refuses `UNKNOWN_SESSION`
 - **posts/my-votes**
   - lists exactly the posts you upvoted in the group
 - **nominations/create**
@@ -257,8 +269,6 @@ Runs against local storage (RustFS), in the `the-moment-test` bucket.
   - create, and refuses `NAME_TAKEN`
   - delete: the group leaves its cycle
   - add-post and remove-post
-- **categories**
-  - create, and refuses `NAME_TAKEN`
 - **previous ranking**
   - empty during the first round
   - after the round rolls over: that round's nominations, most votes first and newest first on ties
@@ -272,6 +282,10 @@ Runs against local storage (RustFS), in the `the-moment-test` bucket.
 ### Public.test.ts
 - **groups/list**
   - each group with its cycle and current run; blank for a group with no cycle
+- **groups/archive**
+  - a finished season shows its posts with final votes, most first and newest first on ties
+  - refuses `NO_SUCH_SEASON` for the season still running, a season the cycle doesn't have, and a group with no cycle
+  - the last season is archived once the whole cycle has ended
 - **groups/feed**
   - only the current run's posts
   - ranked by votes, newest first on ties
@@ -305,7 +319,7 @@ Runs against local storage (RustFS), in the `the-moment-test` bucket.
 | Nominating | createCategory, nominate, withdraw | NAME_TAKEN, NO_SUCH_CATEGORY, INVALID_NAME, TOO_SOON, NO_SUCH_NOMINATION, NOT_NOMINATOR |
 | Uploading | requestUpload, verify, remove, link | NO_SUCH_UPLOAD, NOT_YOUR_UPLOAD, NOT_UPLOADED, INVALID_FILE |
 
-Every endpoint (36) is called at least once in the composition tests, and every
+Every endpoint (37) is called at least once in the composition tests, and every
 composition-authored error (GROUP_CLOSED, OWN_POST, NOT_IN_SEASON, ADMIN_ONLY,
 OWNER_ONLY, CATEGORY_CLOSED, ALREADY_NOMINATED, OWN_NOMINATION, NOT_ACTIVE,
 NO_SUCH_ITEM, UNSUPPORTED_TYPE) is triggered at least once.

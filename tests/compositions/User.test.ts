@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { db } from "../../src/db.ts";
 import { S3Client } from "bun";
 import {
+  createCategory,
   createCycle,
   ok,
   openCategory,
@@ -205,6 +206,53 @@ describe("posts/delete", () => {
   });
 });
 
+describe("posts/mine", () => {
+  const mine = async (session = people.gigi) => ok(await app.api.posts.mine({ session })).mine.posts;
+
+  test("lists your posts newest first with caption, time, votes, gallery, season, and current", async () => {
+    const image = await uploadImage(app.api, people.gigi);
+    const { post: first } = ok(await app.api.posts.create({ session: people.gigi, group, content: image, caption: "Hands" }));
+    ok(await app.api.posts.vote({ session: people.sid, post: first }));
+    app.clock.advance(MINUTE);
+    const second = await post(people.gigi);
+    await post(people.sid); // someone else's post is never listed
+    expect(await mine()).toEqual([
+      { post: second, content: expect.any(String), caption: "", createdAt: expect.any(String), votes: 0, galleries: [{ group, name: "Doodles", season: 0 }], current: true },
+      { post: first, content: image, caption: "Hands", createdAt: expect.any(String), votes: 1, galleries: [{ group, name: "Doodles", season: 0 }], current: true },
+    ]);
+  });
+
+  test("keeps the season a post was made in, and stops marking it current once the season ends", async () => {
+    const early = await post(people.gigi);
+    app.clock.advance(HOUR); // season 1 begins
+    const later = await post(people.gigi);
+    const rows = await mine();
+    expect(rows.map((r) => [r.post, r.galleries[0]?.season, r.current])).toEqual([
+      [later, 1, true],
+      [early, 0, null],
+    ]);
+  });
+
+  test("lists every gallery a post is in", async () => {
+    const p = await post(people.gigi);
+    const sketches = await openGroup(app.api, people.milin, "Sketches", cycle);
+    ok(await app.api.admin.groups["add-post"]({ session: people.milin, group: sketches, post: p }));
+    const galleries = (await mine())[0]?.galleries.map((g) => g.name).sort();
+    expect(galleries).toEqual(["Doodles", "Sketches"]);
+  });
+
+  test("still lists a post whose gallery was deleted, with no galleries", async () => {
+    const p = await post(people.gigi);
+    ok(await app.api.admin.groups.delete({ session: people.milin, group }));
+    expect((await mine()).map((r) => [r.post, r.galleries, r.current])).toEqual([[p, [], null]]);
+  });
+
+  test("is empty for someone with no posts, and refuses UNKNOWN_SESSION when signed out", async () => {
+    expect(await mine(people.sasha)).toEqual([]);
+    expect(await app.api.posts.mine({ session: "invented" })).toEqual({ error: "UNKNOWN_SESSION" });
+  });
+});
+
 describe("posts/vote and posts/unvote", () => {
   test("allowed in season, then refuses ALREADY_VOTED and NOT_VOTED without changing counts", async () => {
     const p = await post(people.gigi);
@@ -273,9 +321,7 @@ describe("nominations/create", () => {
   });
 
   test("refuses CATEGORY_CLOSED with no cycle and after the cycle ends", async () => {
-    const { category: uncycled } = ok(
-      await app.api.admin.categories.create({ session: people.milin, name: "Future wings" }),
-    );
+    const uncycled = await createCategory("Future wings");
     expect(await nominate(people.gigi, "Oceans", uncycled)).toEqual({ error: "CATEGORY_CLOSED" });
     app.clock.advance(3 * HOUR);
     expect(await nominate(people.gigi, "Oceans")).toEqual({ error: "CATEGORY_CLOSED" });

@@ -57,4 +57,7 @@ delete (user: User, post: Post) : returns (content: Content)
 ```queries
 _get (post: Post) : optional (owner: User, content: Content, caption: String, createdAt: DateTime)
   answers the post's owner, content, caption (empty when it has none), and createdAt, and no row when the post is not in Posts
+
+_byOwner (owner: User) : many (post: Post, content: Content, caption: String, createdAt: DateTime)
+  answers every post by owner, newest first, and no rows when owner has none
 ```

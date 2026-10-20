@@ -49,15 +49,12 @@ Admin.AddPostToGroup at /admin/groups/add-post
 Admin.RemovePostFromGroup at /admin/groups/remove-post
 ```
 
-## Nomination categories
+## Future gallery nominations
 
-Only an admin may [create a nomination category](reaction:Admin.CreateCategory), such
-as "Future galleries". A category takes nominations only while it belongs to a cycle
-with a run happening, so an admin adds it to a cycle like a group.
-
-```endpoints
-Admin.CreateCategory at /admin/categories/create
-```
+The application has exactly one nomination category, Future galleries, which the
+server creates when it starts if it does not exist yet; no endpoint creates or changes
+categories. It takes nominations only while it belongs to a cycle with a run happening,
+so an admin adds it to a cycle like a group.
 
 Choosing the next galleries is the admin's decision, informed by the crowd. An admin
 may read [the previous round's ranking](reaction:Admin.PreviousRanking) of a category:

@@ -105,6 +105,13 @@ export class CyclingConcept {
     return [{ run, start, end: new Date(start.getTime() + found.period) }];
   }
 
+  async _run({ item, run }: { item: string; run: number }): Promise<Array<{ start: Date; end: Date }>> {
+    const found = await this.#cycleOf(item);
+    if (found === null || !Number.isInteger(run) || run < 0 || run >= found.runs) return [];
+    const start = new Date(found.start.getTime() + run * found.period);
+    return [{ start, end: new Date(start.getTime() + found.period) }];
+  }
+
   async _all(_input: Record<string, never>): Promise<Array<{ cycle: string; start: Date; period: number; runs: number }>> {
     const rows = await this.cycles.find().sort({ start: 1, _id: 1 }).toArray();
     return rows.map(({ _id, start, period, runs }) => ({ cycle: _id, start, period, runs }));

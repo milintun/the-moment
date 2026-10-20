@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { createCycle, ok, openCategory, openGroup, setUpPeople, uploadImage, useApp, type Sessions } from "../app.ts";
+import { createCategory, createCycle, ok, openCategory, openGroup, setUpPeople, uploadImage, useApp, type Sessions } from "../app.ts";
 import { HOUR, MINUTE, T0, at } from "../helpers.ts";
 
 const app = useApp();
@@ -122,6 +122,50 @@ describe("posts/get", () => {
   });
 });
 
+describe("groups/archive", () => {
+  let group: string;
+  beforeEach(async () => {
+    group = await openGroup(app.api, people.milin, "Doodles", cycle);
+  });
+  const archive = (season: number, into = group) => app.api.groups.archive({ group: into, season });
+
+  test("a finished season shows its posts with final votes, most first and newest first on ties", async () => {
+    const first = await post(people.gigi, group, "first");
+    app.clock.advance(MINUTE);
+    const second = await post(people.sid, group, "second");
+    app.clock.advance(MINUTE);
+    const third = await post(people.sasha, group, "third");
+    ok(await app.api.posts.vote({ session: people.milin, post: first }));
+    app.clock.advance(HOUR); // season 0 ends
+    await post(people.gigi, group, "next season");
+    expect(ok(await archive(0)).archive.posts.map((p) => [p.post, p.votes])).toEqual([
+      [first, 1],
+      [third, 0],
+      [second, 0],
+    ]);
+  });
+
+  test("refuses NO_SUCH_SEASON for the season still running", async () => {
+    await post(people.gigi, group, "now");
+    expect(await archive(0)).toEqual({ error: "NO_SUCH_SEASON" });
+  });
+
+  test("refuses NO_SUCH_SEASON for a season the cycle doesn't have, and for a group with no cycle", async () => {
+    app.clock.advance(5 * HOUR); // every season over
+    expect(await archive(3)).toEqual({ error: "NO_SUCH_SEASON" });
+    expect(await archive(-1)).toEqual({ error: "NO_SUCH_SEASON" });
+    const { group: uncycled } = ok(await app.api.admin.groups.create({ session: people.milin, name: "Wings" }));
+    expect(await archive(0, uncycled)).toEqual({ error: "NO_SUCH_SEASON" });
+  });
+
+  test("the last season is archived once the whole cycle has ended", async () => {
+    app.clock.advance(2 * HOUR);
+    const last = await post(people.gigi, group, "last");
+    app.clock.advance(HOUR);
+    expect(ok(await archive(2)).archive.posts.map((p) => p.post)).toEqual([last]);
+  });
+});
+
 describe("images/link", () => {
   test("gives a working, short-lived link to an uploaded image", async () => {
     const image = await uploadImage(app.api, people.gigi, { bytes: 4321 });
@@ -154,9 +198,7 @@ describe("images/link", () => {
 describe("nominations/categories", () => {
   test("each category with its current round, blank when closed", async () => {
     const open = await openCategory(app.api, people.milin, "Future galleries", cycle);
-    const { category: closed } = ok(
-      await app.api.admin.categories.create({ session: people.milin, name: "Future wings" }),
-    );
+    const closed = await createCategory("Future wings");
     expect(await app.api.nominations.categories({})).toEqual({
       list: {
         categories: [

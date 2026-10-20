@@ -29,7 +29,6 @@ describe("access", () => {
       "groups/delete": () => app.api.admin.groups.delete({ session, group: "x" }),
       "groups/add-post": () => app.api.admin.groups["add-post"]({ session, group: "x", post: "y" }),
       "groups/remove-post": () => app.api.admin.groups["remove-post"]({ session, group: "x", post: "y" }),
-      "categories/create": () => app.api.admin.categories.create({ session, name: "x" }),
       "nominations/previous": () => app.api.admin.nominations.previous({ session, category: "x" }),
       "cycles/list": () => app.api.admin.cycles.list({ session }),
       "cycles/create": () => app.api.admin.cycles.create({ session, period: HOUR, runs: 1 }),
@@ -133,15 +132,6 @@ describe("groups", () => {
   });
 });
 
-describe("categories", () => {
-  test("create, and refuse NAME_TAKEN", async () => {
-    ok(await app.api.admin.categories.create({ session: people.milin, name: "Future galleries" }));
-    expect(await app.api.admin.categories.create({ session: people.milin, name: "Future galleries" })).toEqual({
-      error: "NAME_TAKEN",
-    });
-    expect(ok(await app.api.nominations.categories({})).list.categories).toHaveLength(1);
-  });
-});
 
 describe("previous ranking", () => {
   test("empty in the first round, then last round's nominations ranked by votes, newest first on ties", async () => {

@@ -15,9 +15,10 @@ async function signOut() {
 
 <template>
   <header>
-    <RouterLink to="/">The Moment</RouterLink> | <RouterLink to="/nominations">Nominate</RouterLink>
+    <RouterLink to="/">The Moment</RouterLink> | <RouterLink to="/archive">Archive</RouterLink> |
+    <RouterLink to="/nominations">Future galleries</RouterLink>
     <template v-if="me">
-      | Signed in as {{ me }}
+      | <RouterLink to="/me">My posts</RouterLink> | Signed in as {{ me }}
       <template v-if="isAdmin"> | <RouterLink to="/admin">Admin</RouterLink></template>
       | <button @click="signOut">Sign out</button>
     </template>

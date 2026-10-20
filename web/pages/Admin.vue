@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
-import { client, isAdmin, isOwner } from "../api.ts";
+import { computed, onMounted, ref, watch } from "vue";
+import { FUTURE_GALLERIES, WING_MIN_PERIOD, client, isAdmin, isOwner } from "../api.ts";
 
 type Group = Extract<Awaited<ReturnType<typeof client.groups.list>>, { list: unknown }>["list"]["groups"][number];
 type Category = Extract<Awaited<ReturnType<typeof client.nominations.categories>>, { list: unknown }>["list"]["categories"][number];
@@ -9,21 +9,14 @@ type Admin = Extract<Awaited<ReturnType<(typeof client.admin.admins)["list"]>>, 
 type Nomination = Extract<Awaited<ReturnType<typeof client.admin.nominations.previous>>, { ranking: unknown }>["ranking"]["nominations"][number];
 
 const DAY = 24 * 60 * 60 * 1000;
+const BUILDER_KEY = "the-moment.gallery-builder";
 
 const admins = ref<Admin[]>([]);
 const groups = ref<Group[]>([]);
-const categories = ref<Category[]>([]);
+const nominations = ref<Category | null>(null); // the Future galleries category
 const cycles = ref<Cycle[]>([]);
-const previous = ref<Record<string, Nomination[]>>({}); // category -> last round's ranking, once asked for
+const previous = ref<Nomination[]>([]);
 const error = ref("");
-
-const newAdmin = ref("");
-const newGroupName = ref("");
-const newCategoryName = ref("");
-const newCycleDays = ref(7);
-const newCycleRuns = ref(4);
-const addItemChoice = ref<Record<string, string>>({}); // cycle -> group or category to add
-const runsChoice = ref<Record<string, number>>({}); // cycle -> new runs
 
 async function load() {
   const [a, g, k, c] = await Promise.all([
@@ -35,8 +28,12 @@ async function load() {
   for (const result of [a, g, k, c]) if ("error" in result) return void (error.value = result.error);
   if (!("error" in a)) admins.value = a.list.admins;
   if (!("error" in g)) groups.value = g.list.groups;
-  if (!("error" in k)) categories.value = k.list.categories;
+  if (!("error" in k)) nominations.value = k.list.categories.find((x) => x.name === FUTURE_GALLERIES) ?? null;
   if (!("error" in c)) cycles.value = c.list.cycles;
+  if (nominations.value) {
+    const p = await client.admin.nominations.previous({ category: nominations.value.category });
+    previous.value = "error" in p ? [] : p.ranking.nominations;
+  }
 }
 
 // Run an admin call, show its error if any, then reload everything.
@@ -44,26 +41,114 @@ async function run(call: Promise<object>) {
   const result = await call;
   error.value = "error" in result ? String(result.error) : "";
   await load();
+  return !("error" in result);
 }
 
-async function showPrevious(category: string) {
-  const result = await client.admin.nominations.previous({ category });
-  if ("error" in result) error.value = result.error;
-  else previous.value = { ...previous.value, [category]: result.ranking.nominations };
+// ---------- Describing cycles ----------
+
+const days = (ms: number) => +(ms / DAY).toFixed(3);
+/** The season running now (counted from 0), or null when none is. */
+function seasonNow(c: Cycle) {
+  const elapsed = Date.now() - new Date(c.start).getTime();
+  const season = Math.floor(elapsed / c.period);
+  return elapsed < 0 || season >= c.runs ? null : season;
+}
+function describeCycle(c: Cycle) {
+  const now = seasonNow(c);
+  const status = now == null ? "no season running" : `season ${now + 1} of ${c.runs}`;
+  return `${days(c.period)}-day seasons, started ${new Date(c.start).toLocaleDateString()} (${status})`;
+}
+const cycleOf = (item: string) => cycles.value.find((c) => c.items.some((i) => i.item === item)) ?? null;
+const groupName = (id: string) => groups.value.find((g) => g.group === id)?.name ?? id;
+
+// ---------- Future gallery nominations ----------
+
+const nominationCycle = computed(() => (nominations.value ? cycleOf(nominations.value.category) : null));
+async function followCycle(cycle: string) {
+  const category = nominations.value!.category;
+  const current = nominationCycle.value;
+  if (current?.cycle === cycle) return;
+  if (current) await client.admin.cycles["remove-item"]({ cycle: current.cycle, item: category });
+  if (cycle) await run(client.admin.cycles["add-item"]({ cycle, item: category }));
+  else await load();
 }
 
-// Groups and categories can both belong to a cycle, so name them either way.
-const inACycle = computed(() => new Set(cycles.value.flatMap((c) => c.items.map((i) => i.item))));
-const itemName = (id: string) =>
-  groups.value.find((g) => g.group === id)?.name ?? categories.value.find((c) => c.category === id)?.name ?? id;
-const itemKind = (id: string) => (categories.value.some((c) => c.category === id) ? "category" : "gallery");
-const addable = computed(() => [
-  ...groups.value.filter((g) => !inACycle.value.has(g.group)).map((g) => ({ id: g.group, label: `${g.name} (gallery)` })),
-  ...categories.value
-    .filter((c) => !inACycle.value.has(c.category))
-    .map((c) => ({ id: c.category, label: `${c.name} (category)` })),
-]);
-const days = (ms: number) => ms / DAY;
+// ---------- Gallery builder (draft kept in this browser) ----------
+
+type Draft = { name: string; from?: string };
+function readDraft(): Draft[] {
+  try {
+    return JSON.parse(localStorage.getItem(BUILDER_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+const draft = ref<Draft[]>(readDraft());
+watch(
+  draft,
+  (value) => {
+    try {
+      localStorage.setItem(BUILDER_KEY, JSON.stringify(value));
+    } catch {
+      // Storage unavailable (private window): the draft just won't survive a reload.
+    }
+  },
+  { deep: true },
+);
+const ownName = ref("");
+const builderCycle = ref("");
+const builderReport = ref<string[]>([]);
+const inDraft = (name: string) => draft.value.some((d) => d.name.trim().toLowerCase() === name.trim().toLowerCase());
+function addToDraft(name: string, from?: string) {
+  if (name.trim() && !inDraft(name)) draft.value.push({ name: name.trim(), from });
+}
+async function buildGalleries() {
+  builderReport.value = [];
+  const remaining: Draft[] = [];
+  for (const entry of draft.value) {
+    const created = await client.admin.groups.create({ name: entry.name });
+    if ("error" in created) {
+      builderReport.value.push(`${entry.name}: not created (${created.error === "CONFLICT" ? "name taken" : created.error})`);
+      remaining.push(entry);
+      continue;
+    }
+    const added = await client.admin.cycles["add-item"]({ cycle: builderCycle.value, item: created.group });
+    builderReport.value.push(`${entry.name}: created${"error" in added ? `, but not added to the cycle (${added.error})` : ""}`);
+  }
+  draft.value = remaining;
+  await load();
+}
+
+// ---------- Galleries and wings ----------
+
+const newGalleryName = ref("");
+const newGalleryCycle = ref("");
+const confirmingGroup = ref<string | null>(null);
+async function createGallery() {
+  const created = await client.admin.groups.create({ name: newGalleryName.value });
+  if ("error" in created) return void (error.value = created.error === "CONFLICT" ? "That name is taken." : created.error);
+  if (newGalleryCycle.value) await client.admin.cycles["add-item"]({ cycle: newGalleryCycle.value, item: created.group });
+  newGalleryName.value = "";
+  error.value = "";
+  await load();
+}
+const kind = (g: Group) => (g.period == null ? "" : g.period >= WING_MIN_PERIOD ? "wing" : "gallery");
+function galleryStatus(g: Group) {
+  if (g.cycle == null) return "not in a season, so closed";
+  if (g.run != null) return `open, season ${g.run + 1} of ${g.runs}`;
+  return "closed (no season running)";
+}
+
+// ---------- Seasons ----------
+
+const newCycleDays = ref(7);
+const newCycleRuns = ref(4);
+const runsChoice = ref<Record<string, number>>({});
+const confirmingCycle = ref<string | null>(null);
+
+// ---------- People ----------
+
+const newAdmin = ref("");
 
 onMounted(load);
 </script>
@@ -72,87 +157,153 @@ onMounted(load);
   <h1>Admin</h1>
   <p v-if="!isAdmin">Only admins can use this page.</p>
   <template v-else>
+    <p>
+      Sections follow the usual order of work: review what people nominated, build the next galleries from it,
+      then manage galleries, seasons, and admins.
+    </p>
     <p v-if="error">Error: {{ error }}</p>
 
-    <h2>Admins</h2>
+    <!-- 1. Nominations -->
+    <h2>1. Future gallery nominations</h2>
+    <p>
+      People nominate ideas for future galleries in rounds that follow a cycle's seasons. Use the previous round's
+      ranking to choose the next galleries. <RouterLink to="/nominations">See the current round</RouterLink>.
+    </p>
+    <p v-if="!nominations">Nominations aren't set up yet; restart the server to create them.</p>
+    <template v-else>
+      <p>
+        <label>
+          Rounds follow
+          <select :value="nominationCycle?.cycle ?? ''" @change="followCycle(($event.target as HTMLSelectElement).value)">
+            <option value="">No cycle (nominations closed)</option>
+            <option v-for="c in cycles" :key="c.cycle" :value="c.cycle">{{ describeCycle(c) }}</option>
+          </select>
+        </label>
+      </p>
+      <p>
+        {{ nominations.runEnd ? `Current round open until ${new Date(nominations.runEnd).toLocaleString()}.` : "No round is open right now." }}
+      </p>
+      <h3>Previous round</h3>
+      <p v-if="!previous.length">No nominations in the previous round.</p>
+      <ol>
+        <li v-for="n in previous" :key="n.nomination">
+          {{ n.name }} by {{ n.nominator }} | {{ n.votes }} vote(s)
+          <button :disabled="inDraft(n.name)" @click="addToDraft(n.name, n.nominator)">
+            {{ inDraft(n.name) ? "In builder" : "Add to builder" }}
+          </button>
+        </li>
+      </ol>
+    </template>
+
+    <!-- 2. Builder -->
+    <h2>2. Gallery builder</h2>
+    <p>
+      Collect the next galleries here, from nominations or your own ideas, then create them all at once in a cycle.
+      This list is saved in this browser only.
+    </p>
+    <form @submit.prevent="addToDraft(ownName); ownName = ''">
+      <label>Your own idea <input v-model="ownName" /></label>
+      <button type="submit">Add to builder</button>
+    </form>
+    <p v-if="!draft.length">The builder is empty.</p>
+    <ul>
+      <li v-for="(d, i) in draft" :key="d.name">
+        {{ d.name }}{{ d.from ? ` (nominated by ${d.from})` : "" }}
+        <button @click="draft.splice(i, 1)">Remove</button>
+      </li>
+    </ul>
+    <p v-if="draft.length">
+      <label>
+        Create in
+        <select v-model="builderCycle">
+          <option value="" disabled>Choose a cycle</option>
+          <option v-for="c in cycles" :key="c.cycle" :value="c.cycle">{{ describeCycle(c) }}</option>
+        </select>
+      </label>
+      <button :disabled="!builderCycle" @click="buildGalleries">Create {{ draft.length }} galleries</button>
+    </p>
+    <ul v-if="builderReport.length">
+      <li v-for="line in builderReport" :key="line">{{ line }}</li>
+    </ul>
+
+    <!-- 3. Galleries -->
+    <h2>3. Galleries and wings</h2>
+    <p>
+      Each gallery or wing is open while its cycle has a season running. Cycles of 30 days or longer make wings.
+      Deleting one hides its posts from every feed.
+    </p>
+    <form @submit.prevent="createGallery">
+      <label>Name <input v-model="newGalleryName" required /></label>
+      <label>
+        in
+        <select v-model="newGalleryCycle">
+          <option value="">No cycle yet</option>
+          <option v-for="c in cycles" :key="c.cycle" :value="c.cycle">{{ describeCycle(c) }}</option>
+        </select>
+      </label>
+      <button type="submit">Create</button>
+    </form>
+    <ul>
+      <li v-for="g in groups" :key="g.group">
+        <RouterLink :to="`/groups/${g.group}`">{{ g.name }}</RouterLink>
+        {{ kind(g) ? `(${kind(g)})` : "" }}: {{ galleryStatus(g) }}
+        <button v-if="confirmingGroup !== g.group" @click="confirmingGroup = g.group">Delete</button>
+        <template v-else>
+          Delete {{ g.name }}?
+          <button @click="confirmingGroup = null; run(client.admin.groups.delete({ group: g.group }))">Yes, delete</button>
+          <button @click="confirmingGroup = null">No</button>
+        </template>
+      </li>
+    </ul>
+
+    <!-- 4. Seasons -->
+    <h2>4. Seasons</h2>
+    <p>
+      A cycle is a run of equal seasons that starts when you create it. Galleries and the nomination rounds in a
+      cycle open and close with its seasons. Changing the number of seasons extends a cycle or ends it early.
+    </p>
+    <form @submit.prevent="run(client.admin.cycles.create({ period: newCycleDays * DAY, runs: newCycleRuns }))">
+      <label>Season length (days) <input v-model.number="newCycleDays" type="number" min="0.001" step="any" required /></label>
+      <label>Number of seasons <input v-model.number="newCycleRuns" type="number" min="1" step="1" required /></label>
+      <button type="submit">Create cycle (starts now)</button>
+    </form>
+    <div v-for="c in cycles" :key="c.cycle">
+      <h3>{{ describeCycle(c) }}</h3>
+      <p>
+        Holds:
+        <template v-if="!c.items.length">nothing</template>
+        <template v-for="(m, i) in c.items" :key="m.item">
+          <template v-if="i">, </template>
+          {{ nominations && m.item === nominations.category ? "future gallery nominations" : groupName(m.item) }}
+          <button @click="run(client.admin.cycles['remove-item']({ cycle: c.cycle, item: m.item }))">Remove</button>
+        </template>
+      </p>
+      <p>
+        <label>Seasons <input v-model.number="runsChoice[c.cycle]" type="number" min="1" step="1" :placeholder="String(c.runs)" /></label>
+        <button @click="run(client.admin.cycles['set-runs']({ cycle: c.cycle, runs: runsChoice[c.cycle] ?? c.runs }))">
+          Change number of seasons
+        </button>
+        <button v-if="confirmingCycle !== c.cycle" @click="confirmingCycle = c.cycle">Delete cycle</button>
+        <template v-else>
+          Delete this cycle? Everything in it closes.
+          <button @click="confirmingCycle = null; run(client.admin.cycles.delete({ cycle: c.cycle }))">Yes, delete</button>
+          <button @click="confirmingCycle = null">No</button>
+        </template>
+      </p>
+    </div>
+
+    <!-- 5. People -->
+    <h2>5. People</h2>
+    <p>Admins can use this page. Only the owner can add or remove admins, and the owner can't be removed.</p>
     <ul>
       <li v-for="a in admins" :key="a.user">
         {{ a.user }}{{ a.owner ? " (owner)" : "" }}
         <button v-if="isOwner && !a.owner" @click="run(client.admin.admins.remove({ user: a.user }))">Remove</button>
       </li>
     </ul>
-    <form v-if="isOwner" @submit.prevent="run(client.admin.admins.add({ user: newAdmin }))">
+    <form v-if="isOwner" @submit.prevent="run(client.admin.admins.add({ user: newAdmin })).then((done) => done && (newAdmin = ''))">
       <label>Username <input v-model="newAdmin" required /></label>
       <button type="submit">Add admin</button>
     </form>
-    <p v-else>Only the owner can add or remove admins.</p>
-
-    <h2>Galleries and wings</h2>
-    <form @submit.prevent="run(client.admin.groups.create({ name: newGroupName }))">
-      <label>Name <input v-model="newGroupName" required /></label>
-      <button type="submit">Create group</button>
-    </form>
-    <ul>
-      <li v-for="g in groups" :key="g.group">
-        {{ g.name }} ({{ g.cycle ? `in a ${days(g.period!)}-day cycle` : "no cycle" }})
-        <button @click="run(client.admin.groups.delete({ group: g.group }))">Delete</button>
-      </li>
-    </ul>
-
-    <h2>Nomination categories</h2>
-    <form @submit.prevent="run(client.admin.categories.create({ name: newCategoryName }))">
-      <label>Name <input v-model="newCategoryName" required /></label>
-      <button type="submit">Create category</button>
-    </form>
-    <div v-for="c in categories" :key="c.category">
-      <p>
-        <RouterLink :to="`/nominations/${c.category}`">{{ c.name }}</RouterLink>
-        ({{ c.run != null ? `round open until ${new Date(c.runEnd!).toLocaleString()}` : inACycle.has(c.category) ? "closed" : "not in a cycle" }})
-        <button @click="showPrevious(c.category)">Previous round</button>
-      </p>
-      <template v-if="previous[c.category]">
-        <p v-if="!previous[c.category]!.length">No nominations in the previous round.</p>
-        <ol>
-          <li v-for="n in previous[c.category]" :key="n.nomination">
-            {{ n.name }} by {{ n.nominator }} | {{ n.votes }} vote(s)
-          </li>
-        </ol>
-      </template>
-    </div>
-
-    <h2>Cycles</h2>
-    <form @submit.prevent="run(client.admin.cycles.create({ period: newCycleDays * DAY, runs: newCycleRuns }))">
-      <label>Period (days) <input v-model.number="newCycleDays" type="number" min="0.001" step="any" required /></label>
-      <label>Runs <input v-model.number="newCycleRuns" type="number" min="1" step="1" required /></label>
-      <button type="submit">Create cycle (starts now)</button>
-    </form>
-    <div v-for="c in cycles" :key="c.cycle">
-      <h3>{{ days(c.period) }}-day cycle, {{ c.runs }} run(s), started {{ new Date(c.start).toLocaleString() }}</h3>
-      <p>
-        <button @click="run(client.admin.cycles.delete({ cycle: c.cycle }))">Delete cycle</button>
-        <label>Runs <input v-model.number="runsChoice[c.cycle]" type="number" min="1" step="1" /></label>
-        <button @click="run(client.admin.cycles['set-runs']({ cycle: c.cycle, runs: runsChoice[c.cycle] ?? c.runs }))">
-          Set runs
-        </button>
-      </p>
-      <p>Items:</p>
-      <ul>
-        <li v-for="m in c.items" :key="m.item">
-          {{ itemName(m.item) }} ({{ itemKind(m.item) }})
-          <button @click="run(client.admin.cycles['remove-item']({ cycle: c.cycle, item: m.item }))">Remove</button>
-        </li>
-      </ul>
-      <p>
-        <select v-model="addItemChoice[c.cycle]">
-          <option v-for="option in addable" :key="option.id" :value="option.id">{{ option.label }}</option>
-        </select>
-        <button
-          :disabled="!addItemChoice[c.cycle]"
-          @click="run(client.admin.cycles['add-item']({ cycle: c.cycle, item: addItemChoice[c.cycle]! }))"
-        >
-          Add item
-        </button>
-      </p>
-    </div>
   </template>
 </template>

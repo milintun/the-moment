@@ -77,7 +77,7 @@ async function submit() {
     status.value = "Posting…";
     const result = await client.posts.create({ group, content: requested.upload, caption: caption.value });
     if ("error" in result) throw new Error(result.error);
-    router.push(`/groups/${group}`);
+    router.push(`/groups/${group}#post-${result.post}`); // the feed scrolls to the new post
   } catch (e) {
     error.value = (e as Error).message;
     status.value = "";

@@ -5,6 +5,7 @@ import { createHttpHandler } from "@mit-sdg/sync-engine-http/handler";
 import type { TheMomentWire } from "../generated/wire.ts";
 import { assembleApplication } from "../src/assembly.ts";
 import { AdministratingConcept } from "../src/concepts/Administrating.ts";
+import { NominatingConcept } from "../src/concepts/Nominating.ts";
 import { db } from "../src/db.ts";
 import { policy } from "../src/http.ts";
 import { FakeClock, T0 } from "./helpers.ts";
@@ -83,9 +84,17 @@ export async function openGroup(api: Api, admin: string, name: string, cycle: st
   return group;
 }
 
+/**
+ * Creates a nomination category directly, as the server does at startup for Future
+ * galleries; no endpoint creates categories.
+ */
+export async function createCategory(name: string): Promise<string> {
+  return (await new NominatingConcept(db).createCategory({ name })).category;
+}
+
 /** Creates a nomination category and puts it in the cycle, so it is open now. */
 export async function openCategory(api: Api, admin: string, name: string, cycle: string): Promise<string> {
-  const { category } = ok(await api.admin.categories.create({ session: admin, name }));
+  const category = await createCategory(name);
   ok(await api.admin.cycles["add-item"]({ session: admin, cycle, item: category }));
   return category;
 }

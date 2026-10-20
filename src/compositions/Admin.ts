@@ -138,20 +138,6 @@ const DeletedGroupLeavesCycle = reaction(({ group, cycle }) =>
 
 // ---------- Nomination categories ----------
 
-const CreateCategory = endpoint(
-  "/admin/categories/create",
-  ({ session, name, category }) =>
-    receive({ session, name })
-      .then(Sessioning.current({ session }).responds({}))
-      .then(
-        where(IsAdmin({ session }))
-          .then(Nominating.createCategory({ name }).responds({ category }))
-          .then(respond({ category }))
-          .named("admin"),
-        where(IsNotAdmin({ session })).then(respond({ error: "ADMIN_ONLY" })).named("not-admin"),
-      ),
-);
-
 // The ranking of the most recent round that has ended; empty when none has.
 const PreviousRanking = endpoint(
   "/admin/nominations/previous",
@@ -291,7 +277,6 @@ export const composition = {
   AddPostToGroup,
   RemovePostFromGroup,
   DeletedGroupLeavesCycle,
-  CreateCategory,
   PreviousRanking,
   CycleList,
   ListCycles,

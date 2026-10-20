@@ -18,13 +18,22 @@ Public.ListGroups at /groups/list
 ```
 
 A [group's feed](reaction:Public.Feed) shows
-[the posts of its current run](former:Public.GroupFeed): the posts in the group
-created during the run happening now, each with its owner, content, caption (empty when
+[the posts of a season](former:Public.SeasonPosts) for the run happening now: the posts
+in the group created during that run, each with its owner, content, caption (empty when
 it has none), creation time, and vote count. Posts are ranked by votes, most upvoted first, and among posts with the
 same number of votes the newest comes first. A closed group's feed is empty.
 
 ```endpoints
 Public.Feed at /groups/feed
+```
+
+Past seasons stay viewable in an [archive](reaction:Public.Archive): for a group and a
+season number counted from 0, it shows that season's posts the same way, with their final
+votes, once the season has ended. A season that has not ended yet, or that the group's
+cycle does not have, answers `NO_SUCH_SEASON`. Nothing in the archive can be voted on.
+
+```endpoints
+Public.Archive at /groups/archive
 ```
 
 A post's content is the upload holding its image, and stored images are private. Anyone

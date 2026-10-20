@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import { useRoute } from "vue-router";
-import { client, me, normalizeName } from "../api.ts";
+import { FUTURE_GALLERIES, client, me, normalizeName } from "../api.ts";
 
 type Nomination = Extract<Awaited<ReturnType<typeof client.nominations.list>>, { ranking: unknown }>["ranking"]["nominations"][number];
 
-const category = useRoute().params.id as string;
-const name = ref("");
+let category = ""; // the Future galleries category, found by name
 const roundEnd = ref<string | null>(null); // null when the category is closed
 const ranking = ref<Nomination[]>([]);
 const voted = ref(new Set<string>());
@@ -16,12 +14,14 @@ const message = ref("");
 const error = ref("");
 
 async function load() {
-  const [categories, list] = await Promise.all([client.nominations.categories({}), client.nominations.list({ category })]);
+  const categories = await client.nominations.categories({});
   if ("error" in categories) return void (error.value = categories.error);
+  const found = categories.list.categories.find((c) => c.name === FUTURE_GALLERIES);
+  if (!found) return void (error.value = "Nominations aren't set up yet.");
+  category = found.category;
+  roundEnd.value = found.runEnd ?? null;
+  const list = await client.nominations.list({ category });
   if ("error" in list) return void (error.value = list.error);
-  const found = categories.list.categories.find((c) => c.category === category);
-  name.value = found?.name ?? "Unknown category";
-  roundEnd.value = found?.runEnd ?? null;
   ranking.value = list.ranking.nominations;
   if (me.value) {
     const mine = await client.nominations["my-votes"]({ category });
@@ -66,8 +66,12 @@ onMounted(load);
 </script>
 
 <template>
-  <h1>{{ name }}</h1>
-  <p>{{ roundEnd ? `Round open until ${new Date(roundEnd).toLocaleString()}` : "Closed: no round is open right now." }}</p>
+  <h1>Future galleries</h1>
+  <p>
+    Name the galleries you want to see next. Each round lasts one season, and the most upvoted
+    ideas help decide the next galleries.
+  </p>
+  <p>{{ roundEnd ? `This round is open until ${new Date(roundEnd).toLocaleString()}.` : "Nominations are closed right now." }}</p>
 
   <template v-if="roundEnd">
     <form v-if="me" @submit.prevent="nominate">
@@ -97,5 +101,4 @@ onMounted(load);
       </template>
     </li>
   </ol>
-  <p><RouterLink to="/nominations">All categories</RouterLink></p>
 </template>

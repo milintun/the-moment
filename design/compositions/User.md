@@ -93,6 +93,20 @@ show whether each post is upvoted.
 User.ListMyVotes at /posts/my-votes
 ```
 
+## My posts
+
+A person may [list their own posts](reaction:User.ListMyPosts), which answers
+[their posts, newest first](former:User.MyPosts), each with its caption, creation time,
+and vote count, and with every gallery it is in together with
+[the season it was posted in](former:User.PostedSeason), which is blank once that is no
+longer known, such as after its cycle is deleted. A post that
+[is still in season](former:User.InSeason), and so can still be voted on, is marked
+current. A post whose galleries were all deleted is still listed, with none.
+
+```endpoints
+User.ListMyPosts at /posts/mine
+```
+
 ## Nominating
 
 A nomination category belongs to a cycle like a group, and a round is the cycle's

@@ -33,6 +33,13 @@ export class PostingConcept {
     return { content: doc.content };
   }
 
+  async _byOwner({ owner }: { owner: string }): Promise<
+    Array<{ post: string; content: string; caption: string; createdAt: Date }>
+  > {
+    const rows = await this.posts.find({ owner }).sort({ createdAt: -1, _id: 1 }).toArray();
+    return rows.map(({ _id, content, caption, createdAt }) => ({ post: _id, content, caption: caption ?? "", createdAt }));
+  }
+
   async _get({post}: {post: string}) {
     const doc = await (this.posts.findOne({ _id: post }));
     // Posts made before captions existed have no caption field.

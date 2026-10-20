@@ -77,6 +77,20 @@ describe("queries", () => {
     expect(await posting._get({ post: "unknown" })).toEqual([]);
   });
 
+  test("_byOwner lists only that owner's posts, newest first", async () => {
+    const first = await posting.create({ owner: "gigi", content: "a", caption: "one", createdAt: T0 });
+    await posting.create({ owner: "sid", content: "b", caption: "", createdAt: at(HOUR) });
+    const second = await posting.create({ owner: "gigi", content: "c", caption: "", createdAt: at(2 * HOUR) });
+    expect(await posting._byOwner({ owner: "gigi" })).toEqual([
+      { post: second.post, content: "c", caption: "", createdAt: at(2 * HOUR) },
+      { post: first.post, content: "a", caption: "one", createdAt: T0 },
+    ]);
+  });
+
+  test("_byOwner is empty for someone with no posts", async () => {
+    expect(await posting._byOwner({ owner: "sasha" })).toEqual([]);
+  });
+
   test("_get gives an empty caption for a post stored before captions existed", async () => {
     await db().collection("posting.posts").insertOne({ _id: "old" as never, owner: "gigi", content: "x", createdAt: T0 });
     expect(await posting._get({ post: "old" })).toEqual([{ owner: "gigi", content: "x", caption: "", createdAt: T0 }]);

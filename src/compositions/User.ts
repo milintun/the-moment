@@ -1,5 +1,5 @@
 import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
-import { each, form, former, is, no, now, reaction, view, when, where } from "@mit-sdg/sync-engine/language";
+import { each, form, former, is, no, now, reaction, view, when, where, whether } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
 
 const { Authenticating, Sessioning, Posting, Grouping, Cycling, Upvoting, Nominating, NominationVotes, Uploading } =
@@ -202,6 +202,50 @@ const ListMyVotes = endpoint(
       .then(respond({ votes: MyVotes({ group, user }) })),
 );
 
+// ---------- My posts ----------
+
+// The season (run, counted from 0) of group's cycle that a post made at createdAt was posted
+// in; absent when that is no longer known, for example because the cycle was deleted.
+const PostedSeason = former("the season of (group) at (createdAt)", ({ group, createdAt }, { run }) =>
+  where(Cycling._currentRun({ item: group, now: createdAt }).is({ run })).form({ season: run }),
+).optional();
+
+// Marks a post that is still in season, which is exactly when it can still be voted on.
+const InSeason = former("whether (post) is in season at (now)", ({ post, now }, _bindings) =>
+  where(PostInSeason({ post, now })).form({ current: true }),
+).optional();
+
+// A person's posts, newest first, each with its votes, the galleries it is in with the
+// season it was posted in, and whether it is still in season (current is null when not).
+const MyPosts = former(
+  "the posts of (user) at (now)",
+  ({ user, now }, { post, content, caption, createdAt, votes, group, name }) =>
+    form({
+      posts: each(Posting._byOwner({ owner: user }).is({ post, content, caption, createdAt }))
+        .where(Upvoting._count({ target: post }).is({ votes }))
+        .form({
+          post,
+          content,
+          caption,
+          createdAt,
+          votes,
+          galleries: each(Grouping._groupsOf({ item: post }).is({ group }))
+            .where(Grouping._get({ group }).is({ name }))
+            .form({ group, name })
+            .splicing(whether(PostedSeason({ group, createdAt }))),
+        })
+        .splicing(whether(InSeason({ post, now }))),
+    }),
+);
+
+const ListMyPosts = endpoint(
+  "/posts/mine",
+  ({ session, user, instant }) =>
+    receive({ session })
+      .then(Sessioning.current({ session }).responds({ subject: user }))
+      .then(where(now(instant)).then(respond({ mine: MyPosts({ user, now: instant }) })).named("list")),
+);
+
 // ---------- Nominating ----------
 
 // A nomination is active while its category's cycle has a run happening and the
@@ -376,6 +420,10 @@ export const composition = {
   Unvote,
   MyVotes,
   ListMyVotes,
+  PostedSeason,
+  InSeason,
+  MyPosts,
+  ListMyPosts,
   NominationActive,
   EquivalentActive,
   CreateNomination,

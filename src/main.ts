@@ -3,6 +3,7 @@ import { createHttpHandler } from "@mit-sdg/sync-engine-http/handler";
 import { assembleApplication } from "./assembly.ts";
 import { db } from "./db.ts";
 import { policy } from "./http.ts";
+import { ensureFutureGalleries } from "./nominations.ts";
 import { makeOwner } from "./owner.ts";
 
 const application = assembleApplication();
@@ -33,6 +34,9 @@ const server = Bun.serve({
     return new Response((await file.exists()) ? file : Bun.file(`${dist}/index.html`));
   },
 });
+
+// The one nomination category always exists.
+await ensureFutureGalleries(db);
 
 console.log(`Backend ready on ${server.url}`);
 

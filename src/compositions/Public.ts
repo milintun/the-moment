@@ -27,16 +27,15 @@ const GroupList = former("every group at (now)", ({ now }, { group, name }) =>
   }),
 );
 
-// The posts of a group's current run, most upvoted first and newest first among ties
-// (rows arrive newest first and the vote sort keeps that order for equal votes).
-// Empty when the group is closed.
-const GroupFeed = former(
-  "the feed of (group) at (now)",
-  ({ group, now }, { post, owner, content, caption, createdAt, start, end, votes }) =>
+// The posts of a group created between start and end, most upvoted first and newest first
+// among ties (rows arrive newest first and the vote sort keeps that order for equal votes).
+// Shared by the live feed (the current season) and the archive (a finished one).
+const SeasonPosts = former(
+  "the posts of (group) from (start) to (end)",
+  ({ group, start, end }, { post, owner, content, caption, createdAt, votes }) =>
     form({
       posts: each(Grouping._items({ group }).is({ item: post }))
         .where(
-          Cycling._currentRun({ item: group, now }).is({ start, end }),
           Posting._get({ post }).is({ owner, content, caption, createdAt }),
           is.ge(createdAt, start),
           is.lt(createdAt, end),
@@ -87,10 +86,32 @@ const ListGroups = endpoint("/groups/list", ({ instant }) =>
     .then(respond({ list: GroupList({ now: instant }) })),
 );
 
-const Feed = endpoint("/groups/feed", ({ group, instant }) =>
-  receive({ group })
-    .where(now(instant))
-    .then(respond({ feed: GroupFeed({ group, now: instant }) })),
+// The current season's posts; empty while the group is closed.
+const Feed = endpoint("/groups/feed", ({ group, instant, start, end }) =>
+  receive({ group }).then(
+    where(now(instant), Cycling._currentRun({ item: group, now: instant }).is({ start, end }))
+      .then(respond({ feed: SeasonPosts({ group, start, end }) }))
+      .named("open"),
+    where(now(instant), no(Cycling._currentRun({ item: group, now: instant })))
+      .then(respond({ feed: { posts: [] } }))
+      .named("closed"),
+  ),
+);
+
+// A finished season's posts with their final votes. A season that hasn't ended yet, or that
+// the group's cycle doesn't have, answers NO_SUCH_SEASON.
+const Archive = endpoint("/groups/archive", ({ group, season, instant, start, end }) =>
+  receive({ group, season }).then(
+    where(now(instant), Cycling._run({ item: group, run: season }).is({ start, end }), is.le(end, instant))
+      .then(respond({ archive: SeasonPosts({ group, start, end }) }))
+      .named("finished"),
+    where(now(instant), Cycling._run({ item: group, run: season }).is({ end }), is.gt(end, instant))
+      .then(respond({ error: "NO_SUCH_SEASON" }))
+      .named("not-finished"),
+    where(no(Cycling._run({ item: group, run: season })))
+      .then(respond({ error: "NO_SUCH_SEASON" }))
+      .named("no-such-season"),
+  ),
 );
 
 const GetPost = endpoint("/posts/get", ({ post }) =>
@@ -129,10 +150,11 @@ export const composition = {
   GroupCycle,
   GroupRun,
   GroupList,
-  GroupFeed,
+  SeasonPosts,
   PostDetails,
   ListGroups,
   Feed,
+  Archive,
   GetPost,
   ImageLink,
   CategoryList,

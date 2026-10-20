@@ -23,3 +23,22 @@ export async function refreshMe() {
 
 /** Lowercase, trimmed, single-spaced: how the server decides two nominations name the same idea. */
 export const normalizeName = (name: string) => name.trim().replace(/\s+/g, " ").toLowerCase();
+
+/** The application's one nomination category; the server creates it at startup. */
+export const FUTURE_GALLERIES = "Future galleries";
+
+/** The seasons of a cycle that have fully ended, counting from 0, each with its dates. */
+export function finishedSeasons(
+  cycle: { start: string | null; period: number | null; runs: number | null },
+  now = Date.now(),
+): Array<{ season: number; start: Date; end: Date }> {
+  if (cycle.start == null || cycle.period == null || cycle.runs == null) return [];
+  const first = new Date(cycle.start).getTime();
+  const seasons = [];
+  for (let season = 0; season < cycle.runs; season++) {
+    const end = first + (season + 1) * cycle.period;
+    if (end > now) break;
+    seasons.push({ season, start: new Date(end - cycle.period), end: new Date(end) });
+  }
+  return seasons;
+}
