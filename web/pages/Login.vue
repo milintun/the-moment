@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import { client, me } from "../api.ts";
+import { client, refreshMe } from "../api.ts";
 
 const router = useRouter();
 const username = ref("");
@@ -14,7 +14,7 @@ async function submit(action: "register" | "sign-in") {
     error.value = result.error;
     return;
   }
-  me.value = result.account;
+  await refreshMe(); // also learns whether this account is an admin
   router.push("/");
 }
 </script>

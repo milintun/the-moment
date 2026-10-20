@@ -4,13 +4,22 @@ import type { TheMomentWireHttp } from "../generated/wire.ts";
 
 export const client = createHttpClient<TheMomentWireHttp>({ baseUrl: "/api" });
 
-export const ADMIN = "milin";
 export const WING_MIN_PERIOD = 30 * 24 * 60 * 60 * 1000; // a cycle of 30 days or longer makes a wing
 
-// The signed-in username, or null when signed out. Shared by every page.
+// The signed-in username (null when signed out) and what they may do. Shared by every page.
 export const me = ref<string | null>(null);
+export const isAdmin = ref(false);
+export const isOwner = ref(false);
 
+/** Reloads who is signed in, and whether they are an admin or the owner. */
 export async function refreshMe() {
-  const result = await client.auth.current({});
-  me.value = "error" in result ? null : result.username;
+  const current = await client.auth.current({});
+  me.value = "error" in current ? null : current.username;
+  // Only admins may list the admins, so a successful answer is the admin check.
+  const admins = me.value ? await client.admin.admins.list({}) : { error: "signed out" };
+  isAdmin.value = !("error" in admins);
+  isOwner.value = !("error" in admins) && admins.list.admins.some((a) => a.user === me.value && a.owner);
 }
+
+/** Lowercase, trimmed, single-spaced: how the server decides two nominations name the same idea. */
+export const normalizeName = (name: string) => name.trim().replace(/\s+/g, " ").toLowerCase();

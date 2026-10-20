@@ -1,24 +1,24 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { ADMIN, client, me, refreshMe } from "./api.ts";
+import { client, isAdmin, me, refreshMe } from "./api.ts";
 
 const router = useRouter();
 onMounted(refreshMe);
 
 async function signOut() {
   await client.auth["sign-out"]({});
-  me.value = null;
+  await refreshMe();
   router.push("/");
 }
 </script>
 
 <template>
   <header>
-    <RouterLink to="/">The Moment</RouterLink>
+    <RouterLink to="/">The Moment</RouterLink> | <RouterLink to="/nominations">Nominate</RouterLink>
     <template v-if="me">
       | Signed in as {{ me }}
-      <template v-if="me === ADMIN"> | <RouterLink to="/admin">Admin</RouterLink></template>
+      <template v-if="isAdmin"> | <RouterLink to="/admin">Admin</RouterLink></template>
       | <button @click="signOut">Sign out</button>
     </template>
     <template v-else> | <RouterLink to="/login">Log in or register</RouterLink></template>
