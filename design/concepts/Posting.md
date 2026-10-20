@@ -39,7 +39,7 @@ create (owner: User, content: Content, caption: String, createdAt: DateTime) : r
     outer spaces, so a caption of only spaces leaves the post with none
     returns post
 
-delete (user: User, post: Post) : returns ()
+delete (user: User, post: Post) : returns (content: Content)
   where post is not in Posts
   then
     refuses NO_SUCH_POST "There is no such post."
@@ -48,8 +48,8 @@ delete (user: User, post: Post) : returns ()
     refuses NOT_OWNER "Only the owner of a post can delete it."
   where post exists and user is the owner of post
   then
-    delete this post
-    returns
+    delete this post, keeping the content it held to return
+    returns content
 ```
 
 ## Queries

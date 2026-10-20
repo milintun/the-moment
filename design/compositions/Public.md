@@ -27,6 +27,16 @@ same number of votes the newest comes first. A closed group's feed is empty.
 Public.Feed at /groups/feed
 ```
 
+A post's content is the upload holding its image, and stored images are private. Anyone
+may [get a link to an image](reaction:Public.ImageLink), which Uploading creates fresh and
+which works for five minutes; an unknown upload answers `NO_SUCH_UPLOAD`. Pages reach it
+as a plain web address, `/images/<upload>`, which answers by sending the browser on to
+that link, so an image tag can show any post's image without handling storage links.
+
+```endpoints
+Public.ImageLink at /images/link
+```
+
 ## Posts
 
 A [single post](reaction:Public.GetPost) shows [its details](former:Public.PostDetails),

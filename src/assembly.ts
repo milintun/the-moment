@@ -11,6 +11,7 @@ import { GroupingConcept } from "./concepts/Grouping.ts";
 import { CyclingConcept } from "./concepts/Cycling.ts";
 import { AdministratingConcept } from "./concepts/Administrating.ts";
 import { NominatingConcept } from "./concepts/Nominating.ts";
+import { UploadingConcept } from "./concepts/Uploading.ts";
 import { db } from "./db.ts";
 
 // The clock supplies `now` to compositions; tests pass a fake one to move between runs.
@@ -28,6 +29,7 @@ export function assembleApplication({ clock }: { clock?: () => Date } = {}) {
       Administrating: new AdministratingConcept(db),
       Nominating: new NominatingConcept(db),
       NominationVotes: new UpvotingConcept(db, "nominationvotes.votes"),
+      Uploading: new UploadingConcept(db),
     },
     composition: {
       User: userComposition,

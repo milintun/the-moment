@@ -5,6 +5,8 @@ export const policy = httpPolicy({
   // are refused. Deployed, PUBLIC_ORIGIN is the app's address; locally, the dev frontend.
   publicOrigin: process.env.PUBLIC_ORIGIN ?? "http://127.0.0.1:8080",
   basePath: "/api",
+  // Lets an image tag load /api/images/<upload>: the browser is redirected to a fresh storage link.
+  direct: [{ method: "GET", path: "/images/{upload}", endpoint: "/images/link", redirect: "url" }],
   publicErrors: {
     INVALID_USERNAME: "INVALID_REQUEST",
     INVALID_PASSWORD: "INVALID_REQUEST",
@@ -39,6 +41,11 @@ export const policy = httpPolicy({
     OWN_NOMINATION: "FORBIDDEN",
     NOT_ACTIVE: "CONFLICT",
     NO_SUCH_ITEM: "NOT_FOUND",
+    NO_SUCH_UPLOAD: "NOT_FOUND",
+    NOT_UPLOADED: "CONFLICT",
+    INVALID_FILE: "INVALID_REQUEST",
+    UNSUPPORTED_TYPE: "INVALID_REQUEST",
+    NOT_YOUR_UPLOAD: "FORBIDDEN",
     ADMIN_ONLY: "FORBIDDEN",
     OWN_POST: "FORBIDDEN",
     GROUP_CLOSED: "CONFLICT",

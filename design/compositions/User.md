@@ -29,16 +29,34 @@ User.CurrentUser at /auth/current
 User.SignOut at /auth/sign-out
 ```
 
+## Uploading images
+
+A post's image is uploaded straight to storage by the person's browser. A person first
+[asks to upload an image](reaction:User.RequestUpload) of a given type and receives a new
+upload with a link that accepts the file for ten minutes. This application accepts only
+JPEG, PNG, WebP, and SVG images, each an
+[accepted image type](view:User.AcceptedImageType); any other type answers
+`UNSUPPORTED_TYPE` and creates no upload. The browser then sends the file through that link. An upload that never becomes a post leaves its file in storage; this is
+accepted.
+
+```endpoints
+User.RequestUpload at /uploads/request
+```
+
 ## Posting
 
-A person may [create a post in a group](reaction:User.CreatePost) only when the
-identifier names an existing group whose cycle has a run happening. A post may carry one
-optional caption; leaving it out, or sending only spaces, means the post has none. The
-post is created with the request's time as its creation time and added to the group. An
-identifier that is not a group, or a group that has no cycle, has not started, or has
-finished every run, answers `GROUP_CLOSED` before anything is created. If the group is
-deleted between that check and the post being added, the request is refused and the
-post is left in no group; this rare race is accepted.
+A person may [create a post in a group](reaction:User.CreatePost) with an image they
+uploaded and one optional caption. Uploading first checks the image against this
+application's 10 MB limit: an image that is not an upload answers `NO_SUCH_UPLOAD`,
+someone else's upload `NOT_YOUR_UPLOAD`, one that never arrived `NOT_UPLOADED`, and one
+larger than 10 MB or of another type than requested `INVALID_FILE`, which also removes it
+from storage. Then the group must be [open](view:User.GroupOpen): an identifier that is
+not a group, or a group that has no cycle, has not started, or has finished every run,
+answers `GROUP_CLOSED`. Every refusal happens before the post is created. Leaving the caption out, or sending only spaces, means the post has none. The
+post is created with the uploaded image as its content and the request's time as its
+creation time, and added to the group. If the group is deleted between the check and the
+post being added, the request is refused and the post is left in no group; this rare
+race is accepted.
 
 ```endpoints
 User.CreatePost at /posts/create
@@ -46,8 +64,9 @@ User.CreatePost at /posts/create
 
 The owner of a post may [delete it](reaction:User.DeletePost); anyone else is refused
 by Posting. A deleted post
-[leaves every group it was in](reaction:User.DeletedPostLeavesGroups) and
-[loses its votes](reaction:User.DeletedPostLosesVotes).
+[leaves every group it was in](reaction:User.DeletedPostLeavesGroups),
+[loses its votes](reaction:User.DeletedPostLosesVotes), and
+[has its image removed from storage](reaction:User.DeletedPostLosesImage).
 
 ```endpoints
 User.DeletePost at /posts/delete

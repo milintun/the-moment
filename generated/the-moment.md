@@ -52,7 +52,7 @@ Defined in [Authenticating](../design/concepts/Authenticating.md), line 1.
 
 #### Instances
 
-- `Authenticating` — instance of `Authenticating` — [Application types](../design/types.md), line 17.
+- `Authenticating` — instance of `Authenticating` — [Application types](../design/types.md), line 14.
 
 ### Cycling
 
@@ -153,7 +153,7 @@ Defined in [Posting](../design/concepts/Posting.md), line 1.
 #### Actions
 
 - `create(owner: User, content: Content, caption: String, createdAt: DateTime) : returns (post: Post)`
-- `delete(user: User, post: Post) : returns ()`
+- `delete(user: User, post: Post) : returns (content: Content)`
   - Refuses `NO_SUCH_POST`: There is no such post.
   - Refuses `NOT_OWNER`: Only the owner of a post can delete it.
 
@@ -164,7 +164,7 @@ Defined in [Posting](../design/concepts/Posting.md), line 1.
 #### Instances
 
 - `Posting` — instance of `Posting` — [Application types](../design/types.md), line 25.
-  - `Content` is `ArtworkSource` — [Application types](../design/types.md), line 27.
+  - `Content` is `Uploading.Upload` — [Application types](../design/types.md), line 27.
   - `User` is `Authenticating.Account` — [Application types](../design/types.md), line 26.
 
 ### Sessioning
@@ -185,8 +185,34 @@ Defined in [Sessioning](../design/concepts/Sessioning.md), line 1.
 
 #### Instances
 
-- `Sessioning` — instance of `Sessioning` — [Application types](../design/types.md), line 19.
-  - `Subject` is `Authenticating.Account` — [Application types](../design/types.md), line 20.
+- `Sessioning` — instance of `Sessioning` — [Application types](../design/types.md), line 16.
+  - `Subject` is `Authenticating.Account` — [Application types](../design/types.md), line 17.
+
+### Uploading
+
+Defined in [Uploading](../design/concepts/Uploading.md), line 1.
+
+#### Actions
+
+- `requestUpload(owner: User, contentType: String, createdAt: DateTime) : returns (upload: Upload, uploadUrl: String)`
+- `verify(upload: Upload, owner: User, maxSize: Number) : returns ()`
+  - Refuses `NO_SUCH_UPLOAD`: There is no such upload.
+  - Refuses `NOT_YOUR_UPLOAD`: This upload belongs to someone else.
+  - Refuses `NOT_UPLOADED`: The file has not been uploaded yet.
+  - Refuses `INVALID_FILE`: The file is too large or not of the requested type.
+- `remove(upload: Upload) : returns ()`
+  - Refuses `NO_SUCH_UPLOAD`: There is no such upload.
+- `link(upload: Upload) : returns (url: String)`
+  - Refuses `NO_SUCH_UPLOAD`: There is no such upload.
+
+#### Queries
+
+- `_get(upload: Upload) : optional (owner: User, contentType: String, createdAt: DateTime)`
+
+#### Instances
+
+- `Uploading` — instance of `Uploading` — [Application types](../design/types.md), line 19.
+  - `User` is `Authenticating.Account` — [Application types](../design/types.md), line 20.
 
 ### Upvoting
 
@@ -219,17 +245,38 @@ Defined in [Upvoting](../design/concepts/Upvoting.md), line 1.
 
 Concrete types:
 
-- `ArtworkSource` — [Application types](../design/types.md), line 9.
-- `CycledItem` — [Application types](../design/types.md), line 12.
+- `CycledItem` — [Application types](../design/types.md), line 9.
 
 ## Views
 
 _Views name reusable conditions. Multiple `where` blocks are alternatives._
 
+### (contentType) is an accepted image type
+
+Authored path: `User.AcceptedImageType`.
+- Covered by [User](../design/compositions/User.md), line 38.
+
+```view
+(contentType) is an accepted image type — inputs (contentType); outputs (); bindings ()
+  where contentType is among ["image/jpeg", "image/png", "image/webp", "image/svg+xml"]
+```
+
+### (group) is open at (now)
+
+Authored path: `User.GroupOpen`.
+- Covered by [User](../design/compositions/User.md), line 53.
+
+```view
+(group) is open at (now) — inputs (group, now); outputs (); bindings ()
+  where
+    Grouping._get (group)
+    Cycling._currentRun (item: group, now)
+```
+
 ### (nomination) is active at (now)
 
 Authored path: `User.NominationActive`.
-- Covered by [User](../design/compositions/User.md), line 80.
+- Covered by [User](../design/compositions/User.md), line 99.
 
 ```view
 (nomination) is active at (now) — inputs (nomination, now); outputs (); bindings (category, createdAt, start, end)
@@ -243,7 +290,7 @@ Authored path: `User.NominationActive`.
 ### (post) is in season at (now)
 
 Authored path: `User.PostInSeason`.
-- Covered by [User](../design/compositions/User.md), line 58.
+- Covered by [User](../design/compositions/User.md), line 77.
 
 ```view
 (post) is in season at (now) — inputs (post, now); outputs (); bindings (createdAt, group, start, end)
@@ -306,7 +353,7 @@ Authored path: `Admin.IsNotOwner`.
 ### an idea equivalent to (name) is active in (category) at (now)
 
 Authored path: `User.EquivalentActive`.
-- Covered by [User](../design/compositions/User.md), line 88.
+- Covered by [User](../design/compositions/User.md), line 107.
 
 ```view
 an idea equivalent to (name) is active in (category) at (now) — inputs (category, name, now); outputs (); bindings (createdAt, start, end)
@@ -403,7 +450,7 @@ Former "every group at (now)" — inputs (now); bindings (group, name); promises
 ### every nomination category at (now)
 
 Authored path: `Public.CategoryList`.
-- Covered by [Public](../design/compositions/Public.md), line 43.
+- Covered by [Public](../design/compositions/Public.md), line 53.
 
 ```former
 Former "every nomination category at (now)" — inputs (now); bindings (category, name); promises exactly one record — forms:
@@ -418,7 +465,7 @@ Former "every nomination category at (now)" — inputs (now); bindings (category
 ### the active nominations in (category) upvoted by (user) at (now)
 
 Authored path: `User.MyNominationVotes`.
-- Covered by [User](../design/compositions/User.md), line 112.
+- Covered by [User](../design/compositions/User.md), line 131.
 
 ```former
 Former "the active nominations in (category) upvoted by (user) at (now)" — inputs (category, user, now); bindings (nomination, createdAt, start, end); promises exactly one record — forms:
@@ -435,7 +482,7 @@ Former "the active nominations in (category) upvoted by (user) at (now)" — inp
 ### the details of (post)
 
 Authored path: `Public.PostDetails`.
-- Covered by [Public](../design/compositions/Public.md), line 32.
+- Covered by [Public](../design/compositions/Public.md), line 42.
 
 ```former
 Former "the details of (post)" — inputs (post); bindings (owner, content, caption, createdAt, votes); promises at most one record — forms:
@@ -477,7 +524,7 @@ Former "the feed of (group) at (now)" — inputs (group, now); bindings (post, o
 ### the posts in (group) upvoted by (user)
 
 Authored path: `User.MyVotes`.
-- Covered by [User](../design/compositions/User.md), line 70.
+- Covered by [User](../design/compositions/User.md), line 89.
 
 ```former
 Former "the posts in (group) upvoted by (user)" — inputs (group, user); bindings (post); promises exactly one record — forms:
@@ -492,7 +539,7 @@ Former "the posts in (group) upvoted by (user)" — inputs (group, user); bindin
 
 Authored path: `Public.RoundRanking`.
 - Covered by [Admin](../design/compositions/Admin.md), line 62.
-- Covered by [Public](../design/compositions/Public.md), line 51.
+- Covered by [Public](../design/compositions/Public.md), line 61.
 
 ```former
 Former "the ranking of (category) from (start) to (end)" — inputs (category, start, end); bindings (nomination, nominator, name, createdAt, votes); promises exactly one record — forms:
@@ -1428,8 +1475,8 @@ then
 ### Public.GetPost:found
 
 Authored path: `Public.GetPost`.
-- Covered by [Public](../design/compositions/Public.md), line 32.
-- Covered by [Public](../design/compositions/Public.md), line 37.
+- Covered by [Public](../design/compositions/Public.md), line 42.
+- Covered by [Public](../design/compositions/Public.md), line 47.
 
 ```reaction
 when RequestBoundary.request (path: "/posts/get", post, requestId)
@@ -1442,8 +1489,8 @@ then
 ### Public.GetPost:missing
 
 Authored path: `Public.GetPost`.
-- Covered by [Public](../design/compositions/Public.md), line 32.
-- Covered by [Public](../design/compositions/Public.md), line 37.
+- Covered by [Public](../design/compositions/Public.md), line 42.
+- Covered by [Public](../design/compositions/Public.md), line 47.
 
 ```reaction
 when RequestBoundary.request (path: "/posts/get", post, requestId)
@@ -1453,11 +1500,37 @@ then
   RequestBoundary.respond (error: "NO_SUCH_POST", requestId)
 ```
 
+### Public.ImageLink
+
+Authored path: `Public.ImageLink`.
+- Covered by [Public](../design/compositions/Public.md), line 31.
+- Covered by [Public](../design/compositions/Public.md), line 37.
+
+```reaction
+when RequestBoundary.request (path: "/images/link", requestId, upload)
+then
+  Uploading.link (upload)
+```
+
+### Public.ImageLink#2
+
+Authored path: `Public.ImageLink`.
+- Covered by [Public](../design/compositions/Public.md), line 31.
+- Covered by [Public](../design/compositions/Public.md), line 37.
+
+```reaction
+when Uploading.link (upload, url), asked by Public.ImageLink
+where
+  earlier, RequestBoundary.request (path: "/images/link", requestId, upload)
+then
+  RequestBoundary.respond (requestId, url)
+```
+
 ### Public.ListCategories
 
 Authored path: `Public.ListCategories`.
-- Covered by [Public](../design/compositions/Public.md), line 42.
-- Covered by [Public](../design/compositions/Public.md), line 47.
+- Covered by [Public](../design/compositions/Public.md), line 52.
+- Covered by [Public](../design/compositions/Public.md), line 57.
 
 ```reaction
 when RequestBoundary.request (path: "/nominations/categories", requestId)
@@ -1484,8 +1557,8 @@ then
 ### Public.ListNominations:closed
 
 Authored path: `Public.ListNominations`.
-- Covered by [Public](../design/compositions/Public.md), line 50.
-- Covered by [Public](../design/compositions/Public.md), line 57.
+- Covered by [Public](../design/compositions/Public.md), line 60.
+- Covered by [Public](../design/compositions/Public.md), line 67.
 
 ```reaction
 when RequestBoundary.request (category, path: "/nominations/list", requestId)
@@ -1499,8 +1572,8 @@ then
 ### Public.ListNominations:open
 
 Authored path: `Public.ListNominations`.
-- Covered by [Public](../design/compositions/Public.md), line 50.
-- Covered by [Public](../design/compositions/Public.md), line 57.
+- Covered by [Public](../design/compositions/Public.md), line 60.
+- Covered by [Public](../design/compositions/Public.md), line 67.
 
 ```reaction
 when RequestBoundary.request (category, path: "/nominations/list", requestId)
@@ -1514,8 +1587,8 @@ then
 ### User.CreateNomination
 
 Authored path: `User.CreateNomination`.
-- Covered by [User](../design/compositions/User.md), line 85.
-- Covered by [User](../design/compositions/User.md), line 94.
+- Covered by [User](../design/compositions/User.md), line 104.
+- Covered by [User](../design/compositions/User.md), line 113.
 
 ```reaction
 when RequestBoundary.request (category, name, path: "/nominations/create", requestId, session)
@@ -1526,8 +1599,8 @@ then
 ### User.CreateNomination:closed#2
 
 Authored path: `User.CreateNomination`.
-- Covered by [User](../design/compositions/User.md), line 85.
-- Covered by [User](../design/compositions/User.md), line 94.
+- Covered by [User](../design/compositions/User.md), line 104.
+- Covered by [User](../design/compositions/User.md), line 113.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.CreateNomination
@@ -1542,8 +1615,8 @@ then
 ### User.CreateNomination:duplicate#2
 
 Authored path: `User.CreateNomination`.
-- Covered by [User](../design/compositions/User.md), line 85.
-- Covered by [User](../design/compositions/User.md), line 94.
+- Covered by [User](../design/compositions/User.md), line 104.
+- Covered by [User](../design/compositions/User.md), line 113.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.CreateNomination
@@ -1558,8 +1631,8 @@ then
 ### User.CreateNomination:open#2
 
 Authored path: `User.CreateNomination`.
-- Covered by [User](../design/compositions/User.md), line 85.
-- Covered by [User](../design/compositions/User.md), line 94.
+- Covered by [User](../design/compositions/User.md), line 104.
+- Covered by [User](../design/compositions/User.md), line 113.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.CreateNomination
@@ -1575,8 +1648,8 @@ then
 ### User.CreateNomination:open#3
 
 Authored path: `User.CreateNomination`.
-- Covered by [User](../design/compositions/User.md), line 85.
-- Covered by [User](../design/compositions/User.md), line 94.
+- Covered by [User](../design/compositions/User.md), line 104.
+- Covered by [User](../design/compositions/User.md), line 113.
 
 ```reaction
 when Nominating.nominate (category, createdAt, name, nominator: user, nomination), asked by User.CreateNomination:open#2
@@ -1589,8 +1662,8 @@ then
 ### User.CreatePost
 
 Authored path: `User.CreatePost`.
-- Covered by [User](../design/compositions/User.md), line 34.
-- Covered by [User](../design/compositions/User.md), line 44.
+- Covered by [User](../design/compositions/User.md), line 48.
+- Covered by [User](../design/compositions/User.md), line 62.
 
 ```reaction
 when RequestBoundary.request (caption, content, group, path: "/posts/create", requestId, session)
@@ -1598,14 +1671,28 @@ then
   Sessioning.current (session)
 ```
 
-### User.CreatePost:closed#2
+### User.CreatePost#2
 
 Authored path: `User.CreatePost`.
-- Covered by [User](../design/compositions/User.md), line 34.
-- Covered by [User](../design/compositions/User.md), line 44.
+- Covered by [User](../design/compositions/User.md), line 48.
+- Covered by [User](../design/compositions/User.md), line 62.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.CreatePost
+where
+  earlier, RequestBoundary.request (caption, content, group, path: "/posts/create", requestId, session)
+then
+  Uploading.verify (maxSize: 10485760, owner: user, upload: content)
+```
+
+### User.CreatePost:closed#3
+
+Authored path: `User.CreatePost`.
+- Covered by [User](../design/compositions/User.md), line 48.
+- Covered by [User](../design/compositions/User.md), line 62.
+
+```reaction
+when Uploading.verify (maxSize: 10485760, owner: user, upload: content), asked by User.CreatePost#2
 where
   createdAt is the current flow's instant
   earlier, RequestBoundary.request (caption, content, group, path: "/posts/create", requestId, session)
@@ -1615,14 +1702,14 @@ then
   RequestBoundary.respond (error: "GROUP_CLOSED", requestId)
 ```
 
-### User.CreatePost:not-a-group#2
+### User.CreatePost:not-a-group#3
 
 Authored path: `User.CreatePost`.
-- Covered by [User](../design/compositions/User.md), line 34.
-- Covered by [User](../design/compositions/User.md), line 44.
+- Covered by [User](../design/compositions/User.md), line 48.
+- Covered by [User](../design/compositions/User.md), line 62.
 
 ```reaction
-when Sessioning.current (session, subject: user), asked by User.CreatePost
+when Uploading.verify (maxSize: 10485760, owner: user, upload: content), asked by User.CreatePost#2
 where
   earlier, RequestBoundary.request (caption, content, group, path: "/posts/create", requestId, session)
   no Grouping._get (group)
@@ -1630,45 +1717,44 @@ then
   RequestBoundary.respond (error: "GROUP_CLOSED", requestId)
 ```
 
-### User.CreatePost:open#2
+### User.CreatePost:open#3
 
 Authored path: `User.CreatePost`.
-- Covered by [User](../design/compositions/User.md), line 34.
-- Covered by [User](../design/compositions/User.md), line 44.
+- Covered by [User](../design/compositions/User.md), line 48.
+- Covered by [User](../design/compositions/User.md), line 62.
 
 ```reaction
-when Sessioning.current (session, subject: user), asked by User.CreatePost
+when Uploading.verify (maxSize: 10485760, owner: user, upload: content), asked by User.CreatePost#2
 where
   createdAt is the current flow's instant
   earlier, RequestBoundary.request (caption, content, group, path: "/posts/create", requestId, session)
-  Grouping._get (group)
-  Cycling._currentRun (item: group, now: createdAt)
+  view "(group) is open at (now)" with (group, now: createdAt)
 then
   Posting.create (caption, content, createdAt, owner: user)
 ```
 
-### User.CreatePost:open#3
+### User.CreatePost:open#4
 
 Authored path: `User.CreatePost`.
-- Covered by [User](../design/compositions/User.md), line 34.
-- Covered by [User](../design/compositions/User.md), line 44.
+- Covered by [User](../design/compositions/User.md), line 48.
+- Covered by [User](../design/compositions/User.md), line 62.
 
 ```reaction
-when Posting.create (caption, content, createdAt, owner: user, post), asked by User.CreatePost:open#2
+when Posting.create (caption, content, createdAt, owner: user, post), asked by User.CreatePost:open#3
 where
   earlier, RequestBoundary.request (caption, content, group, path: "/posts/create", requestId, session)
 then
   Grouping.addItem (group, item: post)
 ```
 
-### User.CreatePost:open#4
+### User.CreatePost:open#5
 
 Authored path: `User.CreatePost`.
-- Covered by [User](../design/compositions/User.md), line 34.
-- Covered by [User](../design/compositions/User.md), line 44.
+- Covered by [User](../design/compositions/User.md), line 48.
+- Covered by [User](../design/compositions/User.md), line 62.
 
 ```reaction
-when Grouping.addItem (group, item: post), asked by User.CreatePost:open#3
+when Grouping.addItem (group, item: post), asked by User.CreatePost:open#4
 where
   earlier, RequestBoundary.request (caption, content, group, path: "/posts/create", requestId, session)
 then
@@ -1704,8 +1790,8 @@ then
 ### User.DeletePost
 
 Authored path: `User.DeletePost`.
-- Covered by [User](../design/compositions/User.md), line 47.
-- Covered by [User](../design/compositions/User.md), line 53.
+- Covered by [User](../design/compositions/User.md), line 65.
+- Covered by [User](../design/compositions/User.md), line 72.
 
 ```reaction
 when RequestBoundary.request (path: "/posts/delete", post, requestId, session)
@@ -1716,8 +1802,8 @@ then
 ### User.DeletePost#2
 
 Authored path: `User.DeletePost`.
-- Covered by [User](../design/compositions/User.md), line 47.
-- Covered by [User](../design/compositions/User.md), line 53.
+- Covered by [User](../design/compositions/User.md), line 65.
+- Covered by [User](../design/compositions/User.md), line 72.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.DeletePost
@@ -1730,8 +1816,8 @@ then
 ### User.DeletePost#3
 
 Authored path: `User.DeletePost`.
-- Covered by [User](../design/compositions/User.md), line 47.
-- Covered by [User](../design/compositions/User.md), line 53.
+- Covered by [User](../design/compositions/User.md), line 65.
+- Covered by [User](../design/compositions/User.md), line 72.
 
 ```reaction
 when Posting.delete (post, user), asked by User.DeletePost#2
@@ -1744,7 +1830,7 @@ then
 ### User.DeletedPostLeavesGroups
 
 Authored path: `User.DeletedPostLeavesGroups`.
-- Covered by [User](../design/compositions/User.md), line 49.
+- Covered by [User](../design/compositions/User.md), line 67.
 
 ```reaction
 when Posting.delete (post)
@@ -1754,10 +1840,21 @@ then
   Grouping.removeItem (group, item: post)
 ```
 
+### User.DeletedPostLosesImage
+
+Authored path: `User.DeletedPostLosesImage`.
+- Covered by [User](../design/compositions/User.md), line 69.
+
+```reaction
+when Posting.delete (content)
+then
+  Uploading.remove (upload: content)
+```
+
 ### User.DeletedPostLosesVotes
 
 Authored path: `User.DeletedPostLosesVotes`.
-- Covered by [User](../design/compositions/User.md), line 50.
+- Covered by [User](../design/compositions/User.md), line 68.
 
 ```reaction
 when Posting.delete (post)
@@ -1768,8 +1865,8 @@ then
 ### User.ListMyNominationVotes
 
 Authored path: `User.ListMyNominationVotes`.
-- Covered by [User](../design/compositions/User.md), line 111.
-- Covered by [User](../design/compositions/User.md), line 117.
+- Covered by [User](../design/compositions/User.md), line 130.
+- Covered by [User](../design/compositions/User.md), line 136.
 
 ```reaction
 when RequestBoundary.request (category, path: "/nominations/my-votes", requestId, session)
@@ -1780,8 +1877,8 @@ then
 ### User.ListMyNominationVotes#2
 
 Authored path: `User.ListMyNominationVotes`.
-- Covered by [User](../design/compositions/User.md), line 111.
-- Covered by [User](../design/compositions/User.md), line 117.
+- Covered by [User](../design/compositions/User.md), line 130.
+- Covered by [User](../design/compositions/User.md), line 136.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.ListMyNominationVotes
@@ -1795,8 +1892,8 @@ then
 ### User.ListMyVotes
 
 Authored path: `User.ListMyVotes`.
-- Covered by [User](../design/compositions/User.md), line 69.
-- Covered by [User](../design/compositions/User.md), line 74.
+- Covered by [User](../design/compositions/User.md), line 88.
+- Covered by [User](../design/compositions/User.md), line 93.
 
 ```reaction
 when RequestBoundary.request (group, path: "/posts/my-votes", requestId, session)
@@ -1807,8 +1904,8 @@ then
 ### User.ListMyVotes#2
 
 Authored path: `User.ListMyVotes`.
-- Covered by [User](../design/compositions/User.md), line 69.
-- Covered by [User](../design/compositions/User.md), line 74.
+- Covered by [User](../design/compositions/User.md), line 88.
+- Covered by [User](../design/compositions/User.md), line 93.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.ListMyVotes
@@ -1854,6 +1951,63 @@ where
   earlier, RequestBoundary.request (password, path: "/auth/register", requestId, username)
 then
   RequestBoundary.respond (account, expiresAt, requestId, session)
+```
+
+### User.RequestUpload
+
+Authored path: `User.RequestUpload`.
+- Covered by [User](../design/compositions/User.md), line 35.
+- Covered by [User](../design/compositions/User.md), line 43.
+
+```reaction
+when RequestBoundary.request (contentType, path: "/uploads/request", requestId, session)
+then
+  Sessioning.current (session)
+```
+
+### User.RequestUpload:image#2
+
+Authored path: `User.RequestUpload`.
+- Covered by [User](../design/compositions/User.md), line 35.
+- Covered by [User](../design/compositions/User.md), line 43.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by User.RequestUpload
+where
+  createdAt is the current flow's instant
+  earlier, RequestBoundary.request (contentType, path: "/uploads/request", requestId, session)
+  view "(contentType) is an accepted image type" with (contentType)
+then
+  Uploading.requestUpload (contentType, createdAt, owner: user)
+```
+
+### User.RequestUpload:image#3
+
+Authored path: `User.RequestUpload`.
+- Covered by [User](../design/compositions/User.md), line 35.
+- Covered by [User](../design/compositions/User.md), line 43.
+
+```reaction
+when Uploading.requestUpload (contentType, createdAt, owner: user, upload, uploadUrl), asked by User.RequestUpload:image#2
+where
+  earlier, RequestBoundary.request (contentType, path: "/uploads/request", requestId, session)
+then
+  RequestBoundary.respond (requestId, upload, uploadUrl)
+```
+
+### User.RequestUpload:unsupported#2
+
+Authored path: `User.RequestUpload`.
+- Covered by [User](../design/compositions/User.md), line 35.
+- Covered by [User](../design/compositions/User.md), line 43.
+
+```reaction
+when Sessioning.current (session, subject: user), asked by User.RequestUpload
+where
+  earlier, RequestBoundary.request (contentType, path: "/uploads/request", requestId, session)
+  no view "(contentType) is an accepted image type" with (contentType)
+then
+  RequestBoundary.respond (error: "UNSUPPORTED_TYPE", requestId)
 ```
 
 ### User.SignIn
@@ -1923,8 +2077,8 @@ then
 ### User.Unvote
 
 Authored path: `User.Unvote`.
-- Covered by [User](../design/compositions/User.md), line 60.
-- Covered by [User](../design/compositions/User.md), line 66.
+- Covered by [User](../design/compositions/User.md), line 79.
+- Covered by [User](../design/compositions/User.md), line 85.
 
 ```reaction
 when RequestBoundary.request (path: "/posts/unvote", post, requestId, session)
@@ -1935,8 +2089,8 @@ then
 ### User.Unvote:allowed#2
 
 Authored path: `User.Unvote`.
-- Covered by [User](../design/compositions/User.md), line 60.
-- Covered by [User](../design/compositions/User.md), line 66.
+- Covered by [User](../design/compositions/User.md), line 79.
+- Covered by [User](../design/compositions/User.md), line 85.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.Unvote
@@ -1952,8 +2106,8 @@ then
 ### User.Unvote:allowed#3
 
 Authored path: `User.Unvote`.
-- Covered by [User](../design/compositions/User.md), line 60.
-- Covered by [User](../design/compositions/User.md), line 66.
+- Covered by [User](../design/compositions/User.md), line 79.
+- Covered by [User](../design/compositions/User.md), line 85.
 
 ```reaction
 when Upvoting.unvote (target: post, voter: user), asked by User.Unvote:allowed#2
@@ -1966,8 +2120,8 @@ then
 ### User.Unvote:missing#2
 
 Authored path: `User.Unvote`.
-- Covered by [User](../design/compositions/User.md), line 60.
-- Covered by [User](../design/compositions/User.md), line 66.
+- Covered by [User](../design/compositions/User.md), line 79.
+- Covered by [User](../design/compositions/User.md), line 85.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.Unvote
@@ -1981,8 +2135,8 @@ then
 ### User.Unvote:out-of-season#2
 
 Authored path: `User.Unvote`.
-- Covered by [User](../design/compositions/User.md), line 60.
-- Covered by [User](../design/compositions/User.md), line 66.
+- Covered by [User](../design/compositions/User.md), line 79.
+- Covered by [User](../design/compositions/User.md), line 85.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.Unvote
@@ -1998,8 +2152,8 @@ then
 ### User.Unvote:own-post#2
 
 Authored path: `User.Unvote`.
-- Covered by [User](../design/compositions/User.md), line 60.
-- Covered by [User](../design/compositions/User.md), line 66.
+- Covered by [User](../design/compositions/User.md), line 79.
+- Covered by [User](../design/compositions/User.md), line 85.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.Unvote
@@ -2013,8 +2167,8 @@ then
 ### User.UnvoteNomination
 
 Authored path: `User.UnvoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 108.
-- Covered by [User](../design/compositions/User.md), line 116.
+- Covered by [User](../design/compositions/User.md), line 127.
+- Covered by [User](../design/compositions/User.md), line 135.
 
 ```reaction
 when RequestBoundary.request (nomination, path: "/nominations/unvote", requestId, session)
@@ -2025,8 +2179,8 @@ then
 ### User.UnvoteNomination:allowed#2
 
 Authored path: `User.UnvoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 108.
-- Covered by [User](../design/compositions/User.md), line 116.
+- Covered by [User](../design/compositions/User.md), line 127.
+- Covered by [User](../design/compositions/User.md), line 135.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.UnvoteNomination
@@ -2042,8 +2196,8 @@ then
 ### User.UnvoteNomination:allowed#3
 
 Authored path: `User.UnvoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 108.
-- Covered by [User](../design/compositions/User.md), line 116.
+- Covered by [User](../design/compositions/User.md), line 127.
+- Covered by [User](../design/compositions/User.md), line 135.
 
 ```reaction
 when NominationVotes.unvote (target: nomination, voter: user), asked by User.UnvoteNomination:allowed#2
@@ -2056,8 +2210,8 @@ then
 ### User.UnvoteNomination:inactive#2
 
 Authored path: `User.UnvoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 108.
-- Covered by [User](../design/compositions/User.md), line 116.
+- Covered by [User](../design/compositions/User.md), line 127.
+- Covered by [User](../design/compositions/User.md), line 135.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.UnvoteNomination
@@ -2073,8 +2227,8 @@ then
 ### User.UnvoteNomination:missing#2
 
 Authored path: `User.UnvoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 108.
-- Covered by [User](../design/compositions/User.md), line 116.
+- Covered by [User](../design/compositions/User.md), line 127.
+- Covered by [User](../design/compositions/User.md), line 135.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.UnvoteNomination
@@ -2088,8 +2242,8 @@ then
 ### User.UnvoteNomination:own-nomination#2
 
 Authored path: `User.UnvoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 108.
-- Covered by [User](../design/compositions/User.md), line 116.
+- Covered by [User](../design/compositions/User.md), line 127.
+- Covered by [User](../design/compositions/User.md), line 135.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.UnvoteNomination
@@ -2103,8 +2257,8 @@ then
 ### User.Vote
 
 Authored path: `User.Vote`.
-- Covered by [User](../design/compositions/User.md), line 60.
-- Covered by [User](../design/compositions/User.md), line 65.
+- Covered by [User](../design/compositions/User.md), line 79.
+- Covered by [User](../design/compositions/User.md), line 84.
 
 ```reaction
 when RequestBoundary.request (path: "/posts/vote", post, requestId, session)
@@ -2115,8 +2269,8 @@ then
 ### User.Vote:allowed#2
 
 Authored path: `User.Vote`.
-- Covered by [User](../design/compositions/User.md), line 60.
-- Covered by [User](../design/compositions/User.md), line 65.
+- Covered by [User](../design/compositions/User.md), line 79.
+- Covered by [User](../design/compositions/User.md), line 84.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.Vote
@@ -2132,8 +2286,8 @@ then
 ### User.Vote:allowed#3
 
 Authored path: `User.Vote`.
-- Covered by [User](../design/compositions/User.md), line 60.
-- Covered by [User](../design/compositions/User.md), line 65.
+- Covered by [User](../design/compositions/User.md), line 79.
+- Covered by [User](../design/compositions/User.md), line 84.
 
 ```reaction
 when Upvoting.upvote (target: post, voter: user), asked by User.Vote:allowed#2
@@ -2146,8 +2300,8 @@ then
 ### User.Vote:missing#2
 
 Authored path: `User.Vote`.
-- Covered by [User](../design/compositions/User.md), line 60.
-- Covered by [User](../design/compositions/User.md), line 65.
+- Covered by [User](../design/compositions/User.md), line 79.
+- Covered by [User](../design/compositions/User.md), line 84.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.Vote
@@ -2161,8 +2315,8 @@ then
 ### User.Vote:out-of-season#2
 
 Authored path: `User.Vote`.
-- Covered by [User](../design/compositions/User.md), line 60.
-- Covered by [User](../design/compositions/User.md), line 65.
+- Covered by [User](../design/compositions/User.md), line 79.
+- Covered by [User](../design/compositions/User.md), line 84.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.Vote
@@ -2178,8 +2332,8 @@ then
 ### User.Vote:own-post#2
 
 Authored path: `User.Vote`.
-- Covered by [User](../design/compositions/User.md), line 60.
-- Covered by [User](../design/compositions/User.md), line 65.
+- Covered by [User](../design/compositions/User.md), line 79.
+- Covered by [User](../design/compositions/User.md), line 84.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.Vote
@@ -2193,8 +2347,8 @@ then
 ### User.VoteNomination
 
 Authored path: `User.VoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 107.
-- Covered by [User](../design/compositions/User.md), line 115.
+- Covered by [User](../design/compositions/User.md), line 126.
+- Covered by [User](../design/compositions/User.md), line 134.
 
 ```reaction
 when RequestBoundary.request (nomination, path: "/nominations/vote", requestId, session)
@@ -2205,8 +2359,8 @@ then
 ### User.VoteNomination:allowed#2
 
 Authored path: `User.VoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 107.
-- Covered by [User](../design/compositions/User.md), line 115.
+- Covered by [User](../design/compositions/User.md), line 126.
+- Covered by [User](../design/compositions/User.md), line 134.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.VoteNomination
@@ -2222,8 +2376,8 @@ then
 ### User.VoteNomination:allowed#3
 
 Authored path: `User.VoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 107.
-- Covered by [User](../design/compositions/User.md), line 115.
+- Covered by [User](../design/compositions/User.md), line 126.
+- Covered by [User](../design/compositions/User.md), line 134.
 
 ```reaction
 when NominationVotes.upvote (target: nomination, voter: user), asked by User.VoteNomination:allowed#2
@@ -2236,8 +2390,8 @@ then
 ### User.VoteNomination:inactive#2
 
 Authored path: `User.VoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 107.
-- Covered by [User](../design/compositions/User.md), line 115.
+- Covered by [User](../design/compositions/User.md), line 126.
+- Covered by [User](../design/compositions/User.md), line 134.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.VoteNomination
@@ -2253,8 +2407,8 @@ then
 ### User.VoteNomination:missing#2
 
 Authored path: `User.VoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 107.
-- Covered by [User](../design/compositions/User.md), line 115.
+- Covered by [User](../design/compositions/User.md), line 126.
+- Covered by [User](../design/compositions/User.md), line 134.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.VoteNomination
@@ -2268,8 +2422,8 @@ then
 ### User.VoteNomination:own-nomination#2
 
 Authored path: `User.VoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 107.
-- Covered by [User](../design/compositions/User.md), line 115.
+- Covered by [User](../design/compositions/User.md), line 126.
+- Covered by [User](../design/compositions/User.md), line 134.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.VoteNomination
@@ -2283,8 +2437,8 @@ then
 ### User.WithdrawNomination
 
 Authored path: `User.WithdrawNomination`.
-- Covered by [User](../design/compositions/User.md), line 97.
-- Covered by [User](../design/compositions/User.md), line 102.
+- Covered by [User](../design/compositions/User.md), line 116.
+- Covered by [User](../design/compositions/User.md), line 121.
 
 ```reaction
 when RequestBoundary.request (nomination, path: "/nominations/withdraw", requestId, session)
@@ -2295,8 +2449,8 @@ then
 ### User.WithdrawNomination#2
 
 Authored path: `User.WithdrawNomination`.
-- Covered by [User](../design/compositions/User.md), line 97.
-- Covered by [User](../design/compositions/User.md), line 102.
+- Covered by [User](../design/compositions/User.md), line 116.
+- Covered by [User](../design/compositions/User.md), line 121.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.WithdrawNomination
@@ -2309,8 +2463,8 @@ then
 ### User.WithdrawNomination#3
 
 Authored path: `User.WithdrawNomination`.
-- Covered by [User](../design/compositions/User.md), line 97.
-- Covered by [User](../design/compositions/User.md), line 102.
+- Covered by [User](../design/compositions/User.md), line 116.
+- Covered by [User](../design/compositions/User.md), line 121.
 
 ```reaction
 when Nominating.withdraw (nomination, nominator: user), asked by User.WithdrawNomination#2
@@ -2323,7 +2477,7 @@ then
 ### User.WithdrawnNominationLosesVotes
 
 Authored path: `User.WithdrawnNominationLosesVotes`.
-- Covered by [User](../design/compositions/User.md), line 99.
+- Covered by [User](../design/compositions/User.md), line 118.
 
 ```reaction
 when Nominating.withdraw (nomination)
@@ -2358,6 +2512,7 @@ not listed here have no explicit input contract.
 - `/auth/sign-in` — requires `password`, `username`
 - `/auth/sign-out` — requires `session`
 - `/groups/feed` — requires `group`
+- `/images/link` — requires `upload`
 - `/nominations/create` — requires `category`, `name`, `session`
 - `/nominations/list` — requires `category`
 - `/nominations/my-votes` — requires `category`, `session`
@@ -2370,3 +2525,4 @@ not listed here have no explicit input contract.
 - `/posts/my-votes` — requires `group`, `session`
 - `/posts/unvote` — requires `post`, `session`
 - `/posts/vote` — requires `post`, `session`
+- `/uploads/request` — requires `contentType`, `session`

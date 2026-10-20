@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { createCycle, ok, openCategory, openGroup, setUpPeople, useApp, type Sessions } from "../app.ts";
+import { createCycle, ok, openCategory, openGroup, setUpPeople, uploadImage, useApp, type Sessions } from "../app.ts";
 import { HOUR, MINUTE, T0, at } from "../helpers.ts";
 
 const app = useApp();
@@ -10,8 +10,9 @@ beforeEach(async () => {
   cycle = await createCycle(app.api, people.milin, HOUR, 3);
 });
 
-const post = async (session: string, group: string, content: string) =>
-  ok(await app.api.posts.create({ session, group, content })).post;
+// Posts an uploaded image, labelled by its caption so tests can tell posts apart.
+const post = async (session: string, group: string, caption: string) =>
+  ok(await app.api.posts.create({ session, group, content: await uploadImage(app.api, session), caption })).post;
 const feed = async (group: string) => ok(await app.api.groups.feed({ group })).feed.posts;
 
 describe("groups/list", () => {
@@ -59,16 +60,18 @@ describe("groups/feed", () => {
     await post(people.gigi, group, "old");
     app.clock.advance(HOUR);
     await post(people.sid, group, "new");
-    expect((await feed(group)).map((p) => p.content)).toEqual(["new"]);
+    expect((await feed(group)).map((p) => p.caption)).toEqual(["new"]);
   });
 
   test("each post carries its caption, empty when it has none", async () => {
-    ok(await app.api.posts.create({ session: people.gigi, group, content: "a", caption: "Morning light" }));
+    const captioned = await post(people.gigi, group, "Morning light");
     app.clock.advance(MINUTE);
-    await post(people.sid, group, "b");
-    expect((await feed(group)).map((p) => [p.content, p.caption])).toEqual([
-      ["b", ""],
-      ["a", "Morning light"],
+    const plain = ok(
+      await app.api.posts.create({ session: people.sid, group, content: await uploadImage(app.api, people.sid) }),
+    ).post;
+    expect((await feed(group)).map((p) => [p.post, p.caption])).toEqual([
+      [plain, ""],
+      [captioned, "Morning light"],
     ]);
   });
 
@@ -96,15 +99,14 @@ describe("groups/feed", () => {
 describe("posts/get", () => {
   test("details with the vote count, still readable after leaving every group", async () => {
     const group = await openGroup(app.api, people.milin, "Doodles", cycle);
-    const { post: p } = ok(
-      await app.api.posts.create({ session: people.gigi, group, content: "https://img/hands.png", caption: "Hands" }),
-    );
+    const image = await uploadImage(app.api, people.gigi);
+    const { post: p } = ok(await app.api.posts.create({ session: people.gigi, group, content: image, caption: "Hands" }));
     ok(await app.api.posts.vote({ session: people.sid, post: p }));
     const expected = {
       post: {
         post: p,
         owner: "gigi",
-        content: "https://img/hands.png",
+        content: image,
         caption: "Hands",
         createdAt: T0.toISOString(),
         votes: 1,
@@ -117,6 +119,35 @@ describe("posts/get", () => {
 
   test("refuses NO_SUCH_POST", async () => {
     expect(await app.api.posts.get({ post: "unknown" })).toEqual({ error: "NO_SUCH_POST" });
+  });
+});
+
+describe("images/link", () => {
+  test("gives a working, short-lived link to an uploaded image", async () => {
+    const image = await uploadImage(app.api, people.gigi, { bytes: 4321 });
+    const { url } = ok(await app.api.images.link({ upload: image }));
+    const fetched = await fetch(url);
+    expect(fetched.status).toBe(200);
+    expect((await fetched.arrayBuffer()).byteLength).toBe(4321);
+    expect(new URL(url).searchParams.get("X-Amz-Expires")).toBe("300");
+  });
+
+  test("refuses NO_SUCH_UPLOAD", async () => {
+    expect(await app.api.images.link({ upload: "unknown" })).toEqual({ error: "NO_SUCH_UPLOAD" });
+  });
+
+  test("GET /api/images/<upload> redirects the browser to the image", async () => {
+    const image = await uploadImage(app.api, people.gigi, { bytes: 777 });
+    const response = await app.http(new Request(`http://127.0.0.1:8080/api/images/${image}`));
+    expect(response.status).toBe(302);
+    const location = response.headers.get("location")!;
+    const fetched = await fetch(location);
+    expect((await fetched.arrayBuffer()).byteLength).toBe(777);
+  });
+
+  test("GET /api/images/<upload> answers 404 for an unknown upload", async () => {
+    const response = await app.http(new Request("http://127.0.0.1:8080/api/images/unknown"));
+    expect(response.status).toBe(404);
   });
 });
 

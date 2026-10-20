@@ -2,7 +2,7 @@ import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
 import { each, form, former, is, no, now, where, whether } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
 
-const { Posting, Grouping, Cycling, Upvoting, Nominating, NominationVotes } = concepts;
+const { Posting, Grouping, Cycling, Upvoting, Nominating, NominationVotes, Uploading } = concepts;
 
 // The cycle a group belongs to, if any.
 const GroupCycle = former("the cycle of (group)", ({ group }, { cycle, start, period, runs }) =>
@@ -100,6 +100,14 @@ const GetPost = endpoint("/posts/get", ({ post }) =>
   ),
 );
 
+// A fresh, short-lived link to a stored image. The HTTP policy also serves this as
+// GET /images/{upload}, answered by redirecting the browser to the link.
+const ImageLink = endpoint("/images/link", ({ upload, url }) =>
+  receive({ upload })
+    .then(Uploading.link({ upload }).responds({ url }))
+    .then(respond({ url })),
+);
+
 const ListCategories = endpoint("/nominations/categories", ({ instant }) =>
   receive({})
     .where(now(instant))
@@ -126,6 +134,7 @@ export const composition = {
   ListGroups,
   Feed,
   GetPost,
+  ImageLink,
   CategoryList,
   RoundRanking,
   ListCategories,

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { db } from "../../src/db.ts";
-import { createCycle, ok, openCategory, openGroup, setUpPeople, useApp, type Sessions } from "../app.ts";
+import { createCycle, ok, openCategory, openGroup, setUpPeople, uploadImage, useApp, type Sessions } from "../app.ts";
 import { HOUR, MINUTE } from "../helpers.ts";
 
 const app = useApp();
@@ -116,7 +116,8 @@ describe("groups", () => {
     const cycle = await createCycle(app.api, people.milin, HOUR, 2);
     const doodles = await openGroup(app.api, people.milin, "Doodles", cycle);
     const sketches = await openGroup(app.api, people.milin, "Sketches", cycle);
-    const { post } = ok(await app.api.posts.create({ session: people.gigi, group: doodles, content: "x" }));
+    const content = await uploadImage(app.api, people.gigi);
+    const { post } = ok(await app.api.posts.create({ session: people.gigi, group: doodles, content }));
     const feed = async (group: string) => ok(await app.api.groups.feed({ group })).feed.posts.map((p) => p.post);
 
     expect(await app.api.admin.groups["add-post"]({ session: people.milin, group: sketches, post })).toEqual({
@@ -196,7 +197,7 @@ describe("cycles", () => {
       cycle,
       item: group,
     });
-    expect(await app.api.posts.create({ session: people.gigi, group, content: "x" })).toEqual({
+    expect(await app.api.posts.create({ session: people.gigi, group, content: await uploadImage(app.api, people.gigi) })).toEqual({
       error: "GROUP_CLOSED",
     });
   });
@@ -209,7 +210,7 @@ describe("cycles", () => {
       cycle,
       runs: 1,
     });
-    expect(await app.api.posts.create({ session: people.gigi, group, content: "x" })).toEqual({
+    expect(await app.api.posts.create({ session: people.gigi, group, content: await uploadImage(app.api, people.gigi) })).toEqual({
       error: "GROUP_CLOSED",
     });
   });
@@ -219,7 +220,7 @@ describe("cycles", () => {
     const group = await openGroup(app.api, people.milin, "Doodles", cycle);
     expect(await app.api.admin.cycles.delete({ session: people.milin, cycle })).toEqual({ cycle });
     expect(await cycles()).toEqual([]);
-    expect(await app.api.posts.create({ session: people.gigi, group, content: "x" })).toEqual({
+    expect(await app.api.posts.create({ session: people.gigi, group, content: await uploadImage(app.api, people.gigi) })).toEqual({
       error: "GROUP_CLOSED",
     });
   });

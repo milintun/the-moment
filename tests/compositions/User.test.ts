@@ -1,6 +1,17 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { db } from "../../src/db.ts";
-import { createCycle, ok, openCategory, openGroup, setUpPeople, signUp, useApp, type Sessions } from "../app.ts";
+import { S3Client } from "bun";
+import {
+  createCycle,
+  ok,
+  openCategory,
+  openGroup,
+  setUpPeople,
+  signUp,
+  uploadImage,
+  useApp,
+  type Sessions,
+} from "../app.ts";
 import { HOUR, MINUTE } from "../helpers.ts";
 
 const app = useApp();
@@ -15,8 +26,9 @@ beforeEach(async () => {
 
 const count = (collection: string) => db.collection(collection).countDocuments();
 const votesOf = async (post: string) => ok(await app.api.posts.get({ post })).post?.votes;
-const post = async (who: string, content = "https://img/x.png", into = group) =>
-  ok(await app.api.posts.create({ session: who, group: into, content })).post;
+const post = async (who: string, into = group) =>
+  ok(await app.api.posts.create({ session: who, group: into, content: await uploadImage(app.api, who) })).post;
+const stored = (upload: string) => new S3Client().file(`uploads/${upload}`).exists();
 
 describe("auth", () => {
   test("register returns the account and a session", async () => {
@@ -45,17 +57,47 @@ describe("auth", () => {
   });
 });
 
+describe("uploads/request", () => {
+  test("an accepted image type gets a new upload and a link that accepts the file", async () => {
+    const { upload, uploadUrl } = ok(await app.api.uploads.request({ session: people.gigi, contentType: "image/webp" }));
+    expect(typeof upload).toBe("string");
+    const sent = await fetch(uploadUrl, { method: "PUT", body: new Uint8Array(10), headers: { "Content-Type": "image/webp" } });
+    expect(sent.ok).toBe(true);
+    expect(await stored(upload)).toBe(true);
+  });
+
+  test("every accepted image type is allowed", async () => {
+    for (const contentType of ["image/jpeg", "image/png", "image/webp", "image/svg+xml"]) {
+      expect("upload" in (await app.api.uploads.request({ session: people.gigi, contentType }))).toBe(true);
+    }
+  });
+
+  test("refuses UNSUPPORTED_TYPE for other types and records no upload", async () => {
+    for (const contentType of ["image/gif", "image/heic", "application/pdf"]) {
+      expect(await app.api.uploads.request({ session: people.gigi, contentType })).toEqual({ error: "UNSUPPORTED_TYPE" });
+    }
+    expect(await count("uploading.uploads")).toBe(0);
+  });
+
+  test("refuses UNKNOWN_SESSION without an active session", async () => {
+    expect(await app.api.uploads.request({ session: "invented", contentType: "image/png" })).toEqual({
+      error: "UNKNOWN_SESSION",
+    });
+  });
+});
+
 describe("posts/create", () => {
-  test("posting into an open group adds the post to its feed", async () => {
-    const p = await post(people.gigi);
+  test("posting an uploaded image into an open group adds the post to its feed", async () => {
+    const image = await uploadImage(app.api, people.gigi);
+    const { post: p } = ok(await app.api.posts.create({ session: people.gigi, group, content: image }));
     const feed = ok(await app.api.groups.feed({ group })).feed.posts;
-    expect(feed.map((f) => f.post)).toEqual([p]);
-    expect(feed[0]?.owner).toBe("gigi");
+    expect(feed.map((f) => [f.post, f.content, f.owner])).toEqual([[p, image, "gigi"]]);
   });
 
   test("a caption is optional, trimmed, and only spaces means none", async () => {
     const captioned = async (caption?: string) => {
-      const input = caption === undefined ? { session: people.gigi, group, content: "x" } : { session: people.gigi, group, content: "x", caption };
+      const content = await uploadImage(app.api, people.gigi);
+      const input = caption === undefined ? { session: people.gigi, group, content } : { session: people.gigi, group, content, caption };
       const { post: p } = ok(await app.api.posts.create(input));
       return ok(await app.api.posts.get({ post: p })).post?.caption;
     };
@@ -64,9 +106,57 @@ describe("posts/create", () => {
     expect(await captioned("    ")).toBe("");
   });
 
+  test("refuses NO_SUCH_UPLOAD for something that is not an upload, creating nothing", async () => {
+    expect(await app.api.posts.create({ session: people.gigi, group, content: "https://img/x.png" })).toEqual({
+      error: "NO_SUCH_UPLOAD",
+    });
+    expect(await count("posting.posts")).toBe(0);
+  });
+
+  test("refuses NOT_YOUR_UPLOAD for someone else's upload, creating nothing", async () => {
+    const sids = await uploadImage(app.api, people.sid);
+    expect(await app.api.posts.create({ session: people.gigi, group, content: sids })).toEqual({
+      error: "NOT_YOUR_UPLOAD",
+    });
+    expect(await count("posting.posts")).toBe(0);
+    expect(await stored(sids)).toBe(true);
+  });
+
+  test("refuses NOT_UPLOADED when the file never arrived, creating nothing", async () => {
+    const { upload } = ok(await app.api.uploads.request({ session: people.gigi, contentType: "image/png" }));
+    expect(await app.api.posts.create({ session: people.gigi, group, content: upload })).toEqual({
+      error: "NOT_UPLOADED",
+    });
+    expect(await count("posting.posts")).toBe(0);
+  });
+
+  test("refuses INVALID_FILE over 10 MB, creating nothing and removing the file", async () => {
+    const big = await uploadImage(app.api, people.gigi, { bytes: 10 * 1024 * 1024 + 1 });
+    expect(await app.api.posts.create({ session: people.gigi, group, content: big })).toEqual({
+      error: "INVALID_FILE",
+    });
+    expect(await count("posting.posts")).toBe(0);
+    expect(await stored(big)).toBe(false);
+  });
+
+  test("accepts exactly 10 MB", async () => {
+    const limit = await uploadImage(app.api, people.gigi, { bytes: 10 * 1024 * 1024 });
+    ok(await app.api.posts.create({ session: people.gigi, group, content: limit }));
+  });
+
+  test("refuses INVALID_FILE when the file sent is not the requested type, removing it", async () => {
+    const { upload, uploadUrl } = ok(await app.api.uploads.request({ session: people.gigi, contentType: "image/png" }));
+    await fetch(uploadUrl, { method: "PUT", body: new Uint8Array(10), headers: { "Content-Type": "image/gif" } });
+    expect(await app.api.posts.create({ session: people.gigi, group, content: upload })).toEqual({
+      error: "INVALID_FILE",
+    });
+    expect(await stored(upload)).toBe(false);
+  });
+
   test("refuses GROUP_CLOSED for a category's identifier and creates no post", async () => {
     const category = await openCategory(app.api, people.milin, "Future galleries", cycle);
-    expect(await app.api.posts.create({ session: people.gigi, group: category, content: "x" })).toEqual({
+    const content = await uploadImage(app.api, people.gigi);
+    expect(await app.api.posts.create({ session: people.gigi, group: category, content })).toEqual({
       error: "GROUP_CLOSED",
     });
     expect(await count("posting.posts")).toBe(0);
@@ -74,11 +164,12 @@ describe("posts/create", () => {
 
   test("refuses GROUP_CLOSED for a group with no cycle, and after the cycle ends", async () => {
     const { group: uncycled } = ok(await app.api.admin.groups.create({ session: people.milin, name: "Wings" }));
-    expect(await app.api.posts.create({ session: people.gigi, group: uncycled, content: "x" })).toEqual({
+    const content = await uploadImage(app.api, people.gigi);
+    expect(await app.api.posts.create({ session: people.gigi, group: uncycled, content })).toEqual({
       error: "GROUP_CLOSED",
     });
     app.clock.advance(3 * HOUR);
-    expect(await app.api.posts.create({ session: people.gigi, group, content: "x" })).toEqual({
+    expect(await app.api.posts.create({ session: people.gigi, group, content })).toEqual({
       error: "GROUP_CLOSED",
     });
     expect(await count("posting.posts")).toBe(0);
@@ -92,18 +183,24 @@ describe("posts/create", () => {
 });
 
 describe("posts/delete", () => {
-  test("the owner deletes: the post leaves its groups and its votes are cleared", async () => {
-    const p = await post(people.gigi);
+  test("the owner deletes: the post leaves its groups, its votes are cleared, and its image is removed", async () => {
+    const image = await uploadImage(app.api, people.gigi);
+    const { post: p } = ok(await app.api.posts.create({ session: people.gigi, group, content: image }));
     ok(await app.api.posts.vote({ session: people.sid, post: p }));
     expect(await app.api.posts.delete({ session: people.gigi, post: p })).toEqual({ post: p });
     expect(ok(await app.api.groups.feed({ group })).feed.posts).toEqual([]);
     expect(await count("upvoting.votes")).toBe(0);
     expect(await app.api.posts.get({ post: p })).toEqual({ error: "NO_SUCH_POST" });
+    expect(await count("uploading.uploads")).toBe(0);
+    expect(await stored(image)).toBe(false);
+    expect(await app.api.images.link({ upload: image })).toEqual({ error: "NO_SUCH_UPLOAD" });
   });
 
   test("refuses NOT_OWNER for anyone else and nothing is removed", async () => {
-    const p = await post(people.gigi);
+    const image = await uploadImage(app.api, people.gigi);
+    const { post: p } = ok(await app.api.posts.create({ session: people.gigi, group, content: image }));
     expect(await app.api.posts.delete({ session: people.sid, post: p })).toEqual({ error: "NOT_OWNER" });
+    expect(await stored(image)).toBe(true);
     expect(ok(await app.api.groups.feed({ group })).feed.posts).toHaveLength(1);
   });
 });
@@ -143,8 +240,8 @@ describe("posts/vote and posts/unvote", () => {
 
 describe("posts/my-votes", () => {
   test("lists exactly the posts you upvoted in the group", async () => {
-    const liked = await post(people.gigi, "a");
-    await post(people.sasha, "b");
+    const liked = await post(people.gigi);
+    await post(people.sasha);
     ok(await app.api.posts.vote({ session: people.sid, post: liked }));
     expect(await app.api.posts["my-votes"]({ session: people.sid, group })).toEqual({
       votes: { posts: [{ post: liked }] },
@@ -277,6 +374,6 @@ describe("nominations: withdraw, vote, unvote, my-votes", () => {
 describe("sessions", () => {
   test("a freshly registered user can act right away", async () => {
     const session = await signUp(app.api, "newbie");
-    ok(await app.api.posts.create({ session, group, content: "x" }));
+    ok(await app.api.posts.create({ session, group, content: await uploadImage(app.api, session) }));
   });
 });

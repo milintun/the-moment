@@ -1,14 +1,11 @@
 # Application types
 
 Every person is identified by their account's username, so each concept's user,
-voter, owner, or nominator is an Authenticating account. Posts are artwork sources,
-galleries and wings are groups of posts, and a cycle sets the seasons for both the
+voter, owner, uploader, or nominator is an Authenticating account. A post's content is
+the image its owner uploaded, galleries and wings are groups of posts, and a cycle sets the seasons for both the
 groups and the nomination categories it holds.
 
 ```types
-concrete ArtworkSource
-  The source of an artwork image, such as its URL.
-
 concrete CycledItem
   Something whose seasons a cycle sets: a group of posts or a nomination category.
 ```
@@ -19,12 +16,15 @@ instantiate Authenticating
 instantiate Sessioning with
   Subject is Authenticating.Account
 
+instantiate Uploading with
+  User is Authenticating.Account
+
 instantiate Administrating with
   User is Authenticating.Account
 
 instantiate Posting with
   User is Authenticating.Account
-  Content is ArtworkSource
+  Content is Uploading.Upload
 
 instantiate Upvoting with
   User is Authenticating.Account

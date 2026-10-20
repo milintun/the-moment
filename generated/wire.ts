@@ -282,6 +282,15 @@ export type TheMomentWire = {
     };
     error: { error: AppWideError };
   };
+  "/images/link": {
+    input: {
+      "upload": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Uploading"]["link"]>[0], ["upload"]>>;
+    };
+    output: {
+      "url": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Uploading"]["link"]>>, ["url"]>>;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "NO_SUCH_UPLOAD" };
+  };
   "/nominations/categories": {
     input: Record<string, never>;
     output: {
@@ -376,14 +385,14 @@ export type TheMomentWire = {
   "/posts/create": {
     input: {
       "caption"?: Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["create"]>[0], ["caption"]>>;
-      "content": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["create"]>[0], ["content"]>>;
+      "content": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Uploading"]["verify"]>[0], ["upload"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["create"]>[0], ["content"]>]>>;
       "group": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_get"]>[0], ["group"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["addItem"]>[0], ["group"]>]>>;
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
     };
     output: {
       "post": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["addItem"]>[0], ["item"]>>;
     };
-    error: { error: AppWideError | "ALREADY_IN_GROUP" | "GROUP_CLOSED" | "INVALID_INPUT" | "NO_SUCH_GROUP" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "ALREADY_IN_GROUP" | "GROUP_CLOSED" | "INVALID_FILE" | "INVALID_INPUT" | "NOT_UPLOADED" | "NOT_YOUR_UPLOAD" | "NO_SUCH_GROUP" | "NO_SUCH_UPLOAD" | "UNKNOWN_SESSION" };
   };
   "/posts/delete": {
     input: {
@@ -393,7 +402,7 @@ export type TheMomentWire = {
     output: {
       "post": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["delete"]>[0], ["post"]>>;
     };
-    error: { error: AppWideError | "INVALID_INPUT" | "NOT_IN_GROUP" | "NOT_OWNER" | "NO_SUCH_GROUP" | "NO_SUCH_POST" | "UNKNOWN_SESSION" };
+    error: { error: AppWideError | "INVALID_INPUT" | "NOT_IN_GROUP" | "NOT_OWNER" | "NO_SUCH_GROUP" | "NO_SUCH_POST" | "NO_SUCH_UPLOAD" | "UNKNOWN_SESSION" };
   };
   "/posts/get": {
     input: {
@@ -444,6 +453,17 @@ export type TheMomentWire = {
       "post": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Upvoting"]["upvote"]>[0], ["target"]>>;
     };
     error: { error: AppWideError | "ALREADY_VOTED" | "INVALID_INPUT" | "NOT_IN_SEASON" | "NO_SUCH_POST" | "OWN_POST" | "UNKNOWN_SESSION" };
+  };
+  "/uploads/request": {
+    input: {
+      "contentType": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Uploading"]["requestUpload"]>[0], ["contentType"]>>;
+      "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
+    };
+    output: {
+      "upload": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Uploading"]["requestUpload"]>>, ["upload"]>>;
+      "uploadUrl": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Uploading"]["requestUpload"]>>, ["uploadUrl"]>>;
+    };
+    error: { error: AppWideError | "INVALID_INPUT" | "UNKNOWN_SESSION" | "UNSUPPORTED_TYPE" };
   };
 };
 
@@ -693,6 +713,15 @@ export type TheMomentWireHttp = {
     };
     error: { error: HttpAppWideError };
   };
+  "/images/link": {
+    input: {
+      "upload": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Uploading"]["link"]>[0], ["upload"]>>;
+    };
+    output: {
+      "url": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Uploading"]["link"]>>, ["url"]>>;
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "NOT_FOUND" };
+  };
   "/nominations/categories": {
     input: Record<string, never>;
     output: {
@@ -782,13 +811,13 @@ export type TheMomentWireHttp = {
   "/posts/create": {
     input: {
       "caption"?: Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["create"]>[0], ["caption"]>>;
-      "content": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["create"]>[0], ["content"]>>;
+      "content": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Uploading"]["verify"]>[0], ["upload"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["create"]>[0], ["content"]>]>>;
       "group": Jsonify<OneOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_get"]>[0], ["group"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["addItem"]>[0], ["group"]>]>>;
     };
     output: {
       "post": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["addItem"]>[0], ["item"]>>;
     };
-    error: { error: HttpAppWideError | "CONFLICT" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+    error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
   };
   "/posts/delete": {
     input: {
@@ -845,5 +874,15 @@ export type TheMomentWireHttp = {
       "post": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Upvoting"]["upvote"]>[0], ["target"]>>;
     };
     error: { error: HttpAppWideError | "CONFLICT" | "FORBIDDEN" | "INVALID_REQUEST" | "NOT_FOUND" | "UNAUTHORIZED" };
+  };
+  "/uploads/request": {
+    input: {
+      "contentType": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Uploading"]["requestUpload"]>[0], ["contentType"]>>;
+    };
+    output: {
+      "upload": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Uploading"]["requestUpload"]>>, ["upload"]>>;
+      "uploadUrl": Jsonify<AtPath<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Uploading"]["requestUpload"]>>, ["uploadUrl"]>>;
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
 };

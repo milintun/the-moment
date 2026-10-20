@@ -1,5 +1,6 @@
 // Fills a fresh database with dummy groups, a cycle, users, posts, and votes,
-// going through the real API so every rule applies.
+// going through the real API so every rule applies. Each post's image is downloaded from
+// its URL and uploaded through the app, exactly as a person posting it would.
 //
 //   ADMIN_PASSWORD=... bun scripts/seed.ts [http://127.0.0.1:8080]
 //
@@ -19,15 +20,16 @@ const GROUPS = ["Figure Drawing", "Doodles"];
 const USERS = ["gigi", "sid", "sash"]; // all get DUMMY_PASSWORD
 const DUMMY_PASSWORD = "password123";
 
-// Paste image URLs here: [owner, group, image URL].
-const POSTS: Array<[string, string, string]> = [
-  ["gigi", "Figure Drawing", "https://i.pinimg.com/1200x/7a/c3/8b/7ac38b11c3f76092e3b35d415e9363b5.jpg"],
-  ["sid", "Figure Drawing", "https://i.pinimg.com/1200x/22/53/e3/2253e3d2f9bcb9f4a424596a06330b14.jpg"],
-  ["sash", "Figure Drawing", "https://i.pinimg.com/736x/ed/be/03/edbe032e22b71640245aa8c2467d9acb.jpg"],
-  ["gigi", "Doodles", "https://i.pinimg.com/736x/28/cd/f5/28cdf5990d8316a1457679b3b61e84bb.jpg"],
-  ["sid", "Doodles", "https://i.pinimg.com/736x/ec/86/0c/ec860c090756c02d09b8d579158cb33a.jpg"],
-  ["sash", "Doodles", "https://i.pinimg.com/736x/d8/9c/cd/d89ccd2da14edc4fc0fd6238b27f413c.jpg"],
+// [owner, group, image URL to download, caption ("" for none)].
+const POSTS: Array<[string, string, string, string]> = [
+  ["gigi", "Figure Drawing", "https://i.pinimg.com/1200x/7a/c3/8b/7ac38b11c3f76092e3b35d415e9363b5.jpg", "Quick gesture study"],
+  ["sid", "Figure Drawing", "https://i.pinimg.com/1200x/22/53/e3/2253e3d2f9bcb9f4a424596a06330b14.jpg", ""],
+  ["sash", "Figure Drawing", "https://i.pinimg.com/736x/ed/be/03/edbe032e22b71640245aa8c2467d9acb.jpg", "Someone reading in the park"],
+  ["gigi", "Doodles", "https://i.pinimg.com/736x/28/cd/f5/28cdf5990d8316a1457679b3b61e84bb.jpg", "Margin doodle from lecture"],
+  ["sid", "Doodles", "https://i.pinimg.com/736x/ec/86/0c/ec860c090756c02d09b8d579158cb33a.jpg", ""],
+  ["sash", "Doodles", "https://i.pinimg.com/736x/d8/9c/cd/d89ccd2da14edc4fc0fd6238b27f413c.jpg", "Cat, again"],
 ];
+const ACCEPTED = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
 
 // A client that keeps its own session cookie, like one browser would.
 function clientFor() {
@@ -51,7 +53,17 @@ function ok<T extends object>(step: string, result: T): Exclude<T, { error: unkn
   return result as Exclude<T, { error: unknown }>;
 }
 
-if (POSTS.some(([, , url]) => url === "PASTE_IMAGE_URL")) throw new Error("Paste image URLs into POSTS first.");
+/** Downloads an image and uploads it through the app as `client`'s user, returning the upload. */
+async function uploadFrom(client: ReturnType<typeof clientFor>, url: string): Promise<string> {
+  const download = await fetch(url);
+  if (!download.ok) throw new Error(`download ${url} failed: ${download.status}`);
+  const contentType = download.headers.get("content-type")?.split(";")[0] ?? "";
+  if (!ACCEPTED.includes(contentType)) throw new Error(`${url} is ${contentType || "unknown type"}, not an accepted image`);
+  const { upload, uploadUrl } = ok("request upload", await client.uploads.request({ contentType }));
+  const sent = await fetch(uploadUrl, { method: "PUT", body: await download.arrayBuffer(), headers: { "Content-Type": contentType } });
+  if (!sent.ok) throw new Error(`storing ${url} failed: ${sent.status}`);
+  return upload;
+}
 
 const admin = clientFor();
 ok("milin sign-in", await admin.auth["sign-in"]({ username: "milin", password: adminPassword }));
@@ -74,8 +86,10 @@ for (const username of USERS) {
 }
 
 const posts: Array<{ post: string; owner: string }> = [];
-for (const [owner, group, content] of POSTS) {
-  const { post } = ok(`${owner} posts`, await users.get(owner)!.posts.create({ group: groupIds.get(group)!, content }));
+for (const [owner, group, url, caption] of POSTS) {
+  const client = users.get(owner)!;
+  const content = await uploadFrom(client, url);
+  const { post } = ok(`${owner} posts`, await client.posts.create({ group: groupIds.get(group)!, content, caption }));
   posts.push({ post, owner });
 }
 console.log(`Created ${posts.length} posts by ${USERS.join(", ")}.`);

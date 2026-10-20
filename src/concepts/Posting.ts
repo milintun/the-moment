@@ -30,7 +30,7 @@ export class PostingConcept {
     if (doc === null) throw new NoSuchPost("There is no such post.");
     if (doc.owner !== user) throw new NotOwner("Only the owner of a post can delete it.");
     await this.posts.deleteOne({ _id: post });
-    return {};
+    return { content: doc.content };
   }
 
   async _get({post}: {post: string}) {

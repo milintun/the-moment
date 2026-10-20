@@ -1,10 +1,12 @@
 import { afterAll, beforeEach } from "bun:test";
 import { createGateway } from "@mit-sdg/sync-engine/boundary";
 import { createLocalClient } from "@mit-sdg/sync-engine/client";
+import { createHttpHandler } from "@mit-sdg/sync-engine-http/handler";
 import type { TheMomentWire } from "../generated/wire.ts";
 import { assembleApplication } from "../src/assembly.ts";
 import { AdministratingConcept } from "../src/concepts/Administrating.ts";
 import { db } from "../src/db.ts";
+import { policy } from "../src/http.ts";
 import { FakeClock, T0 } from "./helpers.ts";
 
 type Api = ReturnType<typeof createLocalClient<TheMomentWire>>;
@@ -19,15 +21,19 @@ export function useApp() {
     throw new Error(`Refusing to wipe "${db.databaseName}". Run tests with \`bun run test\`.`);
   }
   const clock = new FakeClock();
-  const app = { clock } as { clock: FakeClock; api: Api };
+  // api: in-process client with exact error codes; http: the real HTTP layer, for routes
+  // that only exist over HTTP (such as the image redirect).
+  const app = { clock } as { clock: FakeClock; api: Api; http: (request: Request) => Promise<Response> };
 
   beforeEach(async () => {
     await db.dropDatabase();
     clock.set(T0);
     // A fresh assembly also means fresh concept instances, so their indexes are recreated.
-    app.api = createLocalClient<TheMomentWire>({
-      invoker: createGateway({ application: assembleApplication({ clock: clock.read }) }),
-    });
+    const application = assembleApplication({ clock: clock.read });
+    const gateway = createGateway({ application });
+    app.api = createLocalClient<TheMomentWire>({ invoker: gateway });
+    const handler = createHttpHandler({ application, gateway, policy });
+    app.http = async (request) => handler(request);
   });
 
   afterAll(async () => {
@@ -82,4 +88,23 @@ export async function openCategory(api: Api, admin: string, name: string, cycle:
   const { category } = ok(await api.admin.categories.create({ session: admin, name }));
   ok(await api.admin.cycles["add-item"]({ session: admin, cycle, item: category }));
   return category;
+}
+
+/**
+ * Uploads a small file through the real flow (ask for a link, then send the bytes to
+ * storage) and returns the upload, ready to use as a post's content.
+ */
+export async function uploadImage(
+  api: Api,
+  session: string,
+  { contentType = "image/png", bytes = 1024 }: { contentType?: string; bytes?: number } = {},
+): Promise<string> {
+  const { upload, uploadUrl } = ok(await api.uploads.request({ session, contentType }));
+  const response = await fetch(uploadUrl, {
+    method: "PUT",
+    body: new Uint8Array(bytes),
+    headers: { "Content-Type": contentType },
+  });
+  if (!response.ok) throw new Error(`storage refused the upload: ${response.status}`);
+  return upload;
 }

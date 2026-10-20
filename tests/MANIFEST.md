@@ -169,25 +169,53 @@ Times are fixed dates, never the real clock.
   - `_categories` ordered by name
   - `_category` and `_get` give no row when unknown
 
+### Uploading.test.ts
+Runs against local storage (RustFS), in the `the-moment-test` bucket.
+- **principle**: request → check before sending refuses `NOT_UPLOADED` → 2 MB file passes → someone else's check refuses `NOT_YOUR_UPLOAD` → 12 MB file refuses `INVALID_FILE` and is removed → read link works → after `remove`, `link` refuses `NO_SUCH_UPLOAD`.
+- **requestUpload**
+  - records the upload and returns a 10-minute link; nothing stored yet
+  - accepts any type (the application decides which types it allows)
+  - two requests get different uploads
+- **verify**
+  - refuses `NO_SUCH_UPLOAD`
+  - refuses `NOT_YOUR_UPLOAD`; the file stays
+  - refuses `NOT_UPLOADED` before the file arrives
+  - accepts exactly `maxSize`; refuses `INVALID_FILE` one byte over and removes it
+  - refuses `INVALID_FILE` when the sent type differs from the requested one, removing it
+- **remove**
+  - removes the record and the stored file
+  - removes an upload whose file never arrived
+  - refuses `NO_SUCH_UPLOAD`, including removing twice
+- **link**
+  - a 5-minute link that reads the file
+  - refuses `NO_SUCH_UPLOAD`
+
 ---
 
 ## Composition tests (`tests/compositions/`)
 
 ### User.test.ts
+- **uploads/request**
+  - an accepted type gets an upload and a working upload link
+  - all four accepted types (JPEG, PNG, WebP, SVG) are allowed
+  - refuses `UNSUPPORTED_TYPE` for GIF, HEIC, and PDF; no upload recorded
+  - refuses `UNKNOWN_SESSION`
 - **auth**
   - register returns `account` and a session
   - current returns the username
   - sign-out, then current refuses `UNKNOWN_SESSION`
   - sign-in with the wrong password refuses `INVALID_CREDENTIALS`
   - registering twice refuses `USERNAME_TAKEN`
-- **posts/create**
-  - into an open group: the post appears in the group's feed
+- **posts/create** (every post uses a real uploaded file)
+  - into an open group: the post appears in the group's feed with its upload as content
+  - refuses `NO_SUCH_UPLOAD`, `NOT_YOUR_UPLOAD` (the owner's file stays), `NOT_UPLOADED`, and `INVALID_FILE` over 10 MB or of the wrong type (file removed); nothing created
+  - accepts exactly 10 MB
   - refuses `GROUP_CLOSED` for a category ID; no post created
   - refuses `GROUP_CLOSED` for a group with no cycle, and after the cycle ends
   - refuses `UNKNOWN_SESSION` without a session
 - **posts/delete**
-  - the owner deletes: the post leaves its groups and its votes are cleared
-  - refuses `NOT_OWNER` for anyone else; nothing removed
+  - the owner deletes: the post leaves its groups, its votes are cleared, and its image is removed from storage
+  - refuses `NOT_OWNER` for anyone else; nothing removed, image kept
 - **posts/vote** and **posts/unvote**
   - allowed while in season
   - refuses `OWN_POST`
@@ -248,6 +276,9 @@ Times are fixed dates, never the real clock.
   - only the current run's posts
   - ranked by votes, newest first on ties
   - empty for a closed group
+- **images/link**
+  - a working 5-minute link to the image; refuses `NO_SUCH_UPLOAD`
+  - over HTTP, `GET /api/images/<upload>` answers 302 to the image, and 404 for an unknown upload
 - **posts/get**
   - details with the vote count
   - still readable after the post leaves every group
@@ -272,8 +303,9 @@ Times are fixed dates, never the real clock.
 | Grouping | create, delete, addItem, removeItem | NAME_TAKEN, NO_SUCH_GROUP, ALREADY_IN_GROUP, NOT_IN_GROUP |
 | Cycling | create, addItem, removeItem, setRuns, delete | INVALID_CYCLE, NO_SUCH_CYCLE, ALREADY_CYCLING, NOT_IN_CYCLE |
 | Nominating | createCategory, nominate, withdraw | NAME_TAKEN, NO_SUCH_CATEGORY, INVALID_NAME, TOO_SOON, NO_SUCH_NOMINATION, NOT_NOMINATOR |
+| Uploading | requestUpload, verify, remove, link | NO_SUCH_UPLOAD, NOT_YOUR_UPLOAD, NOT_UPLOADED, INVALID_FILE |
 
-Every endpoint (34) is called at least once in the composition tests, and every
+Every endpoint (36) is called at least once in the composition tests, and every
 composition-authored error (GROUP_CLOSED, OWN_POST, NOT_IN_SEASON, ADMIN_ONLY,
 OWNER_ONLY, CATEGORY_CLOSED, ALREADY_NOMINATED, OWN_NOMINATION, NOT_ACTIVE,
-NO_SUCH_ITEM) is triggered at least once.
+NO_SUCH_ITEM, UNSUPPORTED_TYPE) is triggered at least once.

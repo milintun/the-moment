@@ -21,7 +21,7 @@ describe("principle", () => {
     expect(await posting._get({ post })).toEqual([
       { owner: "gigi", content: "https://img/hands.png", caption: "My grandma's hands", createdAt: T0 },
     ]);
-    expect(await posting.delete({ user: "gigi", post })).toEqual({});
+    expect(await posting.delete({ user: "gigi", post })).toEqual({ content: "https://img/hands.png" });
     expect(await posting._get({ post })).toEqual([]);
   });
 });

@@ -45,7 +45,7 @@ onMounted(load);
   <p v-if="!posts.length">No posts this season.</p>
   <div v-for="p in posts" :key="p.post">
     <hr />
-    <p><img :src="p.content" :alt="p.caption || `Post by ${p.owner}`" width="300" /></p>
+    <p><img :src="`/api/images/${p.content}`" :alt="p.caption || `Post by ${p.owner}`" width="300" /></p>
     <p v-if="p.caption">{{ p.caption }}</p>
     <p>
       by {{ p.owner }} | {{ p.votes }} vote(s)

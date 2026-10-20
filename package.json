@@ -5,6 +5,7 @@
   "dependencies": {
     "@mit-sdg/sync-engine": "1.1.0",
     "@mit-sdg/sync-engine-http": "1.1.0",
+    "heic2any": "^0.0.4",
     "mongodb": "^7.7.0",
     "vue": "^3.5.44",
     "vue-router": "^5.4.0"
@@ -32,12 +33,12 @@
     "up": "podman compose up -d --build && bun scripts/check-api.ts http://127.0.0.1:8080 --wait",
     "down": "podman compose down",
     "logs": "podman compose logs backend frontend",
-    "db:up": "podman compose up -d mongo",
+    "db:up": "podman compose up -d mongo storage storage-setup",
     "db:shell": "podman compose exec mongo mongosh -u dev -p dev",
     "db:logs": "podman compose logs mongo",
     "db:reset": "podman compose down -v",
     "build": "vite build",
-    "test": "MONGODB_URL='mongodb://dev:dev@127.0.0.1:27017/themoment_test?authSource=admin' bun test",
+    "test": "MONGODB_URL='mongodb://dev:dev@127.0.0.1:27017/themoment_test?authSource=admin' S3_BUCKET=the-moment-test bun test",
     "preview": "bun run db:up && bun run build && NODE_ENV=production PORT=3000 PUBLIC_ORIGIN=http://127.0.0.1:3000 bun run start"
   }
 }

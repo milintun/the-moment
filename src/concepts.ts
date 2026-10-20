@@ -29,6 +29,8 @@ import {
   NotNominator,
   TooSoon,
 } from "./concepts/Nominating.ts";
+import uploadingSpec from "@design/concepts/Uploading.md" with { type: "text" };
+import { InvalidFile, NoSuchUpload, NotUploaded, NotYourUpload, UploadingConcept } from "./concepts/Uploading.ts";
 
   const posting = registerConcept({
     class: PostingConcept,
@@ -105,6 +107,17 @@ const nominating = registerConcept({
   },
 });
 
+const uploading = registerConcept({
+  class: UploadingConcept,
+  spec: uploadingSpec,
+  refusals: {
+    NO_SUCH_UPLOAD: NoSuchUpload,
+    NOT_YOUR_UPLOAD: NotYourUpload,
+    NOT_UPLOADED: NotUploaded,
+    INVALID_FILE: InvalidFile,
+  },
+});
+
 export const applicationConceptSet = conceptSet({
   Authenticating: authenticating,
   Sessioning: sessioning,
@@ -115,5 +128,6 @@ export const applicationConceptSet = conceptSet({
   Administrating: administrating,
   Nominating: nominating,
   NominationVotes: upvoting,
+  Uploading: uploading,
 });
 export const { concepts } = applicationConceptSet;

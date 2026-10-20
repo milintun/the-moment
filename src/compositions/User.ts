@@ -2,7 +2,12 @@ import { endpoint, receive, respond } from "@mit-sdg/sync-engine/boundary";
 import { each, form, former, is, no, now, reaction, view, when, where } from "@mit-sdg/sync-engine/language";
 import { concepts } from "../concepts.ts";
 
-const { Authenticating, Sessioning, Posting, Grouping, Cycling, Upvoting, Nominating, NominationVotes } = concepts;
+const { Authenticating, Sessioning, Posting, Grouping, Cycling, Upvoting, Nominating, NominationVotes, Uploading } =
+  concepts;
+
+// This application's image policy. Uploading itself accepts any file.
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
 // ---------- Account ----------
 
@@ -40,6 +45,28 @@ const SignOut = endpoint(
       .then(respond({ signedOut })),
 );
 
+// ---------- Uploading images ----------
+
+const AcceptedImageType = view("(contentType) is an accepted image type", ({ contentType }, _outputs, _bindings) =>
+  where(is.among(contentType, IMAGE_TYPES)),
+).holds();
+
+const RequestUpload = endpoint(
+  "/uploads/request",
+  ({ session, contentType, user, createdAt, upload, uploadUrl }) =>
+    receive({ session, contentType })
+      .then(Sessioning.current({ session }).responds({ subject: user }))
+      .then(
+        where(now(createdAt), AcceptedImageType({ contentType }))
+          .then(Uploading.requestUpload({ owner: user, contentType, createdAt }).responds({ upload, uploadUrl }))
+          .then(respond({ upload, uploadUrl }))
+          .named("image"),
+        where(no(AcceptedImageType({ contentType })))
+          .then(respond({ error: "UNSUPPORTED_TYPE" }))
+          .named("unsupported"),
+      ),
+);
+
 // ---------- Posting ----------
 
 // A post is in season when one of its groups has a run happening now and the post
@@ -56,15 +83,22 @@ const PostInSeason = view(
     ),
 ).holds();
 
-// Posting requires an existing group with a run happening, checked before anything is
-// created. A cycle also holds nomination categories, so a current run alone is not enough.
+// A group is open when it exists and its cycle has a run happening. A cycle also holds
+// nomination categories, so a current run alone does not make something a group.
+const GroupOpen = view("(group) is open at (now)", ({ group, now }, _outputs, _bindings) =>
+  where(Grouping._get({ group }), Cycling._currentRun({ item: group, now })),
+).holds();
+
+// Every refusal happens before the post is created: Uploading checks the image first
+// (whose it is, that it arrived, and this application's size limit), then the group.
 const CreatePost = endpoint(
   "/posts/create",
   ({ session, group, content, caption, user, createdAt, post }) =>
     receive({ session, group, content, caption })
       .then(Sessioning.current({ session }).responds({ subject: user }))
+      .then(Uploading.verify({ upload: content, owner: user, maxSize: MAX_IMAGE_BYTES }).responds({}))
       .then(
-        where(now(createdAt), Grouping._get({ group }), Cycling._currentRun({ item: group, now: createdAt }))
+        where(now(createdAt), GroupOpen({ group, now: createdAt }))
           .then(Posting.create({ owner: user, content, caption, createdAt }).responds({ post }))
           .then(Grouping.addItem({ group, item: post }).responds({}))
           .then(respond({ post }))
@@ -98,6 +132,11 @@ const DeletedPostLeavesGroups = reaction(({ post, group }) =>
 
 const DeletedPostLosesVotes = reaction(({ post }) =>
   when(Posting.delete({ post }).responds({})).then(Upvoting.clear({ target: post })),
+);
+
+// Cleanup: a deleted post's image is removed from storage.
+const DeletedPostLosesImage = reaction(({ content }) =>
+  when(Posting.delete({}).responds({ content })).then(Uploading.remove({ upload: content })),
 );
 
 // ---------- Voting on posts ----------
@@ -324,11 +363,15 @@ export const composition = {
   SignIn,
   CurrentUser,
   SignOut,
+  AcceptedImageType,
+  RequestUpload,
   PostInSeason,
+  GroupOpen,
   CreatePost,
   DeletePost,
   DeletedPostLeavesGroups,
   DeletedPostLosesVotes,
+  DeletedPostLosesImage,
   Vote,
   Unvote,
   MyVotes,
