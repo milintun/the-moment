@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
+import ErrorNote from "../components/ErrorNote.vue";
 import { client, finishedSeasons } from "../api.ts";
+import { explain } from "../errors.ts";
 
 type Post = Extract<Awaited<ReturnType<typeof client.groups.archive>>, { archive: unknown }>["archive"]["posts"][number];
 
@@ -19,7 +21,7 @@ onMounted(async () => {
   const dates = found ? finishedSeasons(found).find((s) => s.season === season) : undefined;
   title.value = `${found?.name ?? "unknown gallery"}, season ${season + 1}`;
   if (dates) title.value += ` (${dates.start.toLocaleDateString()} to ${dates.end.toLocaleDateString()})`;
-  if ("error" in archive) error.value = archive.error === "NOT_FOUND" ? "this season isn't in the archive." : archive.error;
+  if ("error" in archive) error.value = explain("/groups/archive", archive.error);
   else posts.value = archive.archive.posts;
   loaded.value = true;
 });
@@ -27,7 +29,7 @@ onMounted(async () => {
 
 <template>
   <h1>{{ title }}</h1>
-  <p v-if="error" class="error">{{ error }}</p>
+  <p v-if="error"><ErrorNote :problem="error" /></p>
   <p v-else-if="loaded && !posts.length">no art was hung this season.</p>
   <div class="walk">
     <figure v-for="p in posts" :key="p.post" class="artwork">

@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { ENTERED_KEY, me } from "../api.ts";
 import AuthForm from "../components/AuthForm.vue";
+import ErrorNote from "../components/ErrorNote.vue";
+import { SESSION_ENDED } from "../errors.ts";
 import RoomList from "../components/RoomList.vue";
 import type { Room } from "../museum.ts";
 import { routes } from "../router.ts";
@@ -46,11 +48,11 @@ describe("RoomList", () => {
 });
 
 describe("AuthForm", () => {
-  async function submit(api: Record<string, (input: any) => unknown>, button: "log in" | "register") {
+  async function submit(api: Record<string, (input: any) => unknown>, button: "log in" | "register", username = "Gigi") {
     const router = newRouter();
     const calls = fakeApi(api);
     const wrapper = mount(AuthForm, { global: { plugins: [router] } });
-    await wrapper.find('input[autocomplete="username"]').setValue("Gigi");
+    await wrapper.find('input[autocomplete="username"]').setValue(username);
     await wrapper.find('input[type="password"]').setValue("password123");
     if (button === "log in") await wrapper.find("form").trigger("submit");
     else await wrapper.findAll("button").find((b) => b.text() === "register")!.trigger("click");
@@ -73,14 +75,30 @@ describe("AuthForm", () => {
   });
 
   test.each([
-    ["log in", "/auth/sign-in", "UNAUTHORIZED", "wrong username or password."],
-    ["register", "/auth/register", "CONFLICT", "that username is taken."],
-    ["register", "/auth/register", "INVALID_REQUEST", "usernames need 3 to 32 characters, passwords 8 to 128."],
-  ] as const)("%s refused with %s shows a message and stays put", async (button, path, error, message) => {
-    const { wrapper, router } = await submit({ [path]: () => ({ error }) }, button);
-    expect(wrapper.find(".error").text()).toBe(message);
+    ["log in", "Gigi", "/auth/sign-in", "UNAUTHORIZED", "wrong username or password."],
+    ["register", "Gigi", "/auth/register", "CONFLICT", "that username is taken."],
+    ["register", "Gi", "/auth/register", "INVALID_REQUEST", "usernames need 3 to 32 characters."],
+    ["register", "Gigi", "/auth/register", "INVALID_REQUEST", "passwords need 8 to 128 characters."],
+  ] as const)("%s as %s refused with %s shows a message and stays put", async (button, username, path, error, message) => {
+    const { wrapper, router } = await submit({ [path]: () => ({ error }) }, button, username);
+    expect(wrapper.find('[role="alert"]').text()).toBe(message);
     expect(router.currentRoute.value.path).toBe("/");
     expect(me.value).toBe(null);
+  });
+});
+
+describe("ErrorNote", () => {
+  const note = (props: { problem: string | { at: string; message: string } | null; at?: string }) => mount(ErrorNote, { props, global: { plugins: [newRouter()] } });
+
+  test("shows a message, or a problem only at its own spot", () => {
+    expect(note({ problem: "nope" }).text()).toBe("nope");
+    expect(note({ problem: { at: "p1", message: "nope" }, at: "p1" }).text()).toBe("nope");
+    expect(note({ problem: { at: "p1", message: "nope" }, at: "p2" }).find('[role="alert"]').exists()).toBe(false);
+    expect(note({ problem: null }).find('[role="alert"]').exists()).toBe(false);
+  });
+
+  test("an ended session links to log in", () => {
+    expect(note({ problem: SESSION_ENDED }).find('a[href="/auth"]').text()).toBe("log in");
   });
 });
 

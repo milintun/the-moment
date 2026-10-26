@@ -2,6 +2,8 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { client, refreshMe } from "../api.ts";
+import { explain } from "../errors.ts";
+import ErrorNote from "./ErrorNote.vue";
 
 // Register or log in, then go to `next` (or stay put when next is empty).
 const props = withDefaults(defineProps<{ next?: string }>(), { next: "/home" });
@@ -13,10 +15,10 @@ const error = ref("");
 async function submit(action: "register" | "sign-in") {
   const result = await client.auth[action]({ username: username.value, password: password.value });
   if ("error" in result) {
-    error.value =
-      result.error === "CONFLICT" ? "that username is taken." :
-      result.error === "UNAUTHORIZED" ? "wrong username or password." :
-      result.error === "INVALID_REQUEST" ? "usernames need 3 to 32 characters, passwords 8 to 128." : result.error;
+    // A bad username and a bad password are both INVALID_REQUEST; what was typed tells which.
+    const name = username.value.length;
+    const ties = { INVALID_REQUEST: name < 3 || name > 32 ? "usernames need 3 to 32 characters." : "passwords need 8 to 128 characters." };
+    error.value = explain(`/auth/${action}`, result.error, ties);
     return;
   }
   await refreshMe(); // also learns whether this account is an admin
@@ -32,6 +34,6 @@ async function submit(action: "register" | "sign-in") {
       <button type="submit">log in</button>
       <button type="button" @click="submit('register')">register</button>
     </p>
-    <p v-if="error" class="error">{{ error }}</p>
+    <p v-if="error"><ErrorNote :problem="error" /></p>
   </form>
 </template>

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
+import ErrorNote from "../components/ErrorNote.vue";
 import { FUTURE_GALLERIES, WING_MIN_PERIOD, client, isAdmin, isOwner } from "../api.ts";
+import { explain, type Problem } from "../errors.ts";
 
 type Group = Extract<Awaited<ReturnType<typeof client.groups.list>>, { list: unknown }>["list"]["groups"][number];
 type Category = Extract<Awaited<ReturnType<typeof client.nominations.categories>>, { list: unknown }>["list"]["categories"][number];
@@ -16,7 +18,7 @@ const groups = ref<Group[]>([]);
 const nominations = ref<Category | null>(null); // the Future galleries category
 const cycles = ref<Cycle[]>([]);
 const previous = ref<Nomination[]>([]);
-const error = ref("");
+const problem = ref<Problem | null>(null); // at "page", a section, a gallery, or a cycle
 const loaded = ref(false); // render once the first load is done, so nothing flashes
 
 async function load() {
@@ -26,7 +28,10 @@ async function load() {
     client.nominations.categories({}),
     client.admin.cycles.list({}),
   ]);
-  for (const result of [a, g, k, c]) if ("error" in result) return void (error.value = result.error);
+  const failed = [["/admin/admins/list", a], ["/groups/list", g], ["/nominations/categories", k], ["/admin/cycles/list", c]] as const;
+  for (const [endpoint, result] of failed) {
+    if ("error" in result) return void (problem.value = { at: "page", message: explain(endpoint, result.error) });
+  }
   if (!("error" in a)) admins.value = a.list.admins;
   if (!("error" in g)) groups.value = g.list.groups;
   if (!("error" in k)) nominations.value = k.list.categories.find((x) => x.name === FUTURE_GALLERIES) ?? null;
@@ -37,10 +42,11 @@ async function load() {
   }
 }
 
-// Run an admin call, show its error if any, then reload everything.
-async function run(call: Promise<object>) {
+// Run an admin call, show its error (if any) at `at`, then reload everything, so a page that was
+// out of date catches up.
+async function run(endpoint: Parameters<typeof explain>[0], at: string, call: Promise<object>) {
   const result = await call;
-  error.value = "error" in result ? String(result.error) : "";
+  problem.value = "error" in result ? { at, message: explain(endpoint, String(result.error)) } : null;
   await load();
   return !("error" in result);
 }
@@ -69,9 +75,8 @@ async function followCycle(cycle: string) {
   const category = nominations.value!.category;
   const current = nominationCycle.value;
   if (current?.cycle === cycle) return;
-  if (current) await client.admin.cycles["remove-item"]({ cycle: current.cycle, item: category });
-  if (cycle) await run(client.admin.cycles["add-item"]({ cycle, item: category }));
-  else await load();
+  if (current && !(await run("/admin/cycles/remove-item", "nominations", client.admin.cycles["remove-item"]({ cycle: current.cycle, item: category })))) return;
+  if (cycle) await run("/admin/cycles/add-item", "nominations", client.admin.cycles["add-item"]({ cycle, item: category }));
 }
 
 // ---------- Gallery builder (draft kept in this browser) ----------
@@ -109,12 +114,14 @@ async function buildGalleries() {
   for (const entry of draft.value) {
     const created = await client.admin.groups.create({ name: entry.name });
     if ("error" in created) {
-      builderReport.value.push(`${entry.name}: not created (${created.error === "CONFLICT" ? "name taken" : created.error})`);
+      builderReport.value.push(`${entry.name}: not created. ${explain("/admin/groups/create", created.error)}`);
       remaining.push(entry);
       continue;
     }
     const added = await client.admin.cycles["add-item"]({ cycle: builderCycle.value, item: created.group });
-    builderReport.value.push(`${entry.name}: created${"error" in added ? `, but not added to the cycle (${added.error})` : ""}`);
+    builderReport.value.push(
+      `${entry.name}: created${"error" in added ? `, but not added to the cycle. ${explain("/admin/cycles/add-item", added.error)}` : "."}`,
+    );
   }
   draft.value = remaining;
   await load();
@@ -127,11 +134,14 @@ const newGalleryCycle = ref("");
 const confirmingGroup = ref<string | null>(null);
 async function createGallery() {
   const created = await client.admin.groups.create({ name: newGalleryName.value });
-  if ("error" in created) return void (error.value = created.error === "CONFLICT" ? "That name is taken." : created.error);
-  if (newGalleryCycle.value) await client.admin.cycles["add-item"]({ cycle: newGalleryCycle.value, item: created.group });
+  if ("error" in created) return void (problem.value = { at: "galleries", message: explain("/admin/groups/create", created.error) });
   newGalleryName.value = "";
-  error.value = "";
-  await load();
+  if (newGalleryCycle.value) {
+    await run("/admin/cycles/add-item", "galleries", client.admin.cycles["add-item"]({ cycle: newGalleryCycle.value, item: created.group }));
+  } else {
+    problem.value = null;
+    await load();
+  }
 }
 const kind = (g: Group) => (g.period == null ? "" : g.period >= WING_MIN_PERIOD ? "wing" : "gallery");
 function galleryStatus(g: Group) {
@@ -165,7 +175,7 @@ onMounted(async () => {
       Sections follow the usual order of work: review what people nominated, build the next galleries from it,
       then manage galleries, seasons, and admins.
     </p>
-    <p v-if="error">Error: {{ error }}</p>
+    <p v-if="problem?.at === 'page'"><ErrorNote :problem="problem" at="page" /></p>
 
     <!-- 1. Nominations -->
     <h2>1. Future gallery nominations</h2>
@@ -183,6 +193,7 @@ onMounted(async () => {
             <option v-for="c in cycles" :key="c.cycle" :value="c.cycle">{{ describeCycle(c) }}</option>
           </select>
         </label>
+        <ErrorNote :problem="problem" at="nominations" />
       </p>
       <p>
         {{ nominations.runEnd ? `Current round open until ${new Date(nominations.runEnd).toLocaleString()}.` : "No round is open right now." }}
@@ -246,6 +257,7 @@ onMounted(async () => {
         </select>
       </label>
       <button type="submit">Create</button>
+      <ErrorNote :problem="problem" at="galleries" />
     </form>
     <ul>
       <li v-for="g in groups" :key="g.group">
@@ -254,9 +266,10 @@ onMounted(async () => {
         <button v-if="confirmingGroup !== g.group" @click="confirmingGroup = g.group">Delete</button>
         <template v-else>
           Delete {{ g.name }}?
-          <button @click="confirmingGroup = null; run(client.admin.groups.delete({ group: g.group }))">Yes, delete</button>
+          <button @click="confirmingGroup = null; run('/admin/groups/delete', g.group, client.admin.groups.delete({ group: g.group }))">Yes, delete</button>
           <button @click="confirmingGroup = null">No</button>
         </template>
+        <ErrorNote :problem="problem" :at="g.group" />
       </li>
     </ul>
 
@@ -266,10 +279,11 @@ onMounted(async () => {
       A cycle is a run of equal seasons that starts when you create it. Galleries and the nomination rounds in a
       cycle open and close with its seasons. Changing the number of seasons extends a cycle or ends it early.
     </p>
-    <form @submit.prevent="run(client.admin.cycles.create({ period: newCycleDays * DAY, runs: newCycleRuns }))">
+    <form @submit.prevent="run('/admin/cycles/create', 'seasons', client.admin.cycles.create({ period: newCycleDays * DAY, runs: newCycleRuns }))">
       <label>Season length (days) <input v-model.number="newCycleDays" type="number" min="0.001" step="any" required /></label>
       <label>Number of seasons <input v-model.number="newCycleRuns" type="number" min="1" step="1" required /></label>
       <button type="submit">Create cycle (starts now)</button>
+      <ErrorNote :problem="problem" at="seasons" />
     </form>
     <div v-for="c in cycles" :key="c.cycle">
       <h3>{{ describeCycle(c) }}</h3>
@@ -279,20 +293,21 @@ onMounted(async () => {
         <template v-for="(m, i) in c.items" :key="m.item">
           <template v-if="i">, </template>
           {{ nominations && m.item === nominations.category ? "future gallery nominations" : groupName(m.item) }}
-          <button @click="run(client.admin.cycles['remove-item']({ cycle: c.cycle, item: m.item }))">Remove</button>
+          <button @click="run('/admin/cycles/remove-item', c.cycle, client.admin.cycles['remove-item']({ cycle: c.cycle, item: m.item }))">Remove</button>
         </template>
       </p>
       <p>
         <label>Seasons <input v-model.number="runsChoice[c.cycle]" type="number" min="1" step="1" :placeholder="String(c.runs)" /></label>
-        <button @click="run(client.admin.cycles['set-runs']({ cycle: c.cycle, runs: runsChoice[c.cycle] ?? c.runs }))">
+        <button @click="run('/admin/cycles/set-runs', c.cycle, client.admin.cycles['set-runs']({ cycle: c.cycle, runs: runsChoice[c.cycle] ?? c.runs }))">
           Change number of seasons
         </button>
         <button v-if="confirmingCycle !== c.cycle" @click="confirmingCycle = c.cycle">Delete cycle</button>
         <template v-else>
           Delete this cycle? Everything in it closes.
-          <button @click="confirmingCycle = null; run(client.admin.cycles.delete({ cycle: c.cycle }))">Yes, delete</button>
+          <button @click="confirmingCycle = null; run('/admin/cycles/delete', c.cycle, client.admin.cycles.delete({ cycle: c.cycle }))">Yes, delete</button>
           <button @click="confirmingCycle = null">No</button>
         </template>
+        <ErrorNote :problem="problem" :at="c.cycle" />
       </p>
     </div>
 
@@ -302,12 +317,13 @@ onMounted(async () => {
     <ul>
       <li v-for="a in admins" :key="a.user">
         {{ a.user }}{{ a.owner ? " (owner)" : "" }}
-        <button v-if="isOwner && !a.owner" @click="run(client.admin.admins.remove({ user: a.user }))">Remove</button>
+        <button v-if="isOwner && !a.owner" @click="run('/admin/admins/remove', 'people', client.admin.admins.remove({ user: a.user }))">Remove</button>
       </li>
     </ul>
-    <form v-if="isOwner" @submit.prevent="run(client.admin.admins.add({ user: newAdmin })).then((done) => done && (newAdmin = ''))">
+    <form v-if="isOwner" @submit.prevent="run('/admin/admins/add', 'people', client.admin.admins.add({ user: newAdmin })).then((done) => done && (newAdmin = ''))">
       <label>Username <input v-model="newAdmin" required /></label>
       <button type="submit">Add admin</button>
+      <ErrorNote :problem="problem" at="people" />
     </form>
   </template>
 </template>

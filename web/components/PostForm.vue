@@ -2,7 +2,9 @@
 import { onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { client } from "../api.ts";
+import { explain } from "../errors.ts";
 import { rooms, type Room } from "../museum.ts";
+import ErrorNote from "./ErrorNote.vue";
 
 // Posts an image to `group`, or, without one, to a gallery or wing picked from the open ones.
 const props = defineProps<{ group?: string }>();
@@ -35,7 +37,9 @@ async function choose(file: File | undefined) {
     status.value = "converting heic photo to jpeg…";
     try {
       // Loaded only when needed; the converter is large.
-      const { default: heic2any } = await import("heic2any");
+      const { default: loaded } = await import("heic2any");
+      // A CommonJS package: Vite hands over the function itself, though TypeScript expects it under .default.
+      const heic2any = loaded as unknown as typeof loaded.default;
       const jpeg = (await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 })) as Blob;
       file = new File([jpeg], file.name.replace(/\.hei[cf]$/i, ".jpg"), { type: "image/jpeg" });
     } catch {
@@ -66,19 +70,21 @@ async function submit() {
   try {
     status.value = "uploading…";
     const requested = await client.uploads.request({ contentType: image.value.type });
-    if ("error" in requested) throw new Error(requested.error);
+    if ("error" in requested) throw new Error(explain("/uploads/request", requested.error));
     const sent = await fetch(requested.uploadUrl, {
       method: "PUT",
       body: image.value,
       headers: { "Content-Type": image.value.type },
     });
-    if (!sent.ok) throw new Error(`upload failed (${sent.status})`);
+    if (!sent.ok) throw new Error("the image didn't upload. try again.");
     status.value = "posting…";
     const result = await client.posts.create({ group: chosen.value, content: requested.upload, caption: caption.value });
-    if ("error" in result) throw new Error(result.error === "CONFLICT" ? "this gallery is closed right now." : result.error);
+    // Its CONFLICTs are "season over" and "upload didn't arrive"; the upload just succeeded, so it's the season.
+    if ("error" in result) throw new Error(explain("/posts/create", result.error));
     router.push(`/galleries/${chosen.value}#post-${result.post}`); // the gallery scrolls to the new post
   } catch (e) {
-    error.value = (e as Error).message;
+    // fetch itself throws when storage can't be reached.
+    error.value = e instanceof TypeError ? explain("/uploads/request", "NETWORK_ERROR") : (e as Error).message;
     status.value = "";
   } finally {
     busy.value = false;
@@ -119,6 +125,6 @@ onUnmounted(() => {
     <p><label>caption (optional)<textarea v-model="caption" rows="3"></textarea></label></p>
     <p><button type="submit" :disabled="busy">post</button></p>
     <p v-if="status">{{ status }}</p>
-    <p v-if="error" class="error">{{ error }}</p>
+    <p v-if="error"><ErrorNote :problem="error" /></p>
   </form>
 </template>

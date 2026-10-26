@@ -22,11 +22,12 @@
     "happy-dom": "^21.0.4",
     "typescript": ">=6 <7",
     "vite": "^8.3.4",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "vue-tsc": "^3.3.13"
   },
   "scripts": {
     "generate": "sync-engine artifacts pin",
-    "check": "sync-engine check && sync-engine artifacts check && tsc --noEmit",
+    "check": "sync-engine check && sync-engine artifacts check && tsc --noEmit && vue-tsc --noEmit",
     "start": "bun src/main.ts",
     "start:backend": "HOST=127.0.0.1 PORT=4000 bun src/main.ts",
     "start:frontend": "HOST=0.0.0.0 BACKEND_URL=http://127.0.0.1:4000 bun web/server.ts",

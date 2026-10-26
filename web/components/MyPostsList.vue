@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { client } from "../api.ts";
+import { explain, type Problem } from "../errors.ts";
+import ErrorNote from "./ErrorNote.vue";
 
 type Post = Extract<Awaited<ReturnType<typeof client.posts.mine>>, { mine: unknown }>["mine"]["posts"][number];
 
 const posts = ref<Post[]>([]);
 const confirming = ref<string | null>(null); // the post waiting for "yes, delete"
 const loaded = ref(false);
-const error = ref("");
+const problem = ref<Problem | null>(null); // at "list", or at an item
 
 onMounted(async () => {
   const result = await client.posts.mine({});
-  if ("error" in result) error.value = result.error;
+  if ("error" in result) problem.value = { at: "list", message: explain("/posts/mine", result.error) };
   else posts.value = result.mine.posts;
   loaded.value = true;
 });
@@ -19,14 +21,16 @@ onMounted(async () => {
 async function remove(post: string) {
   confirming.value = null;
   const result = await client.posts.delete({ post });
-  if ("error" in result) error.value = result.error;
-  else posts.value = posts.value.filter((p) => p.post !== post);
+  // An item already gone leaves the list, so its message shows above the list instead.
+  if ("error" in result) problem.value = { at: result.error === "NOT_FOUND" ? "list" : post, message: explain("/posts/delete", result.error) };
+  // Done, or already gone: either way it's off the list.
+  if (!("error" in result) || result.error === "NOT_FOUND") posts.value = posts.value.filter((p) => p.post !== post);
 }
 </script>
 
 <template>
-  <p v-if="error" class="error">{{ error }}</p>
-  <p v-if="loaded && !posts.length && !error">you haven't posted anything yet.</p>
+  <p v-if="problem?.at === 'list'"><ErrorNote :problem="problem" at="list" /></p>
+  <p v-if="loaded && !posts.length && problem?.at !== 'list'">you haven't posted anything yet.</p>
   <ul class="cards">
     <li v-for="p in posts" :key="p.post" class="card">
       <img :src="`/api/images/${p.content}`" :alt="p.caption || 'your post'" />
@@ -52,6 +56,7 @@ async function remove(post: string) {
           <button @click="confirming = null">no</button>
         </template>
       </p>
+      <ErrorNote :problem="problem" :at="p.post" />
     </li>
   </ul>
 </template>

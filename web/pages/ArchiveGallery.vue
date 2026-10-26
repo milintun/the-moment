@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
+import ErrorNote from "../components/ErrorNote.vue";
 import { client, finishedSeasons } from "../api.ts";
+import { explain } from "../errors.ts";
 
 const group = useRoute().params.group as string;
 const name = ref("");
@@ -11,7 +13,7 @@ const loaded = ref(false);
 
 onMounted(async () => {
   const result = await client.groups.list({});
-  if ("error" in result) return void (error.value = result.error);
+  if ("error" in result) return void (error.value = explain("/groups/list", result.error));
   const found = result.list.groups.find((g) => g.group === group);
   name.value = found?.name ?? "unknown gallery";
   seasons.value = found ? finishedSeasons(found) : [];
@@ -22,7 +24,7 @@ onMounted(async () => {
 <template>
   <h1>{{ name }}</h1>
   <p class="lede">finished seasons of this room.</p>
-  <p v-if="error" class="error">{{ error }}</p>
+  <p v-if="error"><ErrorNote :problem="error" /></p>
   <p v-if="loaded && !seasons.length && !error">no finished seasons yet.</p>
   <ol class="rooms">
     <li v-for="s in seasons" :key="s.season" class="room">
