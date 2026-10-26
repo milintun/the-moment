@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import RoomList from "../components/RoomList.vue";
-import { client, me } from "../api.ts";
+import { client, isAdmin, me } from "../api.ts";
 import { neighbours, rooms, type Room } from "../museum.ts";
 
 type Post = Extract<Awaited<ReturnType<typeof client.groups.feed>>, { feed: unknown }>["feed"]["posts"][number];
@@ -16,6 +16,7 @@ const open = ref(false);
 const posts = ref<Post[]>([]);
 const voted = ref(new Set<string>());
 const confirming = ref<string | null>(null); // the post waiting for "yes, delete"
+const confirmingRemoval = ref<string | null>(null); // the post an admin is about to remove
 const error = ref("");
 const loaded = ref(false); // render once the first load is done, so nothing flashes
 
@@ -51,6 +52,14 @@ async function toggle(post: string) {
 async function remove(post: string) {
   confirming.value = null;
   const result = await client.posts.delete({ post });
+  if ("error" in result) error.value = result.error;
+  else posts.value = posts.value.filter((p) => p.post !== post);
+}
+
+// Admins can take a post off this gallery's wall; the post itself is kept (its owner still has it).
+async function removeFromGallery(post: string) {
+  confirmingRemoval.value = null;
+  const result = await client.admin.groups["remove-post"]({ group, post });
   if ("error" in result) error.value = result.error;
   else posts.value = posts.value.filter((p) => p.post !== post);
 }
@@ -103,6 +112,14 @@ onMounted(async () => {
                 delete this post?
                 <button @click="remove(p.post)">yes, delete</button>
                 <button @click="confirming = null">no</button>
+              </template>
+            </template>
+            <template v-if="isAdmin && me !== p.owner">
+              <button v-if="confirmingRemoval !== p.post" @click="confirmingRemoval = p.post">remove from gallery</button>
+              <template v-else>
+                remove this post from {{ name }}?
+                <button @click="removeFromGallery(p.post)">yes, remove</button>
+                <button @click="confirmingRemoval = null">no</button>
               </template>
             </template>
           </p>

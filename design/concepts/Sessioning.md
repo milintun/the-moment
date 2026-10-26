@@ -35,7 +35,7 @@ start (subject: Subject) : returns (session: Session, expiresAt: DateTime)
   where true
   then
     delete every expired session
-    add a new opaque session for subject expiring 30 minutes from now
+    add a new opaque session for subject expiring 2 hours from now
     returns session, expiresAt
 
 current (session: Session) : returns (subject: Subject)

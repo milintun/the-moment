@@ -8,7 +8,7 @@ interface Session {
   expiresAt: Date;
 }
 
-const SESSION_LIFETIME_MS = 30 * 60 * 1000;
+const SESSION_LIFETIME_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 export class SessioningConcept {
   private readonly sessions: Collection<Session>;
