@@ -106,7 +106,7 @@ Times are fixed dates, never the real clock.
   - `_counts` breaks ties by target and leaves out items with no votes
 
 ### Grouping.test.ts
-- **principle**: create "Doodles" → add p1 and p2 → `_items` lists both → remove p1 → delete the group → `_items` empty, and p2's other groups are unaffected.
+- **principle**: create "Doodles" → add p1 and p2 → `_items` lists both → remove p1 → delete the group → `_items` empty, and p2's other groups are unaffected (deleting removes only that group's memberships).
 - **create**
   - refuses `NAME_TAKEN`; still only one group with that name
 - **delete**
@@ -123,6 +123,8 @@ Times are fixed dates, never the real clock.
   - `_items` most recently added first, and empty for an unknown group
   - `_groupsOf` lists every group holding the item, ordered
   - `_byName` finds the group, or no row when unknown
+  - `_page` answers a window of `_groups`; nothing past the end or for a bad offset/limit
+  - `_itemsAdded` lists items added at or after `from` and before `to`, newest first
 
 ### Cycling.test.ts
 - **principle**: a 1-day cycle with 3 runs holds a group and a category → both are in run 0, then run 1, then run 2 → after run 2 neither has a current run → `setRuns` to 4 reopens run 3 for both.
@@ -289,6 +291,8 @@ Runs against local storage (RustFS), in the `the-moment-test` bucket.
   - a finished season shows its posts with final votes, most first and newest first on ties
   - refuses `NO_SUCH_SEASON` for the season still running, a season the cycle doesn't have, and a group with no cycle
   - the last season is archived once the whole cycle has ended
+- **archive/galleries** (archive pagination, done by Grouping's `_page`)
+  - pages through galleries oldest first, each with its cycle, blank without one; empty past the end
 - **groups/feed**
   - only the current run's posts
   - ranked by votes, newest first on ties
@@ -322,7 +326,39 @@ Runs against local storage (RustFS), in the `the-moment-test` bucket.
 | Nominating | createCategory, nominate, withdraw | NAME_TAKEN, NO_SUCH_CATEGORY, INVALID_NAME, TOO_SOON, NO_SUCH_NOMINATION, NOT_NOMINATOR |
 | Uploading | requestUpload, verify, remove, link | NO_SUCH_UPLOAD, NOT_YOUR_UPLOAD, NOT_UPLOADED, INVALID_FILE |
 
-Every endpoint (38) is called at least once in the composition tests, and every
+Every endpoint (39) is called at least once in the composition tests, and every
 composition-authored error (GROUP_CLOSED, OWN_POST, NOT_IN_SEASON, ADMIN_ONLY,
 OWNER_ONLY, CATEGORY_CLOSED, ALREADY_NOMINATED, OWN_NOMINATION, NOT_ACTIVE,
 NO_SUCH_ITEM, UNSUPPORTED_TYPE) is triggered at least once.
+
+## Frontend tests
+
+Run with `bun run test:web` (Vitest, simulated browser, fake backend, no services needed) and
+`bun run test:e2e` (Playwright, real browser and server; needs `bun run db:up`). The e2e server
+(e2e/server.ts) wipes and uses its own `themoment_e2e` database and the test bucket, and seeds the
+owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
+
+### web/tests/helpers.spec.ts
+- `normalizeName` trims, collapses spaces, lowercases
+- `finishedSeasons`: only ended seasons with dates; finished exactly at its end; never past the last run; none without a cycle
+- `refreshMe`: owner admin; non-admin; signed out without asking for admins
+- `rooms`: walking order with wings before galleries, closed ones left out; fixed rooms when the list fails
+- `neighbours`: before and after, ends, unknown room
+
+### web/tests/components.spec.ts
+- **RoomList**: links and kind labels; "you are here" and compact; clicking enters
+- **AuthForm**: log in sends what was typed, learns who you are, goes home; refusals (wrong password, taken, invalid) show their message and stay put
+- **routes**: entrance on first visit, skipped to the map after entering; entrance reachable by link; old addresses redirect
+
+### web/tests/pages.spec.ts
+- **gallery view**: artwork with caption, owner, votes, image; signed out has no buttons and posting goes to log in; closed gallery offers no posting; empty wall; upvote → "unvote" filled in → back; no voting on your own post, delete after confirming; admin removes someone's post after confirming; non-admins never see removal; refused actions show their error
+- **archive**: pages through `/archive/galleries` 20 at a time with "load more", showing only galleries with finished seasons; empty message
+
+### e2e/museum.spec.ts
+- entrance → map, and later visits skip the entrance
+- register, post an image with a caption, land on it, and the image loads from storage
+- another visitor upvotes, then unvotes
+- an artist deletes their own post after confirming
+- an admin removes someone's post from a gallery
+- the owner creates a season and a gallery from the admin page, and it opens on the map
+- signed out, "post here" goes to log in

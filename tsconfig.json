@@ -13,5 +13,5 @@
       "@design/*": ["./design/*"]
     }
   },
-  "include": ["src", "web", "scripts", "tests", "generated.config.ts", "generated"]
+  "include": ["src", "web", "scripts", "tests", "e2e", "playwright.config.ts", "vite.config.ts", "generated.config.ts", "generated"]
 }

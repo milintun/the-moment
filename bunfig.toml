@@ -1,0 +1,3 @@
+# Backend tests live in tests/; the frontend's (web/tests, e2e) run with Vitest and Playwright.
+[test]
+root = "tests"
