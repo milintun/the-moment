@@ -100,7 +100,7 @@ const CreatePost = endpoint(
       .then(
         where(now(createdAt), GroupOpen({ group, now: createdAt }))
           .then(Posting.create({ owner: user, content, caption, createdAt }).responds({ post }))
-          .then(Grouping.addItem({ group, item: post }).responds({}))
+          .then(Grouping.addItem({ group, item: post, addedAt: createdAt }).responds({}))
           .then(respond({ post }))
           .named("open"),
         where(no(Grouping._get({ group })))

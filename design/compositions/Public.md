@@ -36,6 +36,16 @@ cycle does not have, answers `NO_SUCH_SEASON`. Nothing in the archive can be vot
 Public.Archive at /groups/archive
 ```
 
+The archive lists its galleries [a page at a time](reaction:Public.ArchiveGalleries):
+[one page of galleries in the order they were created](former:Public.GroupPage), each
+with its cycle, so a reader can tell which seasons have ended. Grouping does the paging
+and answers a season's posts by when they were added, so neither the gallery list nor a
+season's page grows with the whole history.
+
+```endpoints
+Public.ArchiveGalleries at /archive/galleries
+```
+
 A post's content is the upload holding its image, and stored images are private. Anyone
 may [get a link to an image](reaction:Public.ImageLink), which Uploading creates fresh and
 which works for five minutes; an unknown upload answers `NO_SUCH_UPLOAD`. Pages reach it

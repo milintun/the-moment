@@ -98,7 +98,7 @@ Defined in [Grouping](../design/concepts/Grouping.md), line 1.
   - Refuses `NAME_TAKEN`: A group with this name already exists.
 - `delete(group: Group) : returns ()`
   - Refuses `NO_SUCH_GROUP`: There is no such group.
-- `addItem(group: Group, item: Item) : returns ()`
+- `addItem(group: Group, item: Item, addedAt: DateTime) : returns ()`
   - Refuses `NO_SUCH_GROUP`: There is no such group.
   - Refuses `ALREADY_IN_GROUP`: This item is already in the group.
 - `removeItem(group: Group, item: Item) : returns ()`
@@ -108,8 +108,10 @@ Defined in [Grouping](../design/concepts/Grouping.md), line 1.
 #### Queries
 
 - `_groups() : many (group: Group, name: String)`
+- `_page(offset: Number, limit: Number) : many (group: Group, name: String)`
 - `_get(group: Group) : optional (name: String)`
 - `_items(group: Group) : many (item: Item)`
+- `_itemsAdded(group: Group, from: DateTime, to: DateTime) : many (item: Item, addedAt: DateTime)`
 - `_groupsOf(item: Item) : many (group: Group)`
 - `_byName(name: String) : optional (group: Group)`
 
@@ -453,7 +455,7 @@ Former "every group at (now)" — inputs (now); bindings (group, name); promises
 ### every nomination category at (now)
 
 Authored path: `Public.CategoryList`.
-- Covered by [Public](../design/compositions/Public.md), line 62.
+- Covered by [Public](../design/compositions/Public.md), line 72.
 
 ```former
 Former "every nomination category at (now)" — inputs (now); bindings (category, name); promises exactly one record — forms:
@@ -485,7 +487,7 @@ Former "the active nominations in (category) upvoted by (user) at (now)" — inp
 ### the details of (post)
 
 Authored path: `Public.PostDetails`.
-- Covered by [Public](../design/compositions/Public.md), line 51.
+- Covered by [Public](../design/compositions/Public.md), line 61.
 
 ```former
 Former "the details of (post)" — inputs (post); bindings (owner, content, caption, createdAt, votes); promises at most one record — forms:
@@ -498,6 +500,21 @@ Former "the details of (post)" — inputs (post); bindings (owner, content, capt
     owner
     post
     votes
+```
+
+### the groups from (offset), at most (limit)
+
+Authored path: `Public.GroupPage`.
+- Covered by [Public](../design/compositions/Public.md), line 40.
+
+```former
+Former "the groups from (offset), at most (limit)" — inputs (offset, limit); bindings (group, name); promises exactly one record — forms:
+  a record of
+    groups: each Grouping._page (limit, offset) has (group, name)
+      form a record of
+        group
+        name
+        … former "the cycle of (group)" with (group), with blank leaves if absent
 ```
 
 ### whether (nomination) is active at (now)
@@ -552,7 +569,7 @@ Authored path: `Public.SeasonPosts`.
 ```former
 Former "the posts of (group) from (start) to (end)" — inputs (group, start, end); bindings (post, owner, content, caption, createdAt, votes); promises exactly one record — forms:
   a record of
-    posts: each Grouping._items (group) has (item: post)
+    posts: each Grouping._itemsAdded (from: start, group, to: end) has (item: post)
       where Posting._get (post) has (caption, content, createdAt, owner)
       where createdAt is at least start
       where createdAt is less than end
@@ -620,7 +637,7 @@ Former "the posts of (user) at (now)" — inputs (user, now); bindings (post, co
 
 Authored path: `Public.RoundRanking`.
 - Covered by [Admin](../design/compositions/Admin.md), line 61.
-- Covered by [Public](../design/compositions/Public.md), line 70.
+- Covered by [Public](../design/compositions/Public.md), line 80.
 
 ```former
 Former "the ranking of (category) from (start) to (end)" — inputs (category, start, end); bindings (nomination, nominator, name, createdAt, votes); promises exactly one record — forms:
@@ -821,10 +838,11 @@ Authored path: `Admin.AddPostToGroup`.
 ```reaction
 when Sessioning.current (session), asked by Admin.AddPostToGroup
 where
+  addedAt is the current flow's instant
   view "(session) belongs to an admin" with (session)
   earlier, RequestBoundary.request (group, path: "/admin/groups/add-post", post, requestId, session)
 then
-  Grouping.addItem (group, item: post)
+  Grouping.addItem (addedAt, group, item: post)
 ```
 
 ### Admin.AddPostToGroup:admin#3
@@ -834,7 +852,7 @@ Authored path: `Admin.AddPostToGroup`.
 - Covered by [Admin](../design/compositions/Admin.md), line 48.
 
 ```reaction
-when Grouping.addItem (group, item: post), asked by Admin.AddPostToGroup:admin#2
+when Grouping.addItem (addedAt, group, item: post), asked by Admin.AddPostToGroup:admin#2
 where
   earlier, RequestBoundary.request (group, path: "/admin/groups/add-post", post, requestId, session)
 then
@@ -1530,6 +1548,18 @@ then
   RequestBoundary.respond (error: "NO_SUCH_SEASON", requestId)
 ```
 
+### Public.ArchiveGalleries
+
+Authored path: `Public.ArchiveGalleries`.
+- Covered by [Public](../design/compositions/Public.md), line 39.
+- Covered by [Public](../design/compositions/Public.md), line 46.
+
+```reaction
+when RequestBoundary.request (limit, offset, path: "/archive/galleries", requestId)
+then
+  RequestBoundary.respond (page: former "the groups from (offset), at most (limit)" with (limit, offset), requestId)
+```
+
 ### Public.Feed:closed
 
 Authored path: `Public.Feed`.
@@ -1563,8 +1593,8 @@ then
 ### Public.GetPost:found
 
 Authored path: `Public.GetPost`.
-- Covered by [Public](../design/compositions/Public.md), line 51.
-- Covered by [Public](../design/compositions/Public.md), line 56.
+- Covered by [Public](../design/compositions/Public.md), line 61.
+- Covered by [Public](../design/compositions/Public.md), line 66.
 
 ```reaction
 when RequestBoundary.request (path: "/posts/get", post, requestId)
@@ -1577,8 +1607,8 @@ then
 ### Public.GetPost:missing
 
 Authored path: `Public.GetPost`.
-- Covered by [Public](../design/compositions/Public.md), line 51.
-- Covered by [Public](../design/compositions/Public.md), line 56.
+- Covered by [Public](../design/compositions/Public.md), line 61.
+- Covered by [Public](../design/compositions/Public.md), line 66.
 
 ```reaction
 when RequestBoundary.request (path: "/posts/get", post, requestId)
@@ -1591,8 +1621,8 @@ then
 ### Public.ImageLink
 
 Authored path: `Public.ImageLink`.
-- Covered by [Public](../design/compositions/Public.md), line 40.
-- Covered by [Public](../design/compositions/Public.md), line 46.
+- Covered by [Public](../design/compositions/Public.md), line 50.
+- Covered by [Public](../design/compositions/Public.md), line 56.
 
 ```reaction
 when RequestBoundary.request (path: "/images/link", requestId, upload)
@@ -1603,8 +1633,8 @@ then
 ### Public.ImageLink#2
 
 Authored path: `Public.ImageLink`.
-- Covered by [Public](../design/compositions/Public.md), line 40.
-- Covered by [Public](../design/compositions/Public.md), line 46.
+- Covered by [Public](../design/compositions/Public.md), line 50.
+- Covered by [Public](../design/compositions/Public.md), line 56.
 
 ```reaction
 when Uploading.link (upload, url), asked by Public.ImageLink
@@ -1617,8 +1647,8 @@ then
 ### Public.ListCategories
 
 Authored path: `Public.ListCategories`.
-- Covered by [Public](../design/compositions/Public.md), line 61.
-- Covered by [Public](../design/compositions/Public.md), line 66.
+- Covered by [Public](../design/compositions/Public.md), line 71.
+- Covered by [Public](../design/compositions/Public.md), line 76.
 
 ```reaction
 when RequestBoundary.request (path: "/nominations/categories", requestId)
@@ -1645,8 +1675,8 @@ then
 ### Public.ListNominations:closed
 
 Authored path: `Public.ListNominations`.
-- Covered by [Public](../design/compositions/Public.md), line 69.
-- Covered by [Public](../design/compositions/Public.md), line 76.
+- Covered by [Public](../design/compositions/Public.md), line 79.
+- Covered by [Public](../design/compositions/Public.md), line 86.
 
 ```reaction
 when RequestBoundary.request (category, path: "/nominations/list", requestId)
@@ -1660,8 +1690,8 @@ then
 ### Public.ListNominations:open
 
 Authored path: `Public.ListNominations`.
-- Covered by [Public](../design/compositions/Public.md), line 69.
-- Covered by [Public](../design/compositions/Public.md), line 76.
+- Covered by [Public](../design/compositions/Public.md), line 79.
+- Covered by [Public](../design/compositions/Public.md), line 86.
 
 ```reaction
 when RequestBoundary.request (category, path: "/nominations/list", requestId)
@@ -1832,7 +1862,7 @@ when Posting.create (caption, content, createdAt, owner: user, post), asked by U
 where
   earlier, RequestBoundary.request (caption, content, group, path: "/posts/create", requestId, session)
 then
-  Grouping.addItem (group, item: post)
+  Grouping.addItem (addedAt: createdAt, group, item: post)
 ```
 
 ### User.CreatePost:open#5
@@ -1842,7 +1872,7 @@ Authored path: `User.CreatePost`.
 - Covered by [User](../design/compositions/User.md), line 62.
 
 ```reaction
-when Grouping.addItem (group, item: post), asked by User.CreatePost:open#4
+when Grouping.addItem (addedAt: createdAt, group, item: post), asked by User.CreatePost:open#4
 where
   earlier, RequestBoundary.request (caption, content, group, path: "/posts/create", requestId, session)
 then
@@ -2648,6 +2678,7 @@ not listed here have no explicit input contract.
 - `/admin/groups/delete` — requires `group`, `session`
 - `/admin/groups/remove-post` — requires `group`, `post`, `session`
 - `/admin/nominations/previous` — requires `category`, `session`
+- `/archive/galleries` — requires `limit`, `offset`
 - `/auth/current` — requires `session`
 - `/auth/register` — requires `password`, `username`
 - `/auth/sign-in` — requires `password`, `username`

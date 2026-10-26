@@ -2,16 +2,27 @@
 import { computed, onMounted, ref } from "vue";
 import { WING_MIN_PERIOD, client, finishedSeasons } from "../api.ts";
 
-type Group = Extract<Awaited<ReturnType<typeof client.groups.list>>, { list: unknown }>["list"]["groups"][number];
+type Group = Extract<Awaited<ReturnType<typeof client.archive.galleries>>, { page: unknown }>["page"]["groups"][number];
 
+// Galleries come a page at a time from Grouping (the server pages them), so the archive
+// stays quick however many galleries pile up.
+const PAGE = 20;
 const groups = ref<Group[]>([]);
+const more = ref(true); // a full page came back, so there may be another
 const error = ref("");
 const loaded = ref(false);
 
-onMounted(async () => {
-  const result = await client.groups.list({});
+async function loadMore() {
+  const result = await client.archive.galleries({ offset: groups.value.length, limit: PAGE });
   if ("error" in result) error.value = result.error;
-  else groups.value = result.list.groups;
+  else {
+    groups.value.push(...result.page.groups);
+    more.value = result.page.groups.length === PAGE;
+  }
+}
+
+onMounted(async () => {
+  await loadMore();
   loaded.value = true;
 });
 
@@ -27,7 +38,7 @@ const rooms = computed(() =>
   <h1>Archive</h1>
   <p class="lede">every gallery's past seasons, as they ended. archived art can be viewed but not voted on.</p>
   <p v-if="error" class="error">{{ error }}</p>
-  <p v-if="loaded && !rooms.length && !error">nothing has been archived yet.</p>
+  <p v-if="loaded && !rooms.length && !more && !error">nothing has been archived yet.</p>
   <ol class="rooms">
     <li v-for="g in rooms" :key="g.group" class="room">
       <RouterLink class="room-name" :to="`/archive/${g.group}`">
@@ -35,4 +46,5 @@ const rooms = computed(() =>
       </RouterLink>
     </li>
   </ol>
+  <p v-if="loaded && more && !error"><button @click="loadMore">load more galleries</button></p>
 </template>

@@ -166,6 +166,23 @@ describe("groups/archive", () => {
   });
 });
 
+describe("archive/galleries", () => {
+  test("pages through galleries oldest first, each with its cycle (blank without one)", async () => {
+    const doodles = await openGroup(app.api, people.milin, "Doodles", cycle);
+    app.clock.advance(MINUTE);
+    const { group: wings } = ok(await app.api.admin.groups.create({ session: people.milin, name: "Wings" }));
+    app.clock.advance(MINUTE);
+    const { group: zines } = ok(await app.api.admin.groups.create({ session: people.milin, name: "Zines" }));
+    const page = async (offset: number, limit: number) => ok(await app.api.archive.galleries({ offset, limit })).page.groups;
+    expect(await page(0, 2)).toEqual([
+      { group: doodles, name: "Doodles", cycle, start: T0.toISOString(), period: HOUR, runs: 3 },
+      { group: wings, name: "Wings", cycle: null, start: null, period: null, runs: null },
+    ]);
+    expect((await page(2, 2)).map((g) => g.group)).toEqual([zines]);
+    expect(await page(3, 2)).toEqual([]);
+  });
+});
+
 describe("images/link", () => {
   test("gives a working, short-lived link to an uploaded image", async () => {
     const image = await uploadImage(app.api, people.gigi, { bytes: 4321 });

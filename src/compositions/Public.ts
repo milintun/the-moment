@@ -29,12 +29,14 @@ const GroupList = former("every group at (now)", ({ now }, { group, name }) =>
 
 // The posts of a group created between start and end, most upvoted first and newest first
 // among ties (rows arrive newest first and the vote sort keeps that order for equal votes).
-// Shared by the live feed (the current season) and the archive (a finished one).
+// Shared by the live feed (the current season) and the archive (a finished one). Grouping
+// answers only the posts added during the season, so a season's page never reads the
+// gallery's whole history; that is what keeps the archive fast as seasons pile up.
 const SeasonPosts = former(
   "the posts of (group) from (start) to (end)",
   ({ group, start, end }, { post, owner, content, caption, createdAt, votes }) =>
     form({
-      posts: each(Grouping._items({ group }).is({ item: post }))
+      posts: each(Grouping._itemsAdded({ group, from: start, to: end }).is({ item: post }))
         .where(
           Posting._get({ post }).is({ owner, content, caption, createdAt }),
           is.ge(createdAt, start),
@@ -53,6 +55,16 @@ const PostDetails = former("the details of (post)", ({ post }, { owner, content,
     Upvoting._count({ target: post }).is({ votes }),
   ).form({ post, owner, content, caption, createdAt, votes }),
 ).optional();
+
+// One page of groups in creation order (oldest first), each with its cycle, for the archive.
+// Grouping does the paging, so the archive never loads every gallery at once.
+const GroupPage = former("the groups from (offset), at most (limit)", ({ offset, limit }, { group, name }) =>
+  form({
+    groups: each(Grouping._page({ offset, limit }).is({ group, name }))
+      .form({ group, name })
+      .splicing(whether(GroupCycle({ group }))),
+  }),
+);
 
 // Every nomination category, with its current round left blank when it is closed.
 const CategoryList = former("every nomination category at (now)", ({ now }, { category, name }) =>
@@ -129,6 +141,10 @@ const ImageLink = endpoint("/images/link", ({ upload, url }) =>
     .then(respond({ url })),
 );
 
+const ArchiveGalleries = endpoint("/archive/galleries", ({ offset, limit }) =>
+  receive({ offset, limit }).then(respond({ page: GroupPage({ offset, limit }) })),
+);
+
 const ListCategories = endpoint("/nominations/categories", ({ instant }) =>
   receive({})
     .where(now(instant))
@@ -155,6 +171,8 @@ export const composition = {
   ListGroups,
   Feed,
   Archive,
+  GroupPage,
+  ArchiveGalleries,
   GetPost,
   ImageLink,
   CategoryList,

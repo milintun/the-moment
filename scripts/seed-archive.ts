@@ -79,7 +79,7 @@ try {
           const sent = await fetch(uploadUrl, { method: "PUT", body: image.bytes, headers: { "Content-Type": image.type } });
           if (!sent.ok) throw new Error(`storing an image failed: ${sent.status}`);
           const { post } = await posting.create({ owner, content: upload, caption: CAPTIONS[counter % CAPTIONS.length]!, createdAt });
-          await grouping.addItem({ group, item: post });
+          await grouping.addItem({ group, item: post, addedAt: createdAt });
           // A different number of votes on each post (2, 1, 0), never from its owner.
           for (const voter of PEOPLE.filter((p) => p !== owner).slice(0, 2 - i)) {
             await upvoting.upvote({ voter, target: post });

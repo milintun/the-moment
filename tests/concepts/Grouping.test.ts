@@ -20,15 +20,16 @@ describe("principle", () => {
   test("a named group holds items until it is deleted, without touching its items elsewhere", async () => {
     const { group } = await grouping.create({ name: "Doodles", createdAt: T0 });
     const { group: other } = await grouping.create({ name: "Figure Drawing", createdAt: T0 });
-    await grouping.addItem({ group, item: "p1" });
-    await grouping.addItem({ group, item: "p2" });
-    await grouping.addItem({ group: other, item: "p2" });
+    await grouping.addItem({ group, item: "p1", addedAt: T0 });
+    await grouping.addItem({ group, item: "p2", addedAt: T0 });
+    await grouping.addItem({ group: other, item: "p2", addedAt: T0 });
     expect(await items(group)).toEqual(["p2", "p1"]);
     await grouping.removeItem({ group, item: "p1" });
     expect(await items(group)).toEqual(["p2"]);
     expect(await grouping.delete({ group })).toEqual({});
     expect(await items(group)).toEqual([]);
     expect(await items(other)).toEqual(["p2"]);
+    expect(await grouping._groupsOf({ item: "p2" })).toEqual([{ group: other }]);
   });
 });
 
@@ -48,13 +49,13 @@ describe("delete", () => {
 
 describe("addItem", () => {
   test("refuses NO_SUCH_GROUP", async () => {
-    await expect(grouping.addItem({ group: "unknown", item: "p1" })).rejects.toBeInstanceOf(NoSuchGroup);
+    await expect(grouping.addItem({ group: "unknown", item: "p1", addedAt: T0 })).rejects.toBeInstanceOf(NoSuchGroup);
   });
 
   test("refuses ALREADY_IN_GROUP and the items are unchanged", async () => {
     const { group } = await grouping.create({ name: "Doodles", createdAt: T0 });
-    await grouping.addItem({ group, item: "p1" });
-    await expect(grouping.addItem({ group, item: "p1" })).rejects.toBeInstanceOf(AlreadyInGroup);
+    await grouping.addItem({ group, item: "p1", addedAt: T0 });
+    await expect(grouping.addItem({ group, item: "p1", addedAt: T0 })).rejects.toBeInstanceOf(AlreadyInGroup);
     expect(await items(group)).toEqual(["p1"]);
   });
 });
@@ -66,7 +67,7 @@ describe("removeItem", () => {
 
   test("refuses NOT_IN_GROUP and the items are unchanged", async () => {
     const { group } = await grouping.create({ name: "Doodles", createdAt: T0 });
-    await grouping.addItem({ group, item: "p1" });
+    await grouping.addItem({ group, item: "p1", addedAt: T0 });
     await expect(grouping.removeItem({ group, item: "p2" })).rejects.toBeInstanceOf(NotInGroup);
     expect(await items(group)).toEqual(["p1"]);
   });
@@ -88,7 +89,7 @@ describe("queries", () => {
 
   test("_items lists the most recently added first, and nothing for an unknown group", async () => {
     const { group } = await grouping.create({ name: "Doodles", createdAt: T0 });
-    for (const item of ["p1", "p2", "p3"]) await grouping.addItem({ group, item });
+    for (const [i, item] of ["p1", "p2", "p3"].entries()) await grouping.addItem({ group, item, addedAt: at(i * HOUR) });
     expect(await items(group)).toEqual(["p3", "p2", "p1"]);
     expect(await items("unknown")).toEqual([]);
   });
@@ -97,8 +98,8 @@ describe("queries", () => {
     const a = (await grouping.create({ name: "A", createdAt: T0 })).group;
     const b = (await grouping.create({ name: "B", createdAt: T0 })).group;
     await grouping.create({ name: "C", createdAt: T0 });
-    await grouping.addItem({ group: a, item: "p1" });
-    await grouping.addItem({ group: b, item: "p1" });
+    await grouping.addItem({ group: a, item: "p1", addedAt: T0 });
+    await grouping.addItem({ group: b, item: "p1", addedAt: T0 });
     expect(await grouping._groupsOf({ item: "p1" })).toEqual([a, b].sort().map((group) => ({ group })));
     expect(await grouping._groupsOf({ item: "p9" })).toEqual([]);
   });
@@ -107,5 +108,27 @@ describe("queries", () => {
     const { group } = await grouping.create({ name: "Doodles", createdAt: T0 });
     expect(await grouping._byName({ name: "Doodles" })).toEqual([{ group }]);
     expect(await grouping._byName({ name: "Nope" })).toEqual([]);
+  });
+
+  test("_page answers a window of _groups, and nothing for a bad window", async () => {
+    for (const [i, name] of ["A", "B", "C", "D", "E"].entries()) await grouping.create({ name, createdAt: at(i * HOUR) });
+    const names = async (offset: number, limit: number) => (await grouping._page({ offset, limit })).map((g) => g.name);
+    expect(await names(0, 2)).toEqual(["A", "B"]);
+    expect(await names(2, 2)).toEqual(["C", "D"]);
+    expect(await names(4, 2)).toEqual(["E"]);
+    expect(await names(5, 2)).toEqual([]);
+    expect(await names(-1, 2)).toEqual([]);
+    expect(await names(0, 0)).toEqual([]);
+    expect(await names(0.5, 2)).toEqual([]);
+  });
+
+  test("_itemsAdded lists items added at or after from and before to, newest first", async () => {
+    const { group } = await grouping.create({ name: "Doodles", createdAt: T0 });
+    for (const [i, item] of ["p0", "p1", "p2", "p3"].entries()) await grouping.addItem({ group, item, addedAt: at(i * HOUR) });
+    expect(await grouping._itemsAdded({ group, from: at(HOUR), to: at(3 * HOUR) })).toEqual([
+      { item: "p2", addedAt: at(2 * HOUR) },
+      { item: "p1", addedAt: at(HOUR) },
+    ]);
+    expect(await grouping._itemsAdded({ group: "unknown", from: T0, to: at(9 * HOUR) })).toEqual([]);
   });
 });

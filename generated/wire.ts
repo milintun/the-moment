@@ -193,6 +193,25 @@ export type TheMomentWire = {
     };
     error: { error: AppWideError | "ADMIN_ONLY" | "INVALID_INPUT" | "UNKNOWN_SESSION" };
   };
+  "/archive/galleries": {
+    input: {
+      "limit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_page"]>[0], ["limit"]>>;
+      "offset": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_page"]>[0], ["offset"]>>;
+    };
+    output: {
+      "page": {
+        "groups": ({
+          "cycle": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_cycle"]>>>, ["cycle"]>> | null;
+          "group": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Grouping"]["_page"]>>>, ["group"]>>;
+          "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Grouping"]["_page"]>>>, ["name"]>>;
+          "period": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_cycle"]>>>, ["period"]>> | null;
+          "runs": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_cycle"]>>>, ["runs"]>> | null;
+          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_cycle"]>>>, ["start"]>> | null;
+        })[];
+      };
+    };
+    error: { error: AppWideError | "INVALID_INPUT" };
+  };
   "/auth/current": {
     input: {
       "session": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Sessioning"]["current"]>[0], ["session"]>>;
@@ -247,7 +266,7 @@ export type TheMomentWire = {
           "content": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["content"]>>;
           "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["createdAt"]>>;
           "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["owner"]>>;
-          "post": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>[0], ["post"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Upvoting"]["_count"]>[0], ["target"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Grouping"]["_items"]>>>, ["item"]>]>>;
+          "post": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>[0], ["post"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Upvoting"]["_count"]>[0], ["target"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Grouping"]["_itemsAdded"]>>>, ["item"]>]>>;
           "votes": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Upvoting"]["_count"]>>>, ["votes"]>>;
         }[];
       };
@@ -269,7 +288,7 @@ export type TheMomentWire = {
           "content": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["content"]>>;
           "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["createdAt"]>>;
           "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["owner"]>>;
-          "post": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>[0], ["post"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Upvoting"]["_count"]>[0], ["target"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Grouping"]["_items"]>>>, ["item"]>]>>;
+          "post": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>[0], ["post"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Upvoting"]["_count"]>[0], ["target"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Grouping"]["_itemsAdded"]>>>, ["item"]>]>>;
           "votes": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Upvoting"]["_count"]>>>, ["votes"]>>;
         }[];
       };
@@ -686,6 +705,25 @@ export type TheMomentWireHttp = {
     };
     error: { error: HttpAppWideError | "FORBIDDEN" | "INVALID_REQUEST" | "UNAUTHORIZED" };
   };
+  "/archive/galleries": {
+    input: {
+      "limit": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_page"]>[0], ["limit"]>>;
+      "offset": Jsonify<AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Grouping"]["_page"]>[0], ["offset"]>>;
+    };
+    output: {
+      "page": {
+        "groups": ({
+          "cycle": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_cycle"]>>>, ["cycle"]>> | null;
+          "group": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Grouping"]["_page"]>>>, ["group"]>>;
+          "name": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Grouping"]["_page"]>>>, ["name"]>>;
+          "period": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_cycle"]>>>, ["period"]>> | null;
+          "runs": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_cycle"]>>>, ["runs"]>> | null;
+          "start": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Cycling"]["_cycle"]>>>, ["start"]>> | null;
+        })[];
+      };
+    };
+    error: { error: HttpAppWideError | "INVALID_REQUEST" };
+  };
   "/auth/current": {
     input: Record<string, never>;
     output: {
@@ -732,7 +770,7 @@ export type TheMomentWireHttp = {
           "content": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["content"]>>;
           "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["createdAt"]>>;
           "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["owner"]>>;
-          "post": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>[0], ["post"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Upvoting"]["_count"]>[0], ["target"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Grouping"]["_items"]>>>, ["item"]>]>>;
+          "post": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>[0], ["post"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Upvoting"]["_count"]>[0], ["target"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Grouping"]["_itemsAdded"]>>>, ["item"]>]>>;
           "votes": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Upvoting"]["_count"]>>>, ["votes"]>>;
         }[];
       };
@@ -754,7 +792,7 @@ export type TheMomentWireHttp = {
           "content": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["content"]>>;
           "createdAt": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["createdAt"]>>;
           "owner": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>>>, ["owner"]>>;
-          "post": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>[0], ["post"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Upvoting"]["_count"]>[0], ["target"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Grouping"]["_items"]>>>, ["item"]>]>>;
+          "post": Jsonify<AllOf<[AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Posting"]["_get"]>[0], ["post"]>, AtPath<Parameters<(typeof ApplicationConceptSet.concepts)["Upvoting"]["_count"]>[0], ["target"]>, AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Grouping"]["_itemsAdded"]>>>, ["item"]>]>>;
           "votes": Jsonify<AtPath<QueryRow<Awaited<ReturnType<(typeof ApplicationConceptSet.concepts)["Upvoting"]["_count"]>>>, ["votes"]>>;
         }[];
       };

@@ -103,12 +103,12 @@ const DeleteGroup = endpoint(
 
 const AddPostToGroup = endpoint(
   "/admin/groups/add-post",
-  ({ session, group, post }) =>
+  ({ session, group, post, addedAt }) =>
     receive({ session, group, post })
       .then(Sessioning.current({ session }).responds({}))
       .then(
-        where(IsAdmin({ session }))
-          .then(Grouping.addItem({ group, item: post }).responds({}))
+        where(now(addedAt), IsAdmin({ session }))
+          .then(Grouping.addItem({ group, item: post, addedAt }).responds({}))
           .then(respond({ group, post }))
           .named("admin"),
         where(IsNotAdmin({ session })).then(respond({ error: "ADMIN_ONLY" })).named("not-admin"),
