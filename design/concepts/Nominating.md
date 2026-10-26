@@ -13,11 +13,14 @@ nomination, because names that differ only in spacing or case name the same idea
 Gigi's second nomination later that day is refused because Gigi nominated less than a
 day ago. Sid nominates "Rainy days", and the category lists Sid's nomination before
 Gigi's because it is newer. Gigi withdraws "Hands", and the category no longer lists
-it.
+it. Later Sid's "Rainy days" is chosen to become a gallery; it stays listed, marked
+chosen, and can no longer be withdrawn or chosen again.
 
 ## Types
 
 ```types
+external List
+  An ordered list of values, as the application's runtime represents one.
 external User
   A person who names ideas.
 ```
@@ -33,6 +36,8 @@ a set of Nominations with
   a category Category
   a name String
   a createdAt DateTime
+  an optional chosenAt DateTime
+  Rule: a nomination is chosen exactly when it has a chosenAt
   Rule: names are equivalent when they match after trimming outer spaces, collapsing inner spaces, and ignoring case
 
 a set of Users with
@@ -74,9 +79,24 @@ withdraw (nominator: User, nomination: Nomination) : returns ()
   where nominator is not the nomination's nominator
   then
     refuses NOT_NOMINATOR "Only the nominator can withdraw a nomination."
-  where nomination exists and nominator is its nominator
+  where nomination is chosen
+  then
+    refuses CHOSEN "A chosen nomination can't be withdrawn."
+  where nomination exists, nominator is its nominator, and it is not chosen
   then
     delete nomination, leaving nominator's lastNominatedAt unchanged
+    returns
+
+choose (nominations: List<Nomination>, chosenAt: DateTime) : returns ()
+  where some nomination is not in Nominations
+  then
+    refuses NO_SUCH_NOMINATION "There is no such nomination."
+  where some nomination is already chosen or appears twice in nominations
+  then
+    refuses CHOSEN "This nomination has already been chosen."
+  where every nomination exists and none is chosen
+  then
+    set every nomination's chosenAt to chosenAt, all together or none at all
     returns
 ```
 
@@ -89,8 +109,9 @@ _categories () : many (category: Category, name: String)
 _category (category: Category) : optional (name: String)
   answers the category's name, and no row when category is not in Categories
 
-_nominations (category: Category) : many (nomination: Nomination, nominator: User, name: String, createdAt: DateTime)
-  answers every nomination in category, newest first, and no rows when there are none
+_nominations (category: Category) : many (nomination: Nomination, nominator: User, name: String, createdAt: DateTime, chosen: Flag)
+  answers every nomination in category, newest first, with whether it has been chosen,
+  and no rows when there are none
 
 _equivalent (category: Category, name: String) : many (nomination: Nomination, createdAt: DateTime)
   answers the nominations in category whose names are equivalent to name, newest first, and no rows when there are none
@@ -98,6 +119,6 @@ _equivalent (category: Category, name: String) : many (nomination: Nomination, c
 _byNominator (nominator: User) : many (nomination: Nomination, category: Category, name: String, createdAt: DateTime)
   answers every nomination by nominator in any category, newest first, and no rows when they have none
 
-_get (nomination: Nomination) : optional (nominator: User, category: Category, name: String, createdAt: DateTime)
+_get (nomination: Nomination) : optional (nominator: User, category: Category, name: String, createdAt: DateTime, chosen: Flag)
   answers the nomination's details, and no row when nomination is not in Nominations
 ```

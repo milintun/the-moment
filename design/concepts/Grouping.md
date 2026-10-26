@@ -7,14 +7,17 @@ unrelated items.
 
 ## Principle
 
-A group is created with a name. Items are added to it and removed from it, and the
-group lists the items it holds, including just those added during a given span of time.
-Deleting the group leaves its items untouched. With many groups, they can be listed a
-page at a time.
+A group is created with a name, or several groups are created at once from a list of
+names. Names need not be unique: two groups may share one. Items are added to a group and
+removed from it, and the group lists the items it holds, including just those added
+during a given span of time. Deleting the group leaves its items untouched. With many
+groups, they can be listed a page at a time.
 
 ## Types
 
 ```types
+external List
+  An ordered list of values, as the application's runtime represents one.
 external Item
   The thing being grouped.
 ```
@@ -23,7 +26,7 @@ external Item
 
 ```state
 a set of Groups with
-  a unique name String
+  a name String
   a createdAt DateTime
 
 a set of Memberships with
@@ -38,13 +41,16 @@ a set of Memberships with
 
 ```actions
 create (name: String, createdAt: DateTime) : returns (group: Group)
-  where a group with this name exists
-  then
-    refuses NAME_TAKEN "A group with this name already exists."
-  where no group has this name
+  where any name is given, since names may repeat
   then
     create a new group with this name, createdAt, and no memberships
     returns group
+
+createMany (names: List<String>, createdAt: DateTime) : returns (groups: List<Group>)
+  where any names are given, since names may repeat
+  then
+    create a new group for each name, each with createdAt and no memberships, listed in the order of names
+    returns groups
 
 delete (group: Group) : returns ()
   where group is not in Groups
@@ -103,6 +109,6 @@ _itemsAdded (group: Group, from: DateTime, to: DateTime) : many (item: Item, add
 _groupsOf (item: Item) : many (group: Group)
   answers every group that holds item, ordered by group, and no rows when none does
 
-_byName (name: String) : optional (group: Group)
-  answers the group with this name, and no row when no group has it
+_byName (name: String) : many (group: Group)
+  answers every group with this name, oldest first, and no rows when no group has it
 ```
