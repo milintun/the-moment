@@ -2,7 +2,7 @@
 // Today it is a straight ordered list. A drawn map can replace it later by returning the same
 // rooms and giving neighbours from its paths (forks included); pages only use rooms() and
 // neighbours(), so they won't change.
-import { WING_MIN_PERIOD, client } from "./api.ts";
+import { WING_MIN_PERIOD, client, seasonPhase } from "./api.ts";
 
 export type RoomKind = "entrance" | "home" | "wing" | "gallery" | "nominations" | "archive";
 
@@ -12,22 +12,21 @@ export interface Room {
   label: string;
   to: string; // where entering the room goes
   postTo?: string; // where posting to the room goes, for galleries and wings
+  notice?: "new" | "ending soon"; // a gallery or wing whose season just started or ends soon
 }
 
 /**
  * Every room in walking order: entrance, home, open wings, open galleries (each oldest first),
  * future galleries, archive. Closed galleries and wings live in the archive instead.
  */
-export async function rooms(): Promise<Room[]> {
+export async function rooms(now = Date.now()): Promise<Room[]> {
   const result = await client.groups.list({});
   const open = "error" in result ? [] : result.list.groups.filter((g) => g.run != null);
-  const room = (g: (typeof open)[number], kind: "wing" | "gallery"): Room => ({
-    id: g.group,
-    kind,
-    label: g.name,
-    to: `/galleries/${g.group}`,
-    postTo: `/galleries/${g.group}/post`,
-  });
+  const room = (g: (typeof open)[number], kind: "wing" | "gallery"): Room => {
+    const phase = seasonPhase(g, now);
+    const notice = phase === "new" ? "new" : phase === "ending" ? "ending soon" : undefined;
+    return { id: g.group, kind, label: g.name, to: `/galleries/${g.group}`, postTo: `/galleries/${g.group}/post`, notice };
+  };
   return [
     { id: "entrance", kind: "entrance", label: "entrance", to: "/" },
     { id: "home", kind: "home", label: "home", to: "/home" },

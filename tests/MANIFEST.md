@@ -343,15 +343,22 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 - `finishedSeasons`: only ended seasons with dates; finished exactly at its end; never past the last run; none without a cycle
 - `refreshMe`: owner admin; non-admin; signed out without asking for admins
 - `rooms`: walking order with wings before galleries, closed ones left out; fixed rooms when the list fails
+- `rooms` tags galleries "new" and "ending soon"
 - `neighbours`: before and after, ends, unknown room
+- **season notices**: the window is 20% of the season, at most a day; new / open / ending / ended at the exact edges, for short and long seasons; none without a season; `span` wording
+- **explain**: the endpoint's message; a page's tie wins; category then general fallbacks; network failure
 
 ### web/tests/components.spec.ts
 - **RoomList**: links and kind labels; "you are here" and compact; clicking enters
-- **AuthForm**: log in sends what was typed, learns who you are, goes home; refusals (wrong password, taken, invalid) show their message and stay put
+- **AuthForm**: log in sends what was typed, learns who you are, goes home; refusals (wrong password, taken, bad username vs bad password told apart by what was typed) show their message and stay put
+- **ErrorNote**: a message, or a problem only at its own spot; an ended session links to log in
 - **routes**: entrance on first visit, skipped to the map after entering; entrance reachable by link; old addresses redirect
 
 ### web/tests/pages.spec.ts
-- **gallery view**: artwork with caption, owner, votes, image; signed out has no buttons and posting goes to log in; closed gallery offers no posting; empty wall; upvote → "unvote" filled in → back; no voting on your own post, delete after confirming; admin removes someone's post after confirming; non-admins never see removal; refused actions show their error
+- **gallery view**: artwork with caption, owner, votes, image; signed out has no buttons and posting goes to log in; closed gallery offers no posting; empty wall; upvote → "unvote" filled in → back; no voting on your own post, delete after confirming; admin removes someone's post after confirming; non-admins never see removal; a refusal shows next to its post; a post already gone leaves with the message above; an ended session links to log in
+- **gallery season notices**: new season says when it started; ending soon counts down; none mid-season and the last season is marked final; a season ending with the page open points to the archive, hides posting, and a vote then says votes are final without reloading the wall
+- **future galleries**: counts down to the close; an idea already nominated is caught before the server; a refusal in an open round means once a day; voting after the round closed says votes are final
+- **admin**: a refusal shows in its own section only
 - **archive**: pages through `/archive/galleries` 20 at a time with "load more", showing only galleries with finished seasons; empty message
 
 ### e2e/museum.spec.ts
@@ -360,5 +367,6 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 - another visitor upvotes, then unvotes
 - an artist deletes their own post after confirming
 - an admin removes someone's post from a gallery
-- the owner creates a season and a gallery from the admin page, and it opens on the map
+- the owner creates a season and a gallery from the admin page; it opens on the map tagged "new", and its page says the season just started
+- refusals show their own message: a taken username, a gallery name in use
 - signed out, "post here" goes to log in

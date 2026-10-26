@@ -103,8 +103,11 @@ test("the owner starts a season and a gallery in it from the admin page, and it 
   await expect(page.getByRole("link", { name })).toBeVisible();
 
   await page.goto("/map");
-  await page.getByRole("link", { name: new RegExp(name, "i") }).click();
+  const room = page.getByRole("link", { name: new RegExp(name, "i") });
+  await expect(room.locator(".badge")).toHaveText("new"); // its first season just started
+  await room.click();
   await expect(page.getByRole("heading", { name })).toBeVisible();
+  await expect(page.locator(".season-notice")).toHaveText("new season · started less than a minute ago");
   await expect(page.getByRole("link", { name: "post here" })).toBeVisible();
 });
 
@@ -114,4 +117,25 @@ test("signed out, posting sends you to log in", async ({ page, playwright, baseU
   await page.goto(`/galleries/${group}`);
   await page.getByRole("link", { name: "post here" }).click();
   await expect(page).toHaveURL(/\/auth$/);
+});
+
+test("refusals show their own message: a taken username, and a gallery name in use", async ({ page }) => {
+  const taken = await register(page.request);
+  await page.request.post("/api/auth/sign-out", { data: {} });
+  await page.goto("/auth");
+  await page.getByLabel("username").fill(taken);
+  await page.getByLabel("password").fill(PASSWORD);
+  await page.getByRole("button", { name: "register" }).click();
+  await expect(page.getByRole("alert")).toHaveText("that username is taken.");
+
+  await logInAs(page, OWNER.username, OWNER.password);
+  await page.goto("/home/admin");
+  const form = page.locator("form").filter({ has: page.getByRole("button", { name: "Create", exact: true }) });
+  const name = unique("Twice ");
+  for (let i = 0; i < 2; i++) {
+    await form.getByLabel("Name").fill(name);
+    await form.getByRole("button", { name: "Create", exact: true }).click();
+    await expect(page.getByRole("link", { name, exact: true })).toBeVisible(); // the first one is made
+  }
+  await expect(form.getByRole("alert")).toHaveText("a gallery with that name already exists.");
 });

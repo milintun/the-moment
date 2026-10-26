@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { flushPromises } from "@vue/test-utils";
 import { fakeApi, groupRow, mountAt, signedInAs } from "./fake.ts";
 
@@ -115,14 +115,160 @@ describe("gallery view", () => {
     expect(wrapper.text()).not.toContain("remove from gallery");
   });
 
-  test("a refused action shows its error", async () => {
+  test("a refused action shows its message next to that post", async () => {
+    signedInAs("sasha");
+    gallery({ "/posts/vote": () => ({ error: "CONFLICT" }) });
+    const { wrapper } = await mountAt("/galleries/g1");
+    await click(wrapper, "p2", "upvote");
+    expect(wrapper.find("#post-p2 [role=alert]").text()).toBe("you already voted for this post.");
+    expect(wrapper.find("#post-p1 [role=alert]").exists()).toBe(false);
+  });
+
+  test("a post that's already gone leaves the wall, with the message above it", async () => {
     signedInAs("milin", true);
     gallery({ "/admin/groups/remove-post": () => ({ error: "NOT_FOUND" }) });
     const { wrapper } = await mountAt("/galleries/g1");
     await click(wrapper, "p2", "remove from gallery");
     await click(wrapper, "p2", "yes, remove");
-    expect(wrapper.find(".error").text()).toBe("NOT_FOUND");
-    expect(wrapper.find("#post-p2").exists()).toBe(true);
+    expect(wrapper.find("#post-p2").exists()).toBe(false);
+    expect(wrapper.find("[role=alert]").text()).toBe("this post is already off the wall.");
+  });
+
+  test("an ended session says so, with a link to log in", async () => {
+    signedInAs("sasha");
+    gallery({ "/posts/vote": () => ({ error: "UNAUTHORIZED" }) });
+    const { wrapper } = await mountAt("/galleries/g1");
+    await click(wrapper, "p1", "upvote");
+    const alert = wrapper.find("#post-p1 [role=alert]");
+    expect(alert.text()).toContain("your session ended");
+    expect(alert.find('a[href="/auth"]').exists()).toBe(true);
+  });
+});
+
+describe("gallery season notices", () => {
+  const MINUTE = 60_000;
+  const HOUR = 60 * MINUTE;
+  const T = new Date("2026-03-01T12:00:00.000Z").getTime();
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
+    vi.setSystemTime(T);
+  });
+  afterEach(() => vi.useRealTimers());
+
+  const season = (startedAgo: number, endsIn: number, extra: object = {}) =>
+    fakeApi({
+      "/groups/list": () => ({
+        list: { groups: [groupRow("g1", "Doodles", { runStart: new Date(T - startedAgo).toISOString(), runEnd: new Date(T + endsIn).toISOString(), ...extra })] },
+      }),
+      "/groups/feed": () => ({ feed: { posts: [post("p1", "gigi")] } }),
+      "/posts/my-votes": () => ({ votes: { posts: [] } }),
+      "/posts/vote": () => ({ error: "CONFLICT" }),
+    });
+  const notice = async () => (await mountAt("/galleries/g1")).wrapper;
+
+  test("a new season says when it started", async () => {
+    season(5 * MINUTE, HOUR);
+    expect((await notice()).find(".season-notice").text()).toBe("new season · started 5 min ago");
+  });
+
+  test("a season ending soon counts down", async () => {
+    season(HOUR, 5 * MINUTE);
+    expect((await notice()).find(".season-notice").text()).toBe("ending soon · 5 min left to post and vote");
+  });
+
+  test("mid-season there is no notice, and the last season is marked final", async () => {
+    season(HOUR / 2, HOUR / 2, { run: 2, runs: 3 });
+    const wrapper = await notice();
+    expect(wrapper.find(".season-notice").exists()).toBe(false);
+    expect(wrapper.find(".meta").text()).toContain("season 3 of 3 · final season");
+  });
+
+  test("when the season ends with the page open, it points to the archive and votes are final", async () => {
+    signedInAs("sasha");
+    const api = season(HOUR, MINUTE / 2);
+    const wrapper = await notice();
+    expect(wrapper.find(".season-notice").text()).toContain("less than a minute left");
+    vi.advanceTimersByTime(MINUTE);
+    await flushPromises();
+    expect(wrapper.find(".season-notice").text()).toBe("this season just ended. see it in the archive");
+    expect(wrapper.find('.season-notice a').attributes("href")).toBe("/archive/g1/0");
+    expect(wrapper.text()).not.toContain("post here");
+    await wrapper.find("#post-p1 button").trigger("click");
+    await flushPromises();
+    expect(wrapper.find("#post-p1 [role=alert]").text()).toBe("this season is over, so its votes are final.");
+    expect(api.called("/groups/feed")).toHaveLength(1); // the wall stays as it was
+  });
+});
+
+describe("future galleries", () => {
+  const roundEnd = () => new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
+  const nomination = (id: string, name: string, nominator: string) => ({ nomination: id, name, nominator, votes: 0, createdAt: new Date().toISOString() });
+  const page = (handlers: Record<string, (input: any) => unknown>, end: string | null = roundEnd()) =>
+    fakeApi({
+      "/nominations/categories": () => ({ list: { categories: [{ category: "k", name: "Future galleries", run: end ? 0 : null, runStart: null, runEnd: end }] } }),
+      "/nominations/list": () => ({ ranking: { nominations: [nomination("n1", "Night Walks", "gigi")] } }),
+      "/nominations/my-votes": () => ({ votes: { nominations: [] } }),
+      ...handlers,
+    });
+  const nominate = async (wrapper: any, name: string) => {
+    await wrapper.find("form input").setValue(name);
+    await wrapper.find("form").trigger("submit");
+    await flushPromises();
+  };
+
+  test("counts down to the round's close", async () => {
+    page({});
+    const { wrapper } = await mountAt("/nominations");
+    expect(wrapper.find(".season-notice").text()).toBe("nominations close in 3h");
+  });
+
+  test("an idea already nominated is caught before asking the server", async () => {
+    signedInAs("sasha");
+    const api = page({});
+    const { wrapper } = await mountAt("/nominations");
+    await nominate(wrapper, "  night   WALKS ");
+    expect(api.called("/nominations/create")).toEqual([]);
+    expect(wrapper.find("form [role=alert]").text()).toBe('"Night Walks" is already nominated. upvote it instead.');
+  });
+
+  test("another refusal in the open round means once a day", async () => {
+    signedInAs("sasha");
+    page({ "/nominations/create": () => ({ error: "CONFLICT" }) });
+    const { wrapper } = await mountAt("/nominations");
+    await nominate(wrapper, "Zines");
+    expect(wrapper.find("form [role=alert]").text()).toBe("you can nominate once a day.");
+  });
+
+  test("voting after the round closed says votes are final, next to that nomination", async () => {
+    signedInAs("sasha");
+    // The round closes just as the vote arrives.
+    let end: string | null = roundEnd();
+    const categories = () => ({ list: { categories: [{ category: "k", name: "Future galleries", run: end ? 0 : null, runStart: null, runEnd: end }] } });
+    page({ "/nominations/categories": categories, "/nominations/vote": () => ((end = null), { error: "CONFLICT" }) });
+    const { wrapper } = await mountAt("/nominations");
+    await wrapper.findAll("li button").find((b) => b.text() === "Upvote")!.trigger("click");
+    await flushPromises();
+    expect(wrapper.find("li [role=alert]").text()).toBe("this round is over, so its votes are final.");
+  });
+});
+
+describe("admin", () => {
+  test("a refused action shows its message in its own section", async () => {
+    signedInAs("milin", true);
+    fakeApi({
+      "/admin/admins/list": () => ({ list: { admins: [{ user: "milin", owner: true }] } }),
+      "/groups/list": () => ({ list: { groups: [] } }),
+      "/nominations/categories": () => ({ list: { categories: [] } }),
+      "/admin/cycles/list": () => ({ list: { cycles: [] } }),
+      "/admin/groups/create": () => ({ error: "CONFLICT" }),
+    });
+    const { wrapper } = await mountAt("/home/admin");
+    const form = wrapper.findAll("form").find((f) => f.text().includes("Create") && f.find("select").exists())!;
+    await form.find("input").setValue("Doodles");
+    await form.trigger("submit");
+    await flushPromises();
+    expect(form.find("[role=alert]").text()).toBe("a gallery with that name already exists.");
+    expect(wrapper.findAll("[role=alert]")).toHaveLength(1);
   });
 });
 

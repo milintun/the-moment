@@ -12,6 +12,7 @@ defineProps<{ rooms: Room[]; current?: string; compact?: boolean }>();
       <RouterLink class="room-name" :to="r.to">
         {{ r.label }}
         <span v-if="!compact && (r.kind === 'wing' || r.kind === 'gallery')" class="kind">{{ r.kind }}</span>
+        <span v-if="r.notice" :class="['badge', { ending: r.notice === 'ending soon' }]">{{ r.notice }}</span>
         <template v-if="r.id === current"> (you are here)</template>
       </RouterLink>
     </li>
