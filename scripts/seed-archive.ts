@@ -66,7 +66,7 @@ try {
     if (!todo.length) continue;
 
     const start = new Date(past.start);
-    const { cycle } = await cycling.create({ start, period: past.period, runs: past.runs });
+    const { cycle } = await cycling.create({ start, period: past.period, runs: past.runs, earliest: start });
     for (const name of todo) {
       const { group } = await grouping.create({ name, createdAt: start });
       await cycling.addItem({ cycle, item: group });

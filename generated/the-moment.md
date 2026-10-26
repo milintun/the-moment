@@ -30,8 +30,8 @@ Defined in [Administrating](../design/concepts/Administrating.md), line 1.
 
 #### Instances
 
-- `Administrating` — instance of `Administrating` — [Application types](../design/types.md), line 22.
-  - `User` is `Authenticating.Account` — [Application types](../design/types.md), line 23.
+- `Administrating` — instance of `Administrating` — [Application types](../design/types.md), line 25.
+  - `User` is `Authenticating.Account` — [Application types](../design/types.md), line 26.
 
 ### Authenticating
 
@@ -52,7 +52,7 @@ Defined in [Authenticating](../design/concepts/Authenticating.md), line 1.
 
 #### Instances
 
-- `Authenticating` — instance of `Authenticating` — [Application types](../design/types.md), line 14.
+- `Authenticating` — instance of `Authenticating` — [Application types](../design/types.md), line 17.
 
 ### Cycling
 
@@ -60,33 +60,43 @@ Defined in [Cycling](../design/concepts/Cycling.md), line 1.
 
 #### Actions
 
-- `create(start: DateTime, period: Number, runs: Number) : returns (cycle: Cycle)`
+- `create(start: DateTime, period: Number, runs: Number, earliest: DateTime) : returns (cycle: Cycle)`
   - Refuses `INVALID_CYCLE`: A cycle needs a positive period and at least one run.
+  - Refuses `START_PASSED`: A cycle can't start in the past.
 - `addItem(cycle: Cycle, item: Item) : returns ()`
   - Refuses `NO_SUCH_CYCLE`: There is no such cycle.
   - Refuses `ALREADY_CYCLING`: This item already belongs to a cycle.
-- `removeItem(cycle: Cycle, item: Item) : returns ()`
+- `addItems(cycle: Cycle, items: List<Item>) : returns ()`
+  - Refuses `NO_SUCH_CYCLE`: There is no such cycle.
+  - Refuses `ALREADY_CYCLING`: This item already belongs to a cycle.
+- `removeItem(cycle: Cycle, item: Item, now: DateTime) : returns ()`
   - Refuses `NO_SUCH_CYCLE`: There is no such cycle.
   - Refuses `NOT_IN_CYCLE`: This item is not in the cycle.
-- `setRuns(cycle: Cycle, runs: Number) : returns ()`
+  - Refuses `NO_LATER_RUN`: There is no later run for this item to leave from.
+  - Refuses `LAST_ITEM`: Every run needs at least one item.
+- `setRuns(cycle: Cycle, runs: Number, now: DateTime) : returns ()`
   - Refuses `NO_SUCH_CYCLE`: There is no such cycle.
   - Refuses `INVALID_CYCLE`: A cycle needs a positive period and at least one run.
-- `delete(cycle: Cycle) : returns ()`
+  - Refuses `RUN_UNDERWAY`: A cycle can't end before the run underway has finished.
+  - Refuses `LAST_ITEM`: Every run needs at least one item.
+- `delete(cycle: Cycle) : returns (items: List<Item>)`
   - Refuses `NO_SUCH_CYCLE`: There is no such cycle.
 
 #### Queries
 
-- `_cycle(item: Item) : optional (cycle: Cycle, start: DateTime, period: Number, runs: Number)`
+- `_cycle(item: Item) : optional (cycle: Cycle, start: DateTime, period: Number, runs: Number, itemRuns: Number)`
 - `_currentRun(item: Item, now: DateTime) : optional (run: Number, start: DateTime, end: DateTime)`
 - `_previousRun(item: Item, now: DateTime) : optional (run: Number, start: DateTime, end: DateTime)`
 - `_run(item: Item, run: Number) : optional (start: DateTime, end: DateTime)`
+- `_overlapping(start: DateTime, period: Number, runs: Number, except: String) : many (cycle: Cycle)`
 - `_all() : many (cycle: Cycle, start: DateTime, period: Number, runs: Number)`
-- `_items(cycle: Cycle) : many (item: Item)`
+- `_items(cycle: Cycle) : many (item: Item, itemRuns: Number)`
 
 #### Instances
 
-- `Cycling` — instance of `Cycling` — [Application types](../design/types.md), line 36.
-  - `Item` is `CycledItem` — [Application types](../design/types.md), line 37.
+- `Cycling` — instance of `Cycling` — [Application types](../design/types.md), line 40.
+  - `Item` is `CycledItem` — [Application types](../design/types.md), line 41.
+  - `List` is `Sequence` — [Application types](../design/types.md), line 42.
 
 ### Grouping
 
@@ -95,12 +105,16 @@ Defined in [Grouping](../design/concepts/Grouping.md), line 1.
 #### Actions
 
 - `create(name: String, createdAt: DateTime) : returns (group: Group)`
-  - Refuses `NAME_TAKEN`: A group with this name already exists.
+- `createMany(names: List<String>, createdAt: DateTime) : returns (groups: List<Group>)`
+  - Refuses `NO_NAMES`: Name at least one group.
+  - Refuses `INVALID_NAME`: Every group needs a name.
+  - Refuses `DUPLICATE_NAME`: Groups made together need different names.
 - `delete(group: Group) : returns ()`
   - Refuses `NO_SUCH_GROUP`: There is no such group.
 - `addItem(group: Group, item: Item, addedAt: DateTime) : returns ()`
   - Refuses `NO_SUCH_GROUP`: There is no such group.
   - Refuses `ALREADY_IN_GROUP`: This item is already in the group.
+- `deleteMany(groups: List<Group>) : returns ()`
 - `removeItem(group: Group, item: Item) : returns ()`
   - Refuses `NO_SUCH_GROUP`: There is no such group.
   - Refuses `NOT_IN_GROUP`: This item is not in the group.
@@ -113,12 +127,14 @@ Defined in [Grouping](../design/concepts/Grouping.md), line 1.
 - `_items(group: Group) : many (item: Item)`
 - `_itemsAdded(group: Group, from: DateTime, to: DateTime) : many (item: Item, addedAt: DateTime)`
 - `_groupsOf(item: Item) : many (group: Group)`
-- `_byName(name: String) : optional (group: Group)`
+- `_nameAmong(group: Group, names: List<String>) : optional (name: String)`
+- `_byName(name: String) : many (group: Group)`
 
 #### Instances
 
-- `Grouping` — instance of `Grouping` — [Application types](../design/types.md), line 33.
-  - `Item` is `Posting.Post` — [Application types](../design/types.md), line 34.
+- `Grouping` — instance of `Grouping` — [Application types](../design/types.md), line 36.
+  - `Item` is `Posting.Post` — [Application types](../design/types.md), line 37.
+  - `List` is `Sequence` — [Application types](../design/types.md), line 38.
 
 ### Nominating
 
@@ -135,20 +151,26 @@ Defined in [Nominating](../design/concepts/Nominating.md), line 1.
 - `withdraw(nominator: User, nomination: Nomination) : returns ()`
   - Refuses `NO_SUCH_NOMINATION`: There is no such nomination.
   - Refuses `NOT_NOMINATOR`: Only the nominator can withdraw a nomination.
+  - Refuses `CHOSEN`: A chosen nomination can't be withdrawn.
+- `choose(nominations: List<Nomination>, chosenAt: DateTime) : returns ()`
+  - Refuses `NO_SUCH_NOMINATION`: There is no such nomination.
+  - Refuses `CHOSEN`: This nomination has already been chosen.
 
 #### Queries
 
 - `_categories() : many (category: Category, name: String)`
 - `_category(category: Category) : optional (name: String)`
-- `_nominations(category: Category) : many (nomination: Nomination, nominator: User, name: String, createdAt: DateTime)`
+- `_nominations(category: Category) : many (nomination: Nomination, nominator: User, name: String, createdAt: DateTime, chosen: Flag)`
 - `_equivalent(category: Category, name: String) : many (nomination: Nomination, createdAt: DateTime)`
-- `_byNominator(nominator: User) : many (nomination: Nomination, category: Category, name: String, createdAt: DateTime)`
-- `_get(nomination: Nomination) : optional (nominator: User, category: Category, name: String, createdAt: DateTime)`
+- `_byNominator(nominator: User) : many (nomination: Nomination, category: Category, name: String, createdAt: DateTime, chosen: Flag)`
+- `_unavailable(nominations: List<Nomination>) : many (nomination: Nomination)`
+- `_get(nomination: Nomination) : optional (nominator: User, category: Category, name: String, createdAt: DateTime, chosen: Flag)`
 
 #### Instances
 
-- `Nominating` — instance of `Nominating` — [Application types](../design/types.md), line 39.
-  - `User` is `Authenticating.Account` — [Application types](../design/types.md), line 40.
+- `Nominating` — instance of `Nominating` — [Application types](../design/types.md), line 44.
+  - `List` is `Sequence` — [Application types](../design/types.md), line 46.
+  - `User` is `Authenticating.Account` — [Application types](../design/types.md), line 45.
 
 ### Posting
 
@@ -168,9 +190,9 @@ Defined in [Posting](../design/concepts/Posting.md), line 1.
 
 #### Instances
 
-- `Posting` — instance of `Posting` — [Application types](../design/types.md), line 25.
-  - `Content` is `Uploading.Upload` — [Application types](../design/types.md), line 27.
-  - `User` is `Authenticating.Account` — [Application types](../design/types.md), line 26.
+- `Posting` — instance of `Posting` — [Application types](../design/types.md), line 28.
+  - `Content` is `Uploading.Upload` — [Application types](../design/types.md), line 30.
+  - `User` is `Authenticating.Account` — [Application types](../design/types.md), line 29.
 
 ### Sessioning
 
@@ -190,8 +212,8 @@ Defined in [Sessioning](../design/concepts/Sessioning.md), line 1.
 
 #### Instances
 
-- `Sessioning` — instance of `Sessioning` — [Application types](../design/types.md), line 16.
-  - `Subject` is `Authenticating.Account` — [Application types](../design/types.md), line 17.
+- `Sessioning` — instance of `Sessioning` — [Application types](../design/types.md), line 19.
+  - `Subject` is `Authenticating.Account` — [Application types](../design/types.md), line 20.
 
 ### Uploading
 
@@ -216,8 +238,8 @@ Defined in [Uploading](../design/concepts/Uploading.md), line 1.
 
 #### Instances
 
-- `Uploading` — instance of `Uploading` — [Application types](../design/types.md), line 19.
-  - `User` is `Authenticating.Account` — [Application types](../design/types.md), line 20.
+- `Uploading` — instance of `Uploading` — [Application types](../design/types.md), line 22.
+  - `User` is `Authenticating.Account` — [Application types](../design/types.md), line 23.
 
 ### Upvoting
 
@@ -239,18 +261,19 @@ Defined in [Upvoting](../design/concepts/Upvoting.md), line 1.
 
 #### Instances
 
-- `NominationVotes` — instance of `Upvoting` — [Application types](../design/types.md), line 42.
-  - `Item` is `Nominating.Nomination` — [Application types](../design/types.md), line 44.
-  - `User` is `Authenticating.Account` — [Application types](../design/types.md), line 43.
-- `Upvoting` — instance of `Upvoting` — [Application types](../design/types.md), line 29.
-  - `Item` is `Posting.Post` — [Application types](../design/types.md), line 31.
-  - `User` is `Authenticating.Account` — [Application types](../design/types.md), line 30.
+- `NominationVotes` — instance of `Upvoting` — [Application types](../design/types.md), line 48.
+  - `Item` is `Nominating.Nomination` — [Application types](../design/types.md), line 50.
+  - `User` is `Authenticating.Account` — [Application types](../design/types.md), line 49.
+- `Upvoting` — instance of `Upvoting` — [Application types](../design/types.md), line 32.
+  - `Item` is `Posting.Post` — [Application types](../design/types.md), line 34.
+  - `User` is `Authenticating.Account` — [Application types](../design/types.md), line 33.
 
 ## Application types
 
 Concrete types:
 
 - `CycledItem` — [Application types](../design/types.md), line 9.
+- `Sequence` — [Application types](../design/types.md), line 12.
 
 ## Views
 
@@ -264,6 +287,43 @@ Authored path: `User.AcceptedImageType`.
 ```view
 (contentType) is an accepted image type — inputs (contentType); outputs (); bindings ()
   where contentType is among ["image/jpeg", "image/png", "image/webp", "image/svg+xml"]
+```
+
+### (cycle) hasn't started at (now)
+
+Authored path: `Admin.Upcoming`.
+- Covered by [Admin](../design/compositions/Admin.md), line 89.
+
+```view
+(cycle) hasn't started at (now) — inputs (cycle, now); outputs (); bindings (start)
+  where
+    Cycling._all () has (cycle, start)
+    start is greater than now
+```
+
+### (cycle) holds a nomination category
+
+Authored path: `Admin.HoldsCategory`.
+- Covered by [Admin](../design/compositions/Admin.md), line 52.
+
+```view
+(cycle) holds a nomination category — inputs (cycle); outputs (); bindings (item)
+  where
+    Cycling._items (cycle) has (item)
+    Nominating._category (category: item)
+```
+
+### (cycle) with (runs) seasons would overlap another schedule
+
+Authored path: `Admin.OverlapsAnother`.
+- Covered by [Admin](../design/compositions/Admin.md), line 81.
+
+```view
+(cycle) with (runs) seasons would overlap another schedule — inputs (cycle, runs); outputs (); bindings (start, period, other)
+  where
+    Cycling._all () has (cycle, period, start)
+    Cycling._overlapping (except: cycle, period, runs, start) has (cycle: other)
+    no view "(cycle) holds a nomination category" with (cycle: other)
 ```
 
 ### (group) is open at (now)
@@ -355,6 +415,18 @@ Authored path: `Admin.IsNotOwner`.
     Administrating._isOwner (user) has (owner: false)
 ```
 
+### a schedule from (start), (runs) seasons of (period), would overlap another
+
+Authored path: `Admin.Overlaps`.
+- Covered by [Admin](../design/compositions/Admin.md), line 57.
+
+```view
+a schedule from (start), (runs) seasons of (period), would overlap another — inputs (start, period, runs); outputs (); bindings (other)
+  where
+    Cycling._overlapping (except: "", period, runs, start) has (cycle: other)
+    no view "(cycle) holds a nomination category" with (cycle: other)
+```
+
 ### an idea equivalent to (name) is active in (category) at (now)
 
 Authored path: `User.EquivalentActive`.
@@ -369,6 +441,28 @@ an idea equivalent to (name) is active in (category) at (now) — inputs (catego
     createdAt is less than end
 ```
 
+### one of (names) matches a gallery in (cycle)
+
+Authored path: `Admin.NameTaken`.
+- Covered by [Admin](../design/compositions/Admin.md), line 75.
+
+```view
+one of (names) matches a gallery in (cycle) — inputs (cycle, names); outputs (); bindings (item)
+  where
+    Cycling._items (cycle) has (item)
+    Grouping._nameAmong (group: item, names)
+```
+
+### some of (nominations) can't be chosen
+
+Authored path: `Admin.PicksUnavailable`.
+- Covered by [Admin](../design/compositions/Admin.md), line 59.
+
+```view
+some of (nominations) can't be chosen — inputs (nominations); outputs (); bindings ()
+  where Nominating._unavailable (nominations)
+```
+
 ## Formers
 
 _Formers name result shapes evaluated when asked. The source former owns_
@@ -377,7 +471,7 @@ _the authored explanation; this section records the generated shape._
 ### every admin
 
 Authored path: `Admin.AdminList`.
-- Covered by [Admin](../design/compositions/Admin.md), line 17.
+- Covered by [Admin](../design/compositions/Admin.md), line 18.
 
 ```former
 Former "every admin" — inputs (); bindings (user, owner); promises exactly one record — forms:
@@ -388,25 +482,6 @@ Former "every admin" — inputs (); bindings (user, owner); promises exactly one
         user
 ```
 
-### every cycle
-
-Authored path: `Admin.CycleList`.
-- Covered by [Admin](../design/compositions/Admin.md), line 74.
-
-```former
-Former "every cycle" — inputs (); bindings (cycle, start, period, runs, item); promises exactly one record — forms:
-  a record of
-    cycles: each Cycling._all () has (cycle, period, runs, start)
-      form a record of
-        cycle
-        items: each Cycling._items (cycle) has (item)
-          form a record of
-            item
-        period
-        runs
-        start
-```
-
 ### the cycle of (group)
 
 Authored path: `Public.GroupCycle`.
@@ -415,7 +490,7 @@ Authored path: `Public.GroupCycle`.
 ```former
 Former "the cycle of (group)" — inputs (group); bindings (cycle, start, period, runs); promises at most one record — forms:
   a record of
-    where Cycling._cycle (item: group) has (cycle, period, runs, start)
+    where Cycling._cycle (item: group) has (cycle, itemRuns: runs, period, start)
     cycle
     period
     runs
@@ -455,7 +530,7 @@ Former "every group at (now)" — inputs (now); bindings (group, name); promises
 ### every nomination category at (now)
 
 Authored path: `Public.CategoryList`.
-- Covered by [Public](../design/compositions/Public.md), line 72.
+- Covered by [Public](../design/compositions/Public.md), line 74.
 
 ```former
 Former "every nomination category at (now)" — inputs (now); bindings (category, name); promises exactly one record — forms:
@@ -465,6 +540,29 @@ Former "every nomination category at (now)" — inputs (now); bindings (category
         category
         name
         … former "the run of (group) at (now)" with (group: category, now), with blank leaves if absent
+```
+
+### every schedule
+
+Authored path: `Admin.ScheduleList`.
+- Covered by [Admin](../design/compositions/Admin.md), line 50.
+
+```former
+Former "every schedule" — inputs (); bindings (cycle, start, period, runs, group, name, itemRuns); promises exactly one record — forms:
+  a record of
+    schedules: each Cycling._all () has (cycle, period, runs, start)
+      where no view "(cycle) holds a nomination category" with (cycle)
+      form a record of
+        cycle
+        galleries: each Cycling._items (cycle) has (item: group, itemRuns)
+          where Grouping._get (group) has (name)
+          form a record of
+            group
+            name
+            runs: itemRuns
+        period
+        runs
+        start
 ```
 
 ### the active nominations in (category) upvoted by (user) at (now)
@@ -487,7 +585,7 @@ Former "the active nominations in (category) upvoted by (user) at (now)" — inp
 ### the details of (post)
 
 Authored path: `Public.PostDetails`.
-- Covered by [Public](../design/compositions/Public.md), line 61.
+- Covered by [Public](../design/compositions/Public.md), line 63.
 
 ```former
 Former "the details of (post)" — inputs (post); bindings (owner, content, caption, createdAt, votes); promises at most one record — forms:
@@ -505,7 +603,7 @@ Former "the details of (post)" — inputs (post); bindings (owner, content, capt
 ### the groups from (offset), at most (limit)
 
 Authored path: `Public.GroupPage`.
-- Covered by [Public](../design/compositions/Public.md), line 40.
+- Covered by [Public](../design/compositions/Public.md), line 42.
 
 ```former
 Former "the groups from (offset), at most (limit)" — inputs (offset, limit); bindings (group, name); promises exactly one record — forms:
@@ -535,11 +633,12 @@ Authored path: `User.MyNominations`.
 - Covered by [User](../design/compositions/User.md), line 141.
 
 ```former
-Former "the nominations of (user) at (now)" — inputs (user, now); bindings (nomination, name, createdAt, votes); promises exactly one record — forms:
+Former "the nominations of (user) at (now)" — inputs (user, now); bindings (nomination, name, createdAt, votes, chosen); promises exactly one record — forms:
   a record of
-    nominations: each Nominating._byNominator (nominator: user) has (createdAt, name, nomination)
+    nominations: each Nominating._byNominator (nominator: user) has (chosen, createdAt, name, nomination)
       where NominationVotes._count (target: nomination) has (votes)
       form a record of
+        chosen
         createdAt
         name
         nomination
@@ -564,7 +663,7 @@ Former "the posts in (group) upvoted by (user)" — inputs (group, user); bindin
 ### the posts of (group) from (start) to (end)
 
 Authored path: `Public.SeasonPosts`.
-- Covered by [Public](../design/compositions/Public.md), line 21.
+- Covered by [Public](../design/compositions/Public.md), line 23.
 
 ```former
 Former "the posts of (group) from (start) to (end)" — inputs (group, start, end); bindings (post, owner, content, caption, createdAt, votes); promises exactly one record — forms:
@@ -636,18 +735,19 @@ Former "the posts of (user) at (now)" — inputs (user, now); bindings (post, co
 ### the ranking of (category) from (start) to (end)
 
 Authored path: `Public.RoundRanking`.
-- Covered by [Admin](../design/compositions/Admin.md), line 61.
-- Covered by [Public](../design/compositions/Public.md), line 80.
+- Covered by [Admin](../design/compositions/Admin.md), line 109.
+- Covered by [Public](../design/compositions/Public.md), line 82.
 
 ```former
-Former "the ranking of (category) from (start) to (end)" — inputs (category, start, end); bindings (nomination, nominator, name, createdAt, votes); promises exactly one record — forms:
+Former "the ranking of (category) from (start) to (end)" — inputs (category, start, end); bindings (nomination, nominator, name, createdAt, votes, chosen); promises exactly one record — forms:
   a record of
-    nominations: each Nominating._nominations (category) has (createdAt, name, nomination, nominator)
+    nominations: each Nominating._nominations (category) has (chosen, createdAt, name, nomination, nominator)
       where createdAt is at least start
       where createdAt is less than end
       where NominationVotes._count (target: nomination) has (votes)
       arranged by votes, descending
       form a record of
+        chosen
         createdAt
         name
         nomination
@@ -661,7 +761,7 @@ Former "the ranking of (category) from (start) to (end)" — inputs (category, s
 
 Authored path: `Admin.AddAdmin`.
 - Covered by [Admin](../design/compositions/Admin.md), line 14.
-- Covered by [Admin](../design/compositions/Admin.md), line 26.
+- Covered by [Admin](../design/compositions/Admin.md), line 27.
 
 ```reaction
 when RequestBoundary.request (path: "/admin/admins/add", requestId, session, user)
@@ -673,7 +773,7 @@ then
 
 Authored path: `Admin.AddAdmin`.
 - Covered by [Admin](../design/compositions/Admin.md), line 14.
-- Covered by [Admin](../design/compositions/Admin.md), line 26.
+- Covered by [Admin](../design/compositions/Admin.md), line 27.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.AddAdmin
@@ -684,17 +784,34 @@ then
   RequestBoundary.respond (error: "OWNER_ONLY", requestId)
 ```
 
-### Admin.AddAdmin:owner#2
+### Admin.AddAdmin:not-registered#2
 
 Authored path: `Admin.AddAdmin`.
 - Covered by [Admin](../design/compositions/Admin.md), line 14.
-- Covered by [Admin](../design/compositions/Admin.md), line 26.
+- Covered by [Admin](../design/compositions/Admin.md), line 27.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.AddAdmin
 where
   view "(session) belongs to the owner" with (session)
   earlier, RequestBoundary.request (path: "/admin/admins/add", requestId, session, user)
+  Authenticating._registered (username: user) has (registered: false)
+then
+  RequestBoundary.respond (error: "NO_SUCH_USER", requestId)
+```
+
+### Admin.AddAdmin:owner#2
+
+Authored path: `Admin.AddAdmin`.
+- Covered by [Admin](../design/compositions/Admin.md), line 14.
+- Covered by [Admin](../design/compositions/Admin.md), line 27.
+
+```reaction
+when Sessioning.current (session), asked by Admin.AddAdmin
+where
+  view "(session) belongs to the owner" with (session)
+  earlier, RequestBoundary.request (path: "/admin/admins/add", requestId, session, user)
+  Authenticating._registered (username: user) has (registered: true)
 then
   Administrating.addAdmin (user)
 ```
@@ -703,7 +820,7 @@ then
 
 Authored path: `Admin.AddAdmin`.
 - Covered by [Admin](../design/compositions/Admin.md), line 14.
-- Covered by [Admin](../design/compositions/Admin.md), line 26.
+- Covered by [Admin](../design/compositions/Admin.md), line 27.
 
 ```reaction
 when Administrating.addAdmin (user), asked by Admin.AddAdmin:owner#2
@@ -713,411 +830,381 @@ then
   RequestBoundary.respond (requestId, user)
 ```
 
-### Admin.AddItemToCycle
+### Admin.AddGalleries
 
-Authored path: `Admin.AddItemToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 86.
+Authored path: `Admin.AddGalleries`.
+- Covered by [Admin](../design/compositions/Admin.md), line 73.
 - Covered by [Admin](../design/compositions/Admin.md), line 94.
 
 ```reaction
-when RequestBoundary.request (cycle, item, path: "/admin/cycles/add-item", requestId, session)
+when RequestBoundary.request (cycle, names, nominations, path: "/admin/schedules/add-galleries", requestId, session)
 then
   Sessioning.current (session)
 ```
 
-### Admin.AddItemToCycle:category#2
+### Admin.AddGalleries:name-taken#2
 
-Authored path: `Admin.AddItemToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 86.
+Authored path: `Admin.AddGalleries`.
+- Covered by [Admin](../design/compositions/Admin.md), line 73.
 - Covered by [Admin](../design/compositions/Admin.md), line 94.
 
 ```reaction
-when Sessioning.current (session), asked by Admin.AddItemToCycle
+when Sessioning.current (session), asked by Admin.AddGalleries
 where
+  instant is the current flow's instant
   view "(session) belongs to an admin" with (session)
-  earlier, RequestBoundary.request (cycle, item, path: "/admin/cycles/add-item", requestId, session)
-  Nominating._category (category: item)
+  earlier, RequestBoundary.request (cycle, names, nominations, path: "/admin/schedules/add-galleries", requestId, session)
+  view "(cycle) hasn't started at (now)" with (cycle, now: instant)
+  view "one of (names) matches a gallery in (cycle)" with (cycle, names)
 then
-  Cycling.addItem (cycle, item)
+  RequestBoundary.respond (error: "DUPLICATE_NAME", requestId)
 ```
 
-### Admin.AddItemToCycle:category#3
+### Admin.AddGalleries:nomination-unavailable#2
 
-Authored path: `Admin.AddItemToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 86.
+Authored path: `Admin.AddGalleries`.
+- Covered by [Admin](../design/compositions/Admin.md), line 73.
 - Covered by [Admin](../design/compositions/Admin.md), line 94.
 
 ```reaction
-when Cycling.addItem (cycle, item), asked by Admin.AddItemToCycle:category#2
+when Sessioning.current (session), asked by Admin.AddGalleries
 where
-  earlier, RequestBoundary.request (cycle, item, path: "/admin/cycles/add-item", requestId, session)
-then
-  RequestBoundary.respond (cycle, item, requestId)
-```
-
-### Admin.AddItemToCycle:group#2
-
-Authored path: `Admin.AddItemToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 86.
-- Covered by [Admin](../design/compositions/Admin.md), line 94.
-
-```reaction
-when Sessioning.current (session), asked by Admin.AddItemToCycle
-where
+  instant is the current flow's instant
   view "(session) belongs to an admin" with (session)
-  earlier, RequestBoundary.request (cycle, item, path: "/admin/cycles/add-item", requestId, session)
-  Grouping._get (group: item)
+  earlier, RequestBoundary.request (cycle, names, nominations, path: "/admin/schedules/add-galleries", requestId, session)
+  view "(cycle) hasn't started at (now)" with (cycle, now: instant)
+  no view "one of (names) matches a gallery in (cycle)" with (cycle, names)
+  view "some of (nominations) can't be chosen" with (nominations)
 then
-  Cycling.addItem (cycle, item)
+  RequestBoundary.respond (error: "NOMINATION_UNAVAILABLE", requestId)
 ```
 
-### Admin.AddItemToCycle:group#3
+### Admin.AddGalleries:not-admin#2
 
-Authored path: `Admin.AddItemToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 86.
+Authored path: `Admin.AddGalleries`.
+- Covered by [Admin](../design/compositions/Admin.md), line 73.
 - Covered by [Admin](../design/compositions/Admin.md), line 94.
 
 ```reaction
-when Cycling.addItem (cycle, item), asked by Admin.AddItemToCycle:group#2
-where
-  earlier, RequestBoundary.request (cycle, item, path: "/admin/cycles/add-item", requestId, session)
-then
-  RequestBoundary.respond (cycle, item, requestId)
-```
-
-### Admin.AddItemToCycle:neither#2
-
-Authored path: `Admin.AddItemToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 86.
-- Covered by [Admin](../design/compositions/Admin.md), line 94.
-
-```reaction
-when Sessioning.current (session), asked by Admin.AddItemToCycle
-where
-  view "(session) belongs to an admin" with (session)
-  earlier, RequestBoundary.request (cycle, item, path: "/admin/cycles/add-item", requestId, session)
-  no Grouping._get (group: item)
-  no Nominating._category (category: item)
-then
-  RequestBoundary.respond (error: "NO_SUCH_ITEM", requestId)
-```
-
-### Admin.AddItemToCycle:not-admin#2
-
-Authored path: `Admin.AddItemToCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 86.
-- Covered by [Admin](../design/compositions/Admin.md), line 94.
-
-```reaction
-when Sessioning.current (session), asked by Admin.AddItemToCycle
+when Sessioning.current (session), asked by Admin.AddGalleries
 where
   view "(session) does not belong to an admin" with (session)
-  earlier, RequestBoundary.request (cycle, item, path: "/admin/cycles/add-item", requestId, session)
+  earlier, RequestBoundary.request (cycle, names, nominations, path: "/admin/schedules/add-galleries", requestId, session)
 then
   RequestBoundary.respond (error: "ADMIN_ONLY", requestId)
 ```
 
-### Admin.AddPostToGroup
+### Admin.AddGalleries:started#2
 
-Authored path: `Admin.AddPostToGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 44.
-- Covered by [Admin](../design/compositions/Admin.md), line 48.
+Authored path: `Admin.AddGalleries`.
+- Covered by [Admin](../design/compositions/Admin.md), line 73.
+- Covered by [Admin](../design/compositions/Admin.md), line 94.
 
 ```reaction
-when RequestBoundary.request (group, path: "/admin/groups/add-post", post, requestId, session)
+when Sessioning.current (session), asked by Admin.AddGalleries
+where
+  instant is the current flow's instant
+  view "(session) belongs to an admin" with (session)
+  earlier, RequestBoundary.request (cycle, names, nominations, path: "/admin/schedules/add-galleries", requestId, session)
+  no view "(cycle) hasn't started at (now)" with (cycle, now: instant)
+then
+  RequestBoundary.respond (error: "ALREADY_STARTED", requestId)
+```
+
+### Admin.AddGalleries:upcoming#2
+
+Authored path: `Admin.AddGalleries`.
+- Covered by [Admin](../design/compositions/Admin.md), line 73.
+- Covered by [Admin](../design/compositions/Admin.md), line 94.
+
+```reaction
+when Sessioning.current (session), asked by Admin.AddGalleries
+where
+  instant is the current flow's instant
+  view "(session) belongs to an admin" with (session)
+  earlier, RequestBoundary.request (cycle, names, nominations, path: "/admin/schedules/add-galleries", requestId, session)
+  view "(cycle) hasn't started at (now)" with (cycle, now: instant)
+  no view "one of (names) matches a gallery in (cycle)" with (cycle, names)
+  no view "some of (nominations) can't be chosen" with (nominations)
+then
+  Grouping.createMany (createdAt: instant, names)
+```
+
+### Admin.AddGalleries:upcoming#3
+
+Authored path: `Admin.AddGalleries`.
+- Covered by [Admin](../design/compositions/Admin.md), line 73.
+- Covered by [Admin](../design/compositions/Admin.md), line 94.
+
+```reaction
+when Grouping.createMany (createdAt: instant, names, groups), asked by Admin.AddGalleries:upcoming#2
+where
+  earlier, RequestBoundary.request (cycle, names, nominations, path: "/admin/schedules/add-galleries", requestId, session)
+then
+  Cycling.addItems (cycle, items: groups)
+```
+
+### Admin.AddGalleries:upcoming#4
+
+Authored path: `Admin.AddGalleries`.
+- Covered by [Admin](../design/compositions/Admin.md), line 73.
+- Covered by [Admin](../design/compositions/Admin.md), line 94.
+
+```reaction
+when Cycling.addItems (cycle, items: groups), asked by Admin.AddGalleries:upcoming#3
+where
+  earlier, Grouping.createMany (createdAt: instant, names, groups), asked by Admin.AddGalleries:upcoming#2
+  earlier, RequestBoundary.request (cycle, names, nominations, path: "/admin/schedules/add-galleries", requestId, session)
+then
+  Nominating.choose (chosenAt: instant, nominations)
+```
+
+### Admin.AddGalleries:upcoming#5
+
+Authored path: `Admin.AddGalleries`.
+- Covered by [Admin](../design/compositions/Admin.md), line 73.
+- Covered by [Admin](../design/compositions/Admin.md), line 94.
+
+```reaction
+when Nominating.choose (chosenAt: instant, nominations), asked by Admin.AddGalleries:upcoming#4
+where
+  earlier, Grouping.createMany (createdAt: instant, names, groups), asked by Admin.AddGalleries:upcoming#2
+  earlier, Cycling.addItems (cycle, items: groups), asked by Admin.AddGalleries:upcoming#3
+  earlier, RequestBoundary.request (cycle, names, nominations, path: "/admin/schedules/add-galleries", requestId, session)
+then
+  RequestBoundary.respond (cycle, groups, requestId)
+```
+
+### Admin.CancelSchedule
+
+Authored path: `Admin.CancelSchedule`.
+- Covered by [Admin](../design/compositions/Admin.md), line 90.
+- Covered by [Admin](../design/compositions/Admin.md), line 97.
+
+```reaction
+when RequestBoundary.request (cycle, path: "/admin/schedules/cancel", requestId, session)
 then
   Sessioning.current (session)
 ```
 
-### Admin.AddPostToGroup:admin#2
+### Admin.CancelSchedule:not-admin#2
 
-Authored path: `Admin.AddPostToGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 44.
-- Covered by [Admin](../design/compositions/Admin.md), line 48.
-
-```reaction
-when Sessioning.current (session), asked by Admin.AddPostToGroup
-where
-  addedAt is the current flow's instant
-  view "(session) belongs to an admin" with (session)
-  earlier, RequestBoundary.request (group, path: "/admin/groups/add-post", post, requestId, session)
-then
-  Grouping.addItem (addedAt, group, item: post)
-```
-
-### Admin.AddPostToGroup:admin#3
-
-Authored path: `Admin.AddPostToGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 44.
-- Covered by [Admin](../design/compositions/Admin.md), line 48.
+Authored path: `Admin.CancelSchedule`.
+- Covered by [Admin](../design/compositions/Admin.md), line 90.
+- Covered by [Admin](../design/compositions/Admin.md), line 97.
 
 ```reaction
-when Grouping.addItem (addedAt, group, item: post), asked by Admin.AddPostToGroup:admin#2
-where
-  earlier, RequestBoundary.request (group, path: "/admin/groups/add-post", post, requestId, session)
-then
-  RequestBoundary.respond (group, post, requestId)
-```
-
-### Admin.AddPostToGroup:not-admin#2
-
-Authored path: `Admin.AddPostToGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 44.
-- Covered by [Admin](../design/compositions/Admin.md), line 48.
-
-```reaction
-when Sessioning.current (session), asked by Admin.AddPostToGroup
+when Sessioning.current (session), asked by Admin.CancelSchedule
 where
   view "(session) does not belong to an admin" with (session)
-  earlier, RequestBoundary.request (group, path: "/admin/groups/add-post", post, requestId, session)
+  earlier, RequestBoundary.request (cycle, path: "/admin/schedules/cancel", requestId, session)
 then
   RequestBoundary.respond (error: "ADMIN_ONLY", requestId)
 ```
 
-### Admin.CreateCycle
+### Admin.CancelSchedule:started#2
 
-Authored path: `Admin.CreateCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 75.
-- Covered by [Admin](../design/compositions/Admin.md), line 81.
-
-```reaction
-when RequestBoundary.request (path: "/admin/cycles/create", period, requestId, runs, session)
-then
-  Sessioning.current (session)
-```
-
-### Admin.CreateCycle:admin#2
-
-Authored path: `Admin.CreateCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 75.
-- Covered by [Admin](../design/compositions/Admin.md), line 81.
+Authored path: `Admin.CancelSchedule`.
+- Covered by [Admin](../design/compositions/Admin.md), line 90.
+- Covered by [Admin](../design/compositions/Admin.md), line 97.
 
 ```reaction
-when Sessioning.current (session), asked by Admin.CreateCycle
+when Sessioning.current (session), asked by Admin.CancelSchedule
 where
-  start is the current flow's instant
+  instant is the current flow's instant
   view "(session) belongs to an admin" with (session)
-  earlier, RequestBoundary.request (path: "/admin/cycles/create", period, requestId, runs, session)
+  earlier, RequestBoundary.request (cycle, path: "/admin/schedules/cancel", requestId, session)
+  no view "(cycle) hasn't started at (now)" with (cycle, now: instant)
 then
-  Cycling.create (period, runs, start)
+  RequestBoundary.respond (error: "ALREADY_STARTED", requestId)
 ```
 
-### Admin.CreateCycle:admin#3
+### Admin.CancelSchedule:upcoming#2
 
-Authored path: `Admin.CreateCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 75.
-- Covered by [Admin](../design/compositions/Admin.md), line 81.
+Authored path: `Admin.CancelSchedule`.
+- Covered by [Admin](../design/compositions/Admin.md), line 90.
+- Covered by [Admin](../design/compositions/Admin.md), line 97.
 
 ```reaction
-when Cycling.create (period, runs, start, cycle), asked by Admin.CreateCycle:admin#2
+when Sessioning.current (session), asked by Admin.CancelSchedule
 where
-  earlier, RequestBoundary.request (path: "/admin/cycles/create", period, requestId, runs, session)
-then
-  RequestBoundary.respond (cycle, requestId)
-```
-
-### Admin.CreateCycle:not-admin#2
-
-Authored path: `Admin.CreateCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 75.
-- Covered by [Admin](../design/compositions/Admin.md), line 81.
-
-```reaction
-when Sessioning.current (session), asked by Admin.CreateCycle
-where
-  view "(session) does not belong to an admin" with (session)
-  earlier, RequestBoundary.request (path: "/admin/cycles/create", period, requestId, runs, session)
-then
-  RequestBoundary.respond (error: "ADMIN_ONLY", requestId)
-```
-
-### Admin.CreateGroup
-
-Authored path: `Admin.CreateGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 33.
-- Covered by [Admin](../design/compositions/Admin.md), line 40.
-
-```reaction
-when RequestBoundary.request (name, path: "/admin/groups/create", requestId, session)
-then
-  Sessioning.current (session)
-```
-
-### Admin.CreateGroup:admin#2
-
-Authored path: `Admin.CreateGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 33.
-- Covered by [Admin](../design/compositions/Admin.md), line 40.
-
-```reaction
-when Sessioning.current (session), asked by Admin.CreateGroup
-where
-  createdAt is the current flow's instant
+  instant is the current flow's instant
   view "(session) belongs to an admin" with (session)
-  earlier, RequestBoundary.request (name, path: "/admin/groups/create", requestId, session)
-then
-  Grouping.create (createdAt, name)
-```
-
-### Admin.CreateGroup:admin#3
-
-Authored path: `Admin.CreateGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 33.
-- Covered by [Admin](../design/compositions/Admin.md), line 40.
-
-```reaction
-when Grouping.create (createdAt, name, group), asked by Admin.CreateGroup:admin#2
-where
-  earlier, RequestBoundary.request (name, path: "/admin/groups/create", requestId, session)
-then
-  RequestBoundary.respond (group, requestId)
-```
-
-### Admin.CreateGroup:not-admin#2
-
-Authored path: `Admin.CreateGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 33.
-- Covered by [Admin](../design/compositions/Admin.md), line 40.
-
-```reaction
-when Sessioning.current (session), asked by Admin.CreateGroup
-where
-  view "(session) does not belong to an admin" with (session)
-  earlier, RequestBoundary.request (name, path: "/admin/groups/create", requestId, session)
-then
-  RequestBoundary.respond (error: "ADMIN_ONLY", requestId)
-```
-
-### Admin.DeleteCycle
-
-Authored path: `Admin.DeleteCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 76.
-- Covered by [Admin](../design/compositions/Admin.md), line 82.
-
-```reaction
-when RequestBoundary.request (cycle, path: "/admin/cycles/delete", requestId, session)
-then
-  Sessioning.current (session)
-```
-
-### Admin.DeleteCycle:admin#2
-
-Authored path: `Admin.DeleteCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 76.
-- Covered by [Admin](../design/compositions/Admin.md), line 82.
-
-```reaction
-when Sessioning.current (session), asked by Admin.DeleteCycle
-where
-  view "(session) belongs to an admin" with (session)
-  earlier, RequestBoundary.request (cycle, path: "/admin/cycles/delete", requestId, session)
+  earlier, RequestBoundary.request (cycle, path: "/admin/schedules/cancel", requestId, session)
+  view "(cycle) hasn't started at (now)" with (cycle, now: instant)
 then
   Cycling.delete (cycle)
 ```
 
-### Admin.DeleteCycle:admin#3
+### Admin.CancelSchedule:upcoming#3
 
-Authored path: `Admin.DeleteCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 76.
-- Covered by [Admin](../design/compositions/Admin.md), line 82.
+Authored path: `Admin.CancelSchedule`.
+- Covered by [Admin](../design/compositions/Admin.md), line 90.
+- Covered by [Admin](../design/compositions/Admin.md), line 97.
 
 ```reaction
-when Cycling.delete (cycle), asked by Admin.DeleteCycle:admin#2
+when Cycling.delete (cycle, items), asked by Admin.CancelSchedule:upcoming#2
+then
+  Grouping.deleteMany (groups: items)
+```
+
+### Admin.CancelSchedule:upcoming#4
+
+Authored path: `Admin.CancelSchedule`.
+- Covered by [Admin](../design/compositions/Admin.md), line 90.
+- Covered by [Admin](../design/compositions/Admin.md), line 97.
+
+```reaction
+when Grouping.deleteMany (groups: items), asked by Admin.CancelSchedule:upcoming#3
 where
-  earlier, RequestBoundary.request (cycle, path: "/admin/cycles/delete", requestId, session)
+  earlier, Cycling.delete (cycle, items), asked by Admin.CancelSchedule:upcoming#2
+  earlier, RequestBoundary.request (cycle, path: "/admin/schedules/cancel", requestId, session)
 then
   RequestBoundary.respond (cycle, requestId)
 ```
 
-### Admin.DeleteCycle:not-admin#2
+### Admin.CreateSchedule
 
-Authored path: `Admin.DeleteCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 76.
-- Covered by [Admin](../design/compositions/Admin.md), line 82.
-
-```reaction
-when Sessioning.current (session), asked by Admin.DeleteCycle
-where
-  view "(session) does not belong to an admin" with (session)
-  earlier, RequestBoundary.request (cycle, path: "/admin/cycles/delete", requestId, session)
-then
-  RequestBoundary.respond (error: "ADMIN_ONLY", requestId)
-```
-
-### Admin.DeleteGroup
-
-Authored path: `Admin.DeleteGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 34.
-- Covered by [Admin](../design/compositions/Admin.md), line 41.
+Authored path: `Admin.CreateSchedule`.
+- Covered by [Admin](../design/compositions/Admin.md), line 54.
+- Covered by [Admin](../design/compositions/Admin.md), line 69.
 
 ```reaction
-when RequestBoundary.request (group, path: "/admin/groups/delete", requestId, session)
+when RequestBoundary.request (names, nominations, path: "/admin/schedules/create", period, requestId, runs, session, start)
 then
   Sessioning.current (session)
 ```
 
-### Admin.DeleteGroup:admin#2
+### Admin.CreateSchedule:admin#2
 
-Authored path: `Admin.DeleteGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 34.
-- Covered by [Admin](../design/compositions/Admin.md), line 41.
+Authored path: `Admin.CreateSchedule`.
+- Covered by [Admin](../design/compositions/Admin.md), line 54.
+- Covered by [Admin](../design/compositions/Admin.md), line 69.
 
 ```reaction
-when Sessioning.current (session), asked by Admin.DeleteGroup
+when Sessioning.current (session), asked by Admin.CreateSchedule
+where
+  instant is the current flow's instant
+  view "(session) belongs to an admin" with (session)
+  earlier, RequestBoundary.request (names, nominations, path: "/admin/schedules/create", period, requestId, runs, session, start)
+  no view "a schedule from (start), (runs) seasons of (period), would overlap another" with (period, runs, start)
+  no view "some of (nominations) can't be chosen" with (nominations)
+then
+  Grouping.createMany (createdAt: instant, names)
+```
+
+### Admin.CreateSchedule:admin#3
+
+Authored path: `Admin.CreateSchedule`.
+- Covered by [Admin](../design/compositions/Admin.md), line 54.
+- Covered by [Admin](../design/compositions/Admin.md), line 69.
+
+```reaction
+when Grouping.createMany (createdAt: instant, names, groups), asked by Admin.CreateSchedule:admin#2
+where
+  earlier, RequestBoundary.request (names, nominations, path: "/admin/schedules/create", period, requestId, runs, session, start)
+then
+  Cycling.create (earliest: instant, period, runs, start)
+```
+
+### Admin.CreateSchedule:admin#4
+
+Authored path: `Admin.CreateSchedule`.
+- Covered by [Admin](../design/compositions/Admin.md), line 54.
+- Covered by [Admin](../design/compositions/Admin.md), line 69.
+
+```reaction
+when Cycling.create (earliest: instant, period, runs, start, cycle), asked by Admin.CreateSchedule:admin#3
+where
+  earlier, Grouping.createMany (createdAt: instant, names, groups), asked by Admin.CreateSchedule:admin#2
+then
+  Cycling.addItems (cycle, items: groups)
+```
+
+### Admin.CreateSchedule:admin#5
+
+Authored path: `Admin.CreateSchedule`.
+- Covered by [Admin](../design/compositions/Admin.md), line 54.
+- Covered by [Admin](../design/compositions/Admin.md), line 69.
+
+```reaction
+when Cycling.addItems (cycle, items: groups), asked by Admin.CreateSchedule:admin#4
+where
+  earlier, Grouping.createMany (createdAt: instant, names, groups), asked by Admin.CreateSchedule:admin#2
+  earlier, RequestBoundary.request (names, nominations, path: "/admin/schedules/create", period, requestId, runs, session, start)
+then
+  Nominating.choose (chosenAt: instant, nominations)
+```
+
+### Admin.CreateSchedule:admin#6
+
+Authored path: `Admin.CreateSchedule`.
+- Covered by [Admin](../design/compositions/Admin.md), line 54.
+- Covered by [Admin](../design/compositions/Admin.md), line 69.
+
+```reaction
+when Nominating.choose (chosenAt: instant, nominations), asked by Admin.CreateSchedule:admin#5
+where
+  earlier, Grouping.createMany (createdAt: instant, names, groups), asked by Admin.CreateSchedule:admin#2
+  earlier, Cycling.create (earliest: instant, period, runs, start, cycle), asked by Admin.CreateSchedule:admin#3
+  earlier, RequestBoundary.request (names, nominations, path: "/admin/schedules/create", period, requestId, runs, session, start)
+then
+  RequestBoundary.respond (cycle, groups, requestId)
+```
+
+### Admin.CreateSchedule:nomination-unavailable#2
+
+Authored path: `Admin.CreateSchedule`.
+- Covered by [Admin](../design/compositions/Admin.md), line 54.
+- Covered by [Admin](../design/compositions/Admin.md), line 69.
+
+```reaction
+when Sessioning.current (session), asked by Admin.CreateSchedule
 where
   view "(session) belongs to an admin" with (session)
-  earlier, RequestBoundary.request (group, path: "/admin/groups/delete", requestId, session)
+  earlier, RequestBoundary.request (names, nominations, path: "/admin/schedules/create", period, requestId, runs, session, start)
+  no view "a schedule from (start), (runs) seasons of (period), would overlap another" with (period, runs, start)
+  view "some of (nominations) can't be chosen" with (nominations)
 then
-  Grouping.delete (group)
+  RequestBoundary.respond (error: "NOMINATION_UNAVAILABLE", requestId)
 ```
 
-### Admin.DeleteGroup:admin#3
+### Admin.CreateSchedule:not-admin#2
 
-Authored path: `Admin.DeleteGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 34.
-- Covered by [Admin](../design/compositions/Admin.md), line 41.
-
-```reaction
-when Grouping.delete (group), asked by Admin.DeleteGroup:admin#2
-where
-  earlier, RequestBoundary.request (group, path: "/admin/groups/delete", requestId, session)
-then
-  RequestBoundary.respond (group, requestId)
-```
-
-### Admin.DeleteGroup:not-admin#2
-
-Authored path: `Admin.DeleteGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 34.
-- Covered by [Admin](../design/compositions/Admin.md), line 41.
+Authored path: `Admin.CreateSchedule`.
+- Covered by [Admin](../design/compositions/Admin.md), line 54.
+- Covered by [Admin](../design/compositions/Admin.md), line 69.
 
 ```reaction
-when Sessioning.current (session), asked by Admin.DeleteGroup
+when Sessioning.current (session), asked by Admin.CreateSchedule
 where
   view "(session) does not belong to an admin" with (session)
-  earlier, RequestBoundary.request (group, path: "/admin/groups/delete", requestId, session)
+  earlier, RequestBoundary.request (names, nominations, path: "/admin/schedules/create", period, requestId, runs, session, start)
 then
   RequestBoundary.respond (error: "ADMIN_ONLY", requestId)
 ```
 
-### Admin.DeletedGroupLeavesCycle
+### Admin.CreateSchedule:overlapping#2
 
-Authored path: `Admin.DeletedGroupLeavesCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 37.
+Authored path: `Admin.CreateSchedule`.
+- Covered by [Admin](../design/compositions/Admin.md), line 54.
+- Covered by [Admin](../design/compositions/Admin.md), line 69.
 
 ```reaction
-when Grouping.delete (group)
+when Sessioning.current (session), asked by Admin.CreateSchedule
 where
-  Cycling._cycle (item: group) has (cycle)
+  view "(session) belongs to an admin" with (session)
+  earlier, RequestBoundary.request (names, nominations, path: "/admin/schedules/create", period, requestId, runs, session, start)
+  view "a schedule from (start), (runs) seasons of (period), would overlap another" with (period, runs, start)
 then
-  Cycling.removeItem (cycle, item: group)
+  RequestBoundary.respond (error: "OVERLAPPING_SCHEDULE", requestId)
 ```
 
 ### Admin.ListAdmins
 
 Authored path: `Admin.ListAdmins`.
-- Covered by [Admin](../design/compositions/Admin.md), line 16.
-- Covered by [Admin](../design/compositions/Admin.md), line 28.
+- Covered by [Admin](../design/compositions/Admin.md), line 17.
+- Covered by [Admin](../design/compositions/Admin.md), line 29.
 
 ```reaction
 when RequestBoundary.request (path: "/admin/admins/list", requestId, session)
@@ -1128,8 +1215,8 @@ then
 ### Admin.ListAdmins:admin#2
 
 Authored path: `Admin.ListAdmins`.
-- Covered by [Admin](../design/compositions/Admin.md), line 16.
-- Covered by [Admin](../design/compositions/Admin.md), line 28.
+- Covered by [Admin](../design/compositions/Admin.md), line 17.
+- Covered by [Admin](../design/compositions/Admin.md), line 29.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.ListAdmins
@@ -1143,8 +1230,8 @@ then
 ### Admin.ListAdmins:not-admin#2
 
 Authored path: `Admin.ListAdmins`.
-- Covered by [Admin](../design/compositions/Admin.md), line 16.
-- Covered by [Admin](../design/compositions/Admin.md), line 28.
+- Covered by [Admin](../design/compositions/Admin.md), line 17.
+- Covered by [Admin](../design/compositions/Admin.md), line 29.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.ListAdmins
@@ -1155,105 +1242,44 @@ then
   RequestBoundary.respond (error: "ADMIN_ONLY", requestId)
 ```
 
-### Admin.ListCycles
+### Admin.ListSchedules
 
-Authored path: `Admin.ListCycles`.
-- Covered by [Admin](../design/compositions/Admin.md), line 73.
-- Covered by [Admin](../design/compositions/Admin.md), line 80.
+Authored path: `Admin.ListSchedules`.
+- Covered by [Admin](../design/compositions/Admin.md), line 49.
+- Covered by [Admin](../design/compositions/Admin.md), line 68.
 
 ```reaction
-when RequestBoundary.request (path: "/admin/cycles/list", requestId, session)
+when RequestBoundary.request (path: "/admin/schedules/list", requestId, session)
 then
   Sessioning.current (session)
 ```
 
-### Admin.ListCycles:admin#2
+### Admin.ListSchedules:admin#2
 
-Authored path: `Admin.ListCycles`.
-- Covered by [Admin](../design/compositions/Admin.md), line 73.
-- Covered by [Admin](../design/compositions/Admin.md), line 80.
+Authored path: `Admin.ListSchedules`.
+- Covered by [Admin](../design/compositions/Admin.md), line 49.
+- Covered by [Admin](../design/compositions/Admin.md), line 68.
 
 ```reaction
-when Sessioning.current (session), asked by Admin.ListCycles
+when Sessioning.current (session), asked by Admin.ListSchedules
 where
   view "(session) belongs to an admin" with (session)
-  earlier, RequestBoundary.request (path: "/admin/cycles/list", requestId, session)
+  earlier, RequestBoundary.request (path: "/admin/schedules/list", requestId, session)
 then
-  RequestBoundary.respond (list: former "every cycle", requestId)
+  RequestBoundary.respond (list: former "every schedule", requestId)
 ```
 
-### Admin.ListCycles:not-admin#2
+### Admin.ListSchedules:not-admin#2
 
-Authored path: `Admin.ListCycles`.
-- Covered by [Admin](../design/compositions/Admin.md), line 73.
-- Covered by [Admin](../design/compositions/Admin.md), line 80.
+Authored path: `Admin.ListSchedules`.
+- Covered by [Admin](../design/compositions/Admin.md), line 49.
+- Covered by [Admin](../design/compositions/Admin.md), line 68.
 
 ```reaction
-when Sessioning.current (session), asked by Admin.ListCycles
+when Sessioning.current (session), asked by Admin.ListSchedules
 where
   view "(session) does not belong to an admin" with (session)
-  earlier, RequestBoundary.request (path: "/admin/cycles/list", requestId, session)
-then
-  RequestBoundary.respond (error: "ADMIN_ONLY", requestId)
-```
-
-### Admin.PreviousRanking
-
-Authored path: `Admin.PreviousRanking`.
-- Covered by [Admin](../design/compositions/Admin.md), line 60.
-- Covered by [Admin](../design/compositions/Admin.md), line 66.
-
-```reaction
-when RequestBoundary.request (category, path: "/admin/nominations/previous", requestId, session)
-then
-  Sessioning.current (session)
-```
-
-### Admin.PreviousRanking:admin#2
-
-Authored path: `Admin.PreviousRanking`.
-- Covered by [Admin](../design/compositions/Admin.md), line 60.
-- Covered by [Admin](../design/compositions/Admin.md), line 66.
-
-```reaction
-when Sessioning.current (session), asked by Admin.PreviousRanking
-where
-  instant is the current flow's instant
-  view "(session) belongs to an admin" with (session)
-  earlier, RequestBoundary.request (category, path: "/admin/nominations/previous", requestId, session)
-  Cycling._previousRun (item: category, now: instant) has (end, start)
-then
-  RequestBoundary.respond (ranking: former "the ranking of (category) from (start) to (end)" with (category, end, start), requestId)
-```
-
-### Admin.PreviousRanking:no-previous-round#2
-
-Authored path: `Admin.PreviousRanking`.
-- Covered by [Admin](../design/compositions/Admin.md), line 60.
-- Covered by [Admin](../design/compositions/Admin.md), line 66.
-
-```reaction
-when Sessioning.current (session), asked by Admin.PreviousRanking
-where
-  instant is the current flow's instant
-  view "(session) belongs to an admin" with (session)
-  earlier, RequestBoundary.request (category, path: "/admin/nominations/previous", requestId, session)
-  no Cycling._previousRun (item: category, now: instant)
-then
-  RequestBoundary.respond (ranking: (nominations: []), requestId)
-```
-
-### Admin.PreviousRanking:not-admin#2
-
-Authored path: `Admin.PreviousRanking`.
-- Covered by [Admin](../design/compositions/Admin.md), line 60.
-- Covered by [Admin](../design/compositions/Admin.md), line 66.
-
-```reaction
-when Sessioning.current (session), asked by Admin.PreviousRanking
-where
-  view "(session) does not belong to an admin" with (session)
-  earlier, RequestBoundary.request (category, path: "/admin/nominations/previous", requestId, session)
+  earlier, RequestBoundary.request (path: "/admin/schedules/list", requestId, session)
 then
   RequestBoundary.respond (error: "ADMIN_ONLY", requestId)
 ```
@@ -1261,8 +1287,8 @@ then
 ### Admin.RemoveAdmin
 
 Authored path: `Admin.RemoveAdmin`.
-- Covered by [Admin](../design/compositions/Admin.md), line 15.
-- Covered by [Admin](../design/compositions/Admin.md), line 27.
+- Covered by [Admin](../design/compositions/Admin.md), line 16.
+- Covered by [Admin](../design/compositions/Admin.md), line 28.
 
 ```reaction
 when RequestBoundary.request (path: "/admin/admins/remove", requestId, session, user)
@@ -1273,8 +1299,8 @@ then
 ### Admin.RemoveAdmin:not-owner#2
 
 Authored path: `Admin.RemoveAdmin`.
-- Covered by [Admin](../design/compositions/Admin.md), line 15.
-- Covered by [Admin](../design/compositions/Admin.md), line 27.
+- Covered by [Admin](../design/compositions/Admin.md), line 16.
+- Covered by [Admin](../design/compositions/Admin.md), line 28.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.RemoveAdmin
@@ -1288,8 +1314,8 @@ then
 ### Admin.RemoveAdmin:owner#2
 
 Authored path: `Admin.RemoveAdmin`.
-- Covered by [Admin](../design/compositions/Admin.md), line 15.
-- Covered by [Admin](../design/compositions/Admin.md), line 27.
+- Covered by [Admin](../design/compositions/Admin.md), line 16.
+- Covered by [Admin](../design/compositions/Admin.md), line 28.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.RemoveAdmin
@@ -1303,8 +1329,8 @@ then
 ### Admin.RemoveAdmin:owner#3
 
 Authored path: `Admin.RemoveAdmin`.
-- Covered by [Admin](../design/compositions/Admin.md), line 15.
-- Covered by [Admin](../design/compositions/Admin.md), line 27.
+- Covered by [Admin](../design/compositions/Admin.md), line 16.
+- Covered by [Admin](../design/compositions/Admin.md), line 28.
 
 ```reaction
 when Administrating.removeAdmin (user), asked by Admin.RemoveAdmin:owner#2
@@ -1314,58 +1340,59 @@ then
   RequestBoundary.respond (requestId, user)
 ```
 
-### Admin.RemoveItemFromCycle
+### Admin.RemoveGallery
 
-Authored path: `Admin.RemoveItemFromCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 87.
-- Covered by [Admin](../design/compositions/Admin.md), line 95.
+Authored path: `Admin.RemoveGallery`.
+- Covered by [Admin](../design/compositions/Admin.md), line 82.
+- Covered by [Admin](../design/compositions/Admin.md), line 96.
 
 ```reaction
-when RequestBoundary.request (cycle, item, path: "/admin/cycles/remove-item", requestId, session)
+when RequestBoundary.request (cycle, group, path: "/admin/schedules/remove-gallery", requestId, session)
 then
   Sessioning.current (session)
 ```
 
-### Admin.RemoveItemFromCycle:admin#2
+### Admin.RemoveGallery:admin#2
 
-Authored path: `Admin.RemoveItemFromCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 87.
-- Covered by [Admin](../design/compositions/Admin.md), line 95.
+Authored path: `Admin.RemoveGallery`.
+- Covered by [Admin](../design/compositions/Admin.md), line 82.
+- Covered by [Admin](../design/compositions/Admin.md), line 96.
 
 ```reaction
-when Sessioning.current (session), asked by Admin.RemoveItemFromCycle
+when Sessioning.current (session), asked by Admin.RemoveGallery
 where
+  instant is the current flow's instant
   view "(session) belongs to an admin" with (session)
-  earlier, RequestBoundary.request (cycle, item, path: "/admin/cycles/remove-item", requestId, session)
+  earlier, RequestBoundary.request (cycle, group, path: "/admin/schedules/remove-gallery", requestId, session)
 then
-  Cycling.removeItem (cycle, item)
+  Cycling.removeItem (cycle, item: group, now: instant)
 ```
 
-### Admin.RemoveItemFromCycle:admin#3
+### Admin.RemoveGallery:admin#3
 
-Authored path: `Admin.RemoveItemFromCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 87.
-- Covered by [Admin](../design/compositions/Admin.md), line 95.
+Authored path: `Admin.RemoveGallery`.
+- Covered by [Admin](../design/compositions/Admin.md), line 82.
+- Covered by [Admin](../design/compositions/Admin.md), line 96.
 
 ```reaction
-when Cycling.removeItem (cycle, item), asked by Admin.RemoveItemFromCycle:admin#2
+when Cycling.removeItem (cycle, item: group, now: instant), asked by Admin.RemoveGallery:admin#2
 where
-  earlier, RequestBoundary.request (cycle, item, path: "/admin/cycles/remove-item", requestId, session)
+  earlier, RequestBoundary.request (cycle, group, path: "/admin/schedules/remove-gallery", requestId, session)
 then
-  RequestBoundary.respond (cycle, item, requestId)
+  RequestBoundary.respond (cycle, group, requestId)
 ```
 
-### Admin.RemoveItemFromCycle:not-admin#2
+### Admin.RemoveGallery:not-admin#2
 
-Authored path: `Admin.RemoveItemFromCycle`.
-- Covered by [Admin](../design/compositions/Admin.md), line 87.
-- Covered by [Admin](../design/compositions/Admin.md), line 95.
+Authored path: `Admin.RemoveGallery`.
+- Covered by [Admin](../design/compositions/Admin.md), line 82.
+- Covered by [Admin](../design/compositions/Admin.md), line 96.
 
 ```reaction
-when Sessioning.current (session), asked by Admin.RemoveItemFromCycle
+when Sessioning.current (session), asked by Admin.RemoveGallery
 where
   view "(session) does not belong to an admin" with (session)
-  earlier, RequestBoundary.request (cycle, item, path: "/admin/cycles/remove-item", requestId, session)
+  earlier, RequestBoundary.request (cycle, group, path: "/admin/schedules/remove-gallery", requestId, session)
 then
   RequestBoundary.respond (error: "ADMIN_ONLY", requestId)
 ```
@@ -1373,8 +1400,8 @@ then
 ### Admin.RemovePostFromGroup
 
 Authored path: `Admin.RemovePostFromGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 45.
-- Covered by [Admin](../design/compositions/Admin.md), line 49.
+- Covered by [Admin](../design/compositions/Admin.md), line 34.
+- Covered by [Admin](../design/compositions/Admin.md), line 38.
 
 ```reaction
 when RequestBoundary.request (group, path: "/admin/groups/remove-post", post, requestId, session)
@@ -1385,8 +1412,8 @@ then
 ### Admin.RemovePostFromGroup:admin#2
 
 Authored path: `Admin.RemovePostFromGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 45.
-- Covered by [Admin](../design/compositions/Admin.md), line 49.
+- Covered by [Admin](../design/compositions/Admin.md), line 34.
+- Covered by [Admin](../design/compositions/Admin.md), line 38.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.RemovePostFromGroup
@@ -1400,8 +1427,8 @@ then
 ### Admin.RemovePostFromGroup:admin#3
 
 Authored path: `Admin.RemovePostFromGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 45.
-- Covered by [Admin](../design/compositions/Admin.md), line 49.
+- Covered by [Admin](../design/compositions/Admin.md), line 34.
+- Covered by [Admin](../design/compositions/Admin.md), line 38.
 
 ```reaction
 when Grouping.removeItem (group, item: post), asked by Admin.RemovePostFromGroup:admin#2
@@ -1414,8 +1441,8 @@ then
 ### Admin.RemovePostFromGroup:not-admin#2
 
 Authored path: `Admin.RemovePostFromGroup`.
-- Covered by [Admin](../design/compositions/Admin.md), line 45.
-- Covered by [Admin](../design/compositions/Admin.md), line 49.
+- Covered by [Admin](../design/compositions/Admin.md), line 34.
+- Covered by [Admin](../design/compositions/Admin.md), line 38.
 
 ```reaction
 when Sessioning.current (session), asked by Admin.RemovePostFromGroup
@@ -1426,60 +1453,171 @@ then
   RequestBoundary.respond (error: "ADMIN_ONLY", requestId)
 ```
 
-### Admin.SetCycleRuns
+### Admin.RoundOfNominations
 
-Authored path: `Admin.SetCycleRuns`.
-- Covered by [Admin](../design/compositions/Admin.md), line 90.
-- Covered by [Admin](../design/compositions/Admin.md), line 96.
+Authored path: `Admin.RoundOfNominations`.
+- Covered by [Admin](../design/compositions/Admin.md), line 108.
+- Covered by [Admin](../design/compositions/Admin.md), line 114.
 
 ```reaction
-when RequestBoundary.request (cycle, path: "/admin/cycles/set-runs", requestId, runs, session)
+when RequestBoundary.request (category, path: "/admin/nominations/round", requestId, round, session)
 then
   Sessioning.current (session)
 ```
 
-### Admin.SetCycleRuns:admin#2
+### Admin.RoundOfNominations:finished#2
 
-Authored path: `Admin.SetCycleRuns`.
-- Covered by [Admin](../design/compositions/Admin.md), line 90.
-- Covered by [Admin](../design/compositions/Admin.md), line 96.
+Authored path: `Admin.RoundOfNominations`.
+- Covered by [Admin](../design/compositions/Admin.md), line 108.
+- Covered by [Admin](../design/compositions/Admin.md), line 114.
 
 ```reaction
-when Sessioning.current (session), asked by Admin.SetCycleRuns
+when Sessioning.current (session), asked by Admin.RoundOfNominations
 where
+  instant is the current flow's instant
   view "(session) belongs to an admin" with (session)
-  earlier, RequestBoundary.request (cycle, path: "/admin/cycles/set-runs", requestId, runs, session)
+  earlier, RequestBoundary.request (category, path: "/admin/nominations/round", requestId, round, session)
+  Cycling._run (item: category, run: round) has (end, start)
+  end is at most instant
 then
-  Cycling.setRuns (cycle, runs)
+  RequestBoundary.respond (ranking: former "the ranking of (category) from (start) to (end)" with (category, end, start), requestId)
 ```
 
-### Admin.SetCycleRuns:admin#3
+### Admin.RoundOfNominations:no-such-round#2
 
-Authored path: `Admin.SetCycleRuns`.
-- Covered by [Admin](../design/compositions/Admin.md), line 90.
-- Covered by [Admin](../design/compositions/Admin.md), line 96.
+Authored path: `Admin.RoundOfNominations`.
+- Covered by [Admin](../design/compositions/Admin.md), line 108.
+- Covered by [Admin](../design/compositions/Admin.md), line 114.
 
 ```reaction
-when Cycling.setRuns (cycle, runs), asked by Admin.SetCycleRuns:admin#2
+when Sessioning.current (session), asked by Admin.RoundOfNominations
 where
-  earlier, RequestBoundary.request (cycle, path: "/admin/cycles/set-runs", requestId, runs, session)
+  view "(session) belongs to an admin" with (session)
+  earlier, RequestBoundary.request (category, path: "/admin/nominations/round", requestId, round, session)
+  no Cycling._run (item: category, run: round)
+then
+  RequestBoundary.respond (error: "NO_SUCH_ROUND", requestId)
+```
+
+### Admin.RoundOfNominations:not-admin#2
+
+Authored path: `Admin.RoundOfNominations`.
+- Covered by [Admin](../design/compositions/Admin.md), line 108.
+- Covered by [Admin](../design/compositions/Admin.md), line 114.
+
+```reaction
+when Sessioning.current (session), asked by Admin.RoundOfNominations
+where
+  view "(session) does not belong to an admin" with (session)
+  earlier, RequestBoundary.request (category, path: "/admin/nominations/round", requestId, round, session)
+then
+  RequestBoundary.respond (error: "ADMIN_ONLY", requestId)
+```
+
+### Admin.RoundOfNominations:not-finished#2
+
+Authored path: `Admin.RoundOfNominations`.
+- Covered by [Admin](../design/compositions/Admin.md), line 108.
+- Covered by [Admin](../design/compositions/Admin.md), line 114.
+
+```reaction
+when Sessioning.current (session), asked by Admin.RoundOfNominations
+where
+  instant is the current flow's instant
+  view "(session) belongs to an admin" with (session)
+  earlier, RequestBoundary.request (category, path: "/admin/nominations/round", requestId, round, session)
+  Cycling._run (item: category, run: round) has (end)
+  end is greater than instant
+then
+  RequestBoundary.respond (error: "NO_SUCH_ROUND", requestId)
+```
+
+### Admin.SetScheduleRuns
+
+Authored path: `Admin.SetScheduleRuns`.
+- Covered by [Admin](../design/compositions/Admin.md), line 79.
+- Covered by [Admin](../design/compositions/Admin.md), line 95.
+
+```reaction
+when RequestBoundary.request (cycle, path: "/admin/schedules/set-runs", requestId, runs, session)
+then
+  Sessioning.current (session)
+```
+
+### Admin.SetScheduleRuns:admin#2
+
+Authored path: `Admin.SetScheduleRuns`.
+- Covered by [Admin](../design/compositions/Admin.md), line 79.
+- Covered by [Admin](../design/compositions/Admin.md), line 95.
+
+```reaction
+when Sessioning.current (session), asked by Admin.SetScheduleRuns
+where
+  instant is the current flow's instant
+  view "(session) belongs to an admin" with (session)
+  earlier, RequestBoundary.request (cycle, path: "/admin/schedules/set-runs", requestId, runs, session)
+  no view "(cycle) with (runs) seasons would overlap another schedule" with (cycle, runs)
+then
+  Cycling.setRuns (cycle, now: instant, runs)
+```
+
+### Admin.SetScheduleRuns:admin#3
+
+Authored path: `Admin.SetScheduleRuns`.
+- Covered by [Admin](../design/compositions/Admin.md), line 79.
+- Covered by [Admin](../design/compositions/Admin.md), line 95.
+
+```reaction
+when Cycling.setRuns (cycle, now: instant, runs), asked by Admin.SetScheduleRuns:admin#2
+where
+  earlier, RequestBoundary.request (cycle, path: "/admin/schedules/set-runs", requestId, runs, session)
 then
   RequestBoundary.respond (cycle, requestId, runs)
 ```
 
-### Admin.SetCycleRuns:not-admin#2
+### Admin.SetScheduleRuns:not-admin#2
 
-Authored path: `Admin.SetCycleRuns`.
-- Covered by [Admin](../design/compositions/Admin.md), line 90.
-- Covered by [Admin](../design/compositions/Admin.md), line 96.
+Authored path: `Admin.SetScheduleRuns`.
+- Covered by [Admin](../design/compositions/Admin.md), line 79.
+- Covered by [Admin](../design/compositions/Admin.md), line 95.
 
 ```reaction
-when Sessioning.current (session), asked by Admin.SetCycleRuns
+when Sessioning.current (session), asked by Admin.SetScheduleRuns
 where
   view "(session) does not belong to an admin" with (session)
-  earlier, RequestBoundary.request (cycle, path: "/admin/cycles/set-runs", requestId, runs, session)
+  earlier, RequestBoundary.request (cycle, path: "/admin/schedules/set-runs", requestId, runs, session)
 then
   RequestBoundary.respond (error: "ADMIN_ONLY", requestId)
+```
+
+### Admin.SetScheduleRuns:overlapping#2
+
+Authored path: `Admin.SetScheduleRuns`.
+- Covered by [Admin](../design/compositions/Admin.md), line 79.
+- Covered by [Admin](../design/compositions/Admin.md), line 95.
+
+```reaction
+when Sessioning.current (session), asked by Admin.SetScheduleRuns
+where
+  view "(session) belongs to an admin" with (session)
+  earlier, RequestBoundary.request (cycle, path: "/admin/schedules/set-runs", requestId, runs, session)
+  view "(cycle) with (runs) seasons would overlap another schedule" with (cycle, runs)
+then
+  RequestBoundary.respond (error: "OVERLAPPING_SCHEDULE", requestId)
+```
+
+### Admin.UnstartedGalleryIsDeleted
+
+Authored path: `Admin.UnstartedGalleryIsDeleted`.
+- Covered by [Admin](../design/compositions/Admin.md), line 85.
+
+```reaction
+when Cycling.removeItem (item)
+where
+  no Cycling._cycle (item)
+  Grouping._get (group: item)
+then
+  Grouping.delete (group: item)
 ```
 
 ### DeliverFaultToAsker
@@ -1505,8 +1643,8 @@ then
 ### Public.Archive:finished
 
 Authored path: `Public.Archive`.
-- Covered by [Public](../design/compositions/Public.md), line 30.
-- Covered by [Public](../design/compositions/Public.md), line 36.
+- Covered by [Public](../design/compositions/Public.md), line 32.
+- Covered by [Public](../design/compositions/Public.md), line 38.
 
 ```reaction
 when RequestBoundary.request (group, path: "/groups/archive", requestId, season)
@@ -1521,8 +1659,8 @@ then
 ### Public.Archive:no-such-season
 
 Authored path: `Public.Archive`.
-- Covered by [Public](../design/compositions/Public.md), line 30.
-- Covered by [Public](../design/compositions/Public.md), line 36.
+- Covered by [Public](../design/compositions/Public.md), line 32.
+- Covered by [Public](../design/compositions/Public.md), line 38.
 
 ```reaction
 when RequestBoundary.request (group, path: "/groups/archive", requestId, season)
@@ -1535,8 +1673,8 @@ then
 ### Public.Archive:not-finished
 
 Authored path: `Public.Archive`.
-- Covered by [Public](../design/compositions/Public.md), line 30.
-- Covered by [Public](../design/compositions/Public.md), line 36.
+- Covered by [Public](../design/compositions/Public.md), line 32.
+- Covered by [Public](../design/compositions/Public.md), line 38.
 
 ```reaction
 when RequestBoundary.request (group, path: "/groups/archive", requestId, season)
@@ -1551,8 +1689,8 @@ then
 ### Public.ArchiveGalleries
 
 Authored path: `Public.ArchiveGalleries`.
-- Covered by [Public](../design/compositions/Public.md), line 39.
-- Covered by [Public](../design/compositions/Public.md), line 46.
+- Covered by [Public](../design/compositions/Public.md), line 41.
+- Covered by [Public](../design/compositions/Public.md), line 48.
 
 ```reaction
 when RequestBoundary.request (limit, offset, path: "/archive/galleries", requestId)
@@ -1563,8 +1701,8 @@ then
 ### Public.Feed:closed
 
 Authored path: `Public.Feed`.
-- Covered by [Public](../design/compositions/Public.md), line 20.
-- Covered by [Public](../design/compositions/Public.md), line 27.
+- Covered by [Public](../design/compositions/Public.md), line 22.
+- Covered by [Public](../design/compositions/Public.md), line 29.
 
 ```reaction
 when RequestBoundary.request (group, path: "/groups/feed", requestId)
@@ -1578,8 +1716,8 @@ then
 ### Public.Feed:open
 
 Authored path: `Public.Feed`.
-- Covered by [Public](../design/compositions/Public.md), line 20.
-- Covered by [Public](../design/compositions/Public.md), line 27.
+- Covered by [Public](../design/compositions/Public.md), line 22.
+- Covered by [Public](../design/compositions/Public.md), line 29.
 
 ```reaction
 when RequestBoundary.request (group, path: "/groups/feed", requestId)
@@ -1593,8 +1731,8 @@ then
 ### Public.GetPost:found
 
 Authored path: `Public.GetPost`.
-- Covered by [Public](../design/compositions/Public.md), line 61.
-- Covered by [Public](../design/compositions/Public.md), line 66.
+- Covered by [Public](../design/compositions/Public.md), line 63.
+- Covered by [Public](../design/compositions/Public.md), line 68.
 
 ```reaction
 when RequestBoundary.request (path: "/posts/get", post, requestId)
@@ -1607,8 +1745,8 @@ then
 ### Public.GetPost:missing
 
 Authored path: `Public.GetPost`.
-- Covered by [Public](../design/compositions/Public.md), line 61.
-- Covered by [Public](../design/compositions/Public.md), line 66.
+- Covered by [Public](../design/compositions/Public.md), line 63.
+- Covered by [Public](../design/compositions/Public.md), line 68.
 
 ```reaction
 when RequestBoundary.request (path: "/posts/get", post, requestId)
@@ -1621,8 +1759,8 @@ then
 ### Public.ImageLink
 
 Authored path: `Public.ImageLink`.
-- Covered by [Public](../design/compositions/Public.md), line 50.
-- Covered by [Public](../design/compositions/Public.md), line 56.
+- Covered by [Public](../design/compositions/Public.md), line 52.
+- Covered by [Public](../design/compositions/Public.md), line 58.
 
 ```reaction
 when RequestBoundary.request (path: "/images/link", requestId, upload)
@@ -1633,8 +1771,8 @@ then
 ### Public.ImageLink#2
 
 Authored path: `Public.ImageLink`.
-- Covered by [Public](../design/compositions/Public.md), line 50.
-- Covered by [Public](../design/compositions/Public.md), line 56.
+- Covered by [Public](../design/compositions/Public.md), line 52.
+- Covered by [Public](../design/compositions/Public.md), line 58.
 
 ```reaction
 when Uploading.link (upload, url), asked by Public.ImageLink
@@ -1647,8 +1785,8 @@ then
 ### Public.ListCategories
 
 Authored path: `Public.ListCategories`.
-- Covered by [Public](../design/compositions/Public.md), line 71.
-- Covered by [Public](../design/compositions/Public.md), line 76.
+- Covered by [Public](../design/compositions/Public.md), line 73.
+- Covered by [Public](../design/compositions/Public.md), line 78.
 
 ```reaction
 when RequestBoundary.request (path: "/nominations/categories", requestId)
@@ -1662,7 +1800,7 @@ then
 
 Authored path: `Public.ListGroups`.
 - Covered by [Public](../design/compositions/Public.md), line 8.
-- Covered by [Public](../design/compositions/Public.md), line 17.
+- Covered by [Public](../design/compositions/Public.md), line 19.
 
 ```reaction
 when RequestBoundary.request (path: "/groups/list", requestId)
@@ -1675,8 +1813,8 @@ then
 ### Public.ListNominations:closed
 
 Authored path: `Public.ListNominations`.
-- Covered by [Public](../design/compositions/Public.md), line 79.
-- Covered by [Public](../design/compositions/Public.md), line 86.
+- Covered by [Public](../design/compositions/Public.md), line 81.
+- Covered by [Public](../design/compositions/Public.md), line 88.
 
 ```reaction
 when RequestBoundary.request (category, path: "/nominations/list", requestId)
@@ -1690,8 +1828,8 @@ then
 ### Public.ListNominations:open
 
 Authored path: `Public.ListNominations`.
-- Covered by [Public](../design/compositions/Public.md), line 79.
-- Covered by [Public](../design/compositions/Public.md), line 86.
+- Covered by [Public](../design/compositions/Public.md), line 81.
+- Covered by [Public](../design/compositions/Public.md), line 88.
 
 ```reaction
 when RequestBoundary.request (category, path: "/nominations/list", requestId)
@@ -2667,17 +2805,14 @@ not listed here have no explicit input contract.
 - `/admin/admins/add` — requires `session`, `user`
 - `/admin/admins/list` — requires `session`
 - `/admin/admins/remove` — requires `session`, `user`
-- `/admin/cycles/add-item` — requires `cycle`, `item`, `session`
-- `/admin/cycles/create` — requires `period`, `runs`, `session`
-- `/admin/cycles/delete` — requires `cycle`, `session`
-- `/admin/cycles/list` — requires `session`
-- `/admin/cycles/remove-item` — requires `cycle`, `item`, `session`
-- `/admin/cycles/set-runs` — requires `cycle`, `runs`, `session`
-- `/admin/groups/add-post` — requires `group`, `post`, `session`
-- `/admin/groups/create` — requires `name`, `session`
-- `/admin/groups/delete` — requires `group`, `session`
 - `/admin/groups/remove-post` — requires `group`, `post`, `session`
-- `/admin/nominations/previous` — requires `category`, `session`
+- `/admin/nominations/round` — requires `category`, `round`, `session`
+- `/admin/schedules/add-galleries` — requires `session`, `cycle`, `names`; fills `nominations` with [] when absent
+- `/admin/schedules/cancel` — requires `cycle`, `session`
+- `/admin/schedules/create` — requires `session`, `period`, `runs`, `start`, `names`; fills `nominations` with [] when absent
+- `/admin/schedules/list` — requires `session`
+- `/admin/schedules/remove-gallery` — requires `cycle`, `group`, `session`
+- `/admin/schedules/set-runs` — requires `cycle`, `runs`, `session`
 - `/archive/galleries` — requires `limit`, `offset`
 - `/auth/current` — requires `session`
 - `/auth/register` — requires `password`, `username`

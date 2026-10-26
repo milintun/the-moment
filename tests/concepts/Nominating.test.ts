@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import {
+  Chosen,
   InvalidName,
   NameTaken,
   NominatingConcept,
@@ -21,19 +22,23 @@ beforeEach(async () => {
 const names = async (cat = category) => (await nominating._nominations({ category: cat })).map((n) => n.name);
 
 describe("principle", () => {
-  test("ideas are named once a day, matched by meaning, listed newest first, and withdrawn", async () => {
+  test("ideas are named once a day, matched by meaning, listed newest first, withdrawn, and chosen", async () => {
     const { nomination: hands } = await nominating.nominate({ nominator: "gigi", category, name: "Hands", createdAt: T0 });
     expect(await nominating._nominations({ category })).toEqual([
-      { nomination: hands, nominator: "gigi", name: "Hands", createdAt: T0 },
+      { nomination: hands, nominator: "gigi", name: "Hands", createdAt: T0, chosen: false },
     ]);
     expect(await nominating._equivalent({ category, name: " hands " })).toEqual([{ nomination: hands, createdAt: T0 }]);
     await expect(
       nominating.nominate({ nominator: "gigi", category, name: "Feet", createdAt: at(2 * HOUR) }),
     ).rejects.toBeInstanceOf(TooSoon);
-    await nominating.nominate({ nominator: "sid", category, name: "Rainy days", createdAt: at(HOUR) });
+    const { nomination: rain } = await nominating.nominate({ nominator: "sid", category, name: "Rainy days", createdAt: at(HOUR) });
     expect(await names()).toEqual(["Rainy days", "Hands"]);
     await nominating.withdraw({ nominator: "gigi", nomination: hands });
     expect(await names()).toEqual(["Rainy days"]);
+    await nominating.choose({ nominations: [rain], chosenAt: at(DAY) });
+    expect((await nominating._nominations({ category }))[0]?.chosen).toBe(true);
+    await expect(nominating.withdraw({ nominator: "sid", nomination: rain })).rejects.toBeInstanceOf(Chosen);
+    await expect(nominating.choose({ nominations: [rain], chosenAt: at(DAY) })).rejects.toBeInstanceOf(Chosen);
   });
 });
 
@@ -110,6 +115,41 @@ describe("withdraw", () => {
   });
 });
 
+describe("choose", () => {
+  test("marks every listed nomination chosen, and a chosen one can't be withdrawn", async () => {
+    const { nomination: a } = await nominating.nominate({ nominator: "gigi", category, name: "A", createdAt: T0 });
+    const { nomination: b } = await nominating.nominate({ nominator: "sid", category, name: "B", createdAt: T0 });
+    expect(await nominating.choose({ nominations: [a, b], chosenAt: at(HOUR) })).toEqual({});
+    expect((await nominating._nominations({ category })).map((n) => n.chosen)).toEqual([true, true]);
+    expect((await nominating._get({ nomination: a }))[0]?.chosen).toBe(true);
+    await expect(nominating.withdraw({ nominator: "gigi", nomination: a })).rejects.toBeInstanceOf(Chosen);
+  });
+
+  test("refuses NO_SUCH_NOMINATION and CHOSEN (already chosen, or listed twice), choosing none", async () => {
+    const { nomination: a } = await nominating.nominate({ nominator: "gigi", category, name: "A", createdAt: T0 });
+    const { nomination: b } = await nominating.nominate({ nominator: "sid", category, name: "B", createdAt: T0 });
+    await expect(nominating.choose({ nominations: [a, "unknown"], chosenAt: T0 })).rejects.toBeInstanceOf(NoSuchNomination);
+    await expect(nominating.choose({ nominations: [a, a], chosenAt: T0 })).rejects.toBeInstanceOf(Chosen);
+    await nominating.choose({ nominations: [b], chosenAt: T0 });
+    await expect(nominating.choose({ nominations: [a, b], chosenAt: T0 })).rejects.toBeInstanceOf(Chosen);
+    expect((await nominating._get({ nomination: a }))[0]?.chosen).toBe(false);
+  });
+
+  test("_unavailable answers the ones that are missing, chosen, or repeated", async () => {
+    const { nomination: a } = await nominating.nominate({ nominator: "gigi", category, name: "A", createdAt: T0 });
+    const { nomination: b } = await nominating.nominate({ nominator: "sid", category, name: "B", createdAt: T0 });
+    const { nomination: c } = await nominating.nominate({ nominator: "sasha", category, name: "C", createdAt: T0 });
+    await nominating.choose({ nominations: [b], chosenAt: T0 });
+    expect(await nominating._unavailable({ nominations: [a, c] })).toEqual([]);
+    expect(await nominating._unavailable({ nominations: [] })).toEqual([]);
+    expect(await nominating._unavailable({ nominations: [a, b, "gone", c, c] })).toEqual([
+      { nomination: b },
+      { nomination: "gone" },
+      { nomination: c },
+    ]);
+  });
+});
+
 describe("queries", () => {
   test("_nominations lists newest first, per category", async () => {
     const { category: other } = await nominating.createCategory({ name: "Future wings" });
@@ -134,8 +174,8 @@ describe("queries", () => {
     await nominating.nominate({ nominator: "sid", category, name: "B", createdAt: at(HOUR) });
     const { nomination: c } = await nominating.nominate({ nominator: "gigi", category: other, name: "C", createdAt: at(DAY) });
     expect(await nominating._byNominator({ nominator: "gigi" })).toEqual([
-      { nomination: c, category: other, name: "C", createdAt: at(DAY) },
-      { nomination: a, category, name: "A", createdAt: T0 },
+      { nomination: c, category: other, name: "C", createdAt: at(DAY), chosen: false },
+      { nomination: a, category, name: "A", createdAt: T0, chosen: false },
     ]);
     expect(await nominating._byNominator({ nominator: "sasha" })).toEqual([]);
   });

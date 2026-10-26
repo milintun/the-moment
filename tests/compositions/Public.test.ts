@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { createCategory, createCycle, ok, openCategory, openGroup, setUpPeople, uploadImage, useApp, type Sessions } from "../app.ts";
+import { createCategory, createGroup, createCycle, ok, openCategory, openGroup, setUpPeople, uploadImage, useApp, type Sessions } from "../app.ts";
 import { HOUR, MINUTE, T0, at } from "../helpers.ts";
 
 const app = useApp();
@@ -7,7 +7,7 @@ let people: Sessions;
 let cycle: string; // 1-hour runs, 3 of them, starting at T0
 beforeEach(async () => {
   people = await setUpPeople(app.api);
-  cycle = await createCycle(app.api, people.milin, HOUR, 3);
+  cycle = await createCycle(app, HOUR, 3);
 });
 
 // Posts an uploaded image, labelled by its caption so tests can tell posts apart.
@@ -17,8 +17,8 @@ const feed = async (group: string) => ok(await app.api.groups.feed({ group })).f
 
 describe("groups/list", () => {
   test("each group with its cycle and current run, and blanks for a group with no cycle", async () => {
-    const doodles = await openGroup(app.api, people.milin, "Doodles", cycle);
-    const { group: wings } = ok(await app.api.admin.groups.create({ session: people.milin, name: "Wings" }));
+    const doodles = await openGroup(app, "Doodles", cycle);
+    const wings = await createGroup(app, "Wings");
     expect(await app.api.groups.list({})).toEqual({
       list: {
         groups: [
@@ -53,7 +53,7 @@ describe("groups/list", () => {
 describe("groups/feed", () => {
   let group: string;
   beforeEach(async () => {
-    group = await openGroup(app.api, people.milin, "Doodles", cycle);
+    group = await openGroup(app, "Doodles", cycle);
   });
 
   test("shows only the current run's posts", async () => {
@@ -98,7 +98,7 @@ describe("groups/feed", () => {
 
 describe("posts/get", () => {
   test("details with the vote count, still readable after leaving every group", async () => {
-    const group = await openGroup(app.api, people.milin, "Doodles", cycle);
+    const group = await openGroup(app, "Doodles", cycle);
     const image = await uploadImage(app.api, people.gigi);
     const { post: p } = ok(await app.api.posts.create({ session: people.gigi, group, content: image, caption: "Hands" }));
     ok(await app.api.posts.vote({ session: people.sid, post: p }));
@@ -125,7 +125,7 @@ describe("posts/get", () => {
 describe("groups/archive", () => {
   let group: string;
   beforeEach(async () => {
-    group = await openGroup(app.api, people.milin, "Doodles", cycle);
+    group = await openGroup(app, "Doodles", cycle);
   });
   const archive = (season: number, into = group) => app.api.groups.archive({ group: into, season });
 
@@ -154,7 +154,7 @@ describe("groups/archive", () => {
     app.clock.advance(5 * HOUR); // every season over
     expect(await archive(3)).toEqual({ error: "NO_SUCH_SEASON" });
     expect(await archive(-1)).toEqual({ error: "NO_SUCH_SEASON" });
-    const { group: uncycled } = ok(await app.api.admin.groups.create({ session: people.milin, name: "Wings" }));
+    const uncycled = await createGroup(app, "Wings");
     expect(await archive(0, uncycled)).toEqual({ error: "NO_SUCH_SEASON" });
   });
 
@@ -168,11 +168,11 @@ describe("groups/archive", () => {
 
 describe("archive/galleries", () => {
   test("pages through galleries oldest first, each with its cycle (blank without one)", async () => {
-    const doodles = await openGroup(app.api, people.milin, "Doodles", cycle);
+    const doodles = await openGroup(app, "Doodles", cycle);
     app.clock.advance(MINUTE);
-    const { group: wings } = ok(await app.api.admin.groups.create({ session: people.milin, name: "Wings" }));
+    const wings = await createGroup(app, "Wings");
     app.clock.advance(MINUTE);
-    const { group: zines } = ok(await app.api.admin.groups.create({ session: people.milin, name: "Zines" }));
+    const zines = await createGroup(app, "Zines");
     const page = async (offset: number, limit: number) => ok(await app.api.archive.galleries({ offset, limit })).page.groups;
     expect(await page(0, 2)).toEqual([
       { group: doodles, name: "Doodles", cycle, start: T0.toISOString(), period: HOUR, runs: 3 },
@@ -214,7 +214,7 @@ describe("images/link", () => {
 
 describe("nominations/categories", () => {
   test("each category with its current round, blank when closed", async () => {
-    const open = await openCategory(app.api, people.milin, "Future galleries", cycle);
+    const open = await openCategory("Future galleries", cycle);
     const closed = await createCategory("Future wings");
     expect(await app.api.nominations.categories({})).toEqual({
       list: {
@@ -230,7 +230,7 @@ describe("nominations/categories", () => {
 describe("nominations/list", () => {
   let category: string;
   beforeEach(async () => {
-    category = await openCategory(app.api, people.milin, "Future galleries", cycle);
+    category = await openCategory("Future galleries", cycle);
   });
   const ranking = async () => ok(await app.api.nominations.list({ category })).ranking.nominations;
   const nominate = async (session: string, name: string) =>
@@ -254,6 +254,7 @@ describe("nominations/list", () => {
       name: "Hands",
       createdAt: T0.toISOString(),
       votes: 1,
+      chosen: false,
     });
   });
 

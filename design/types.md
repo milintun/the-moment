@@ -8,6 +8,9 @@ groups and the nomination categories it holds.
 ```types
 concrete CycledItem
   Something whose seasons a cycle sets: a group of posts or a nomination category.
+
+concrete Sequence
+  An ordered list of values, sent and stored as an array.
 ```
 
 ```instances
@@ -32,12 +35,15 @@ instantiate Upvoting with
 
 instantiate Grouping with
   Item is Posting.Post
+  List is Sequence
 
 instantiate Cycling with
   Item is CycledItem
+  List is Sequence
 
 instantiate Nominating with
   User is Authenticating.Account
+  List is Sequence
 
 instantiate Upvoting as NominationVotes with
   User is Authenticating.Account

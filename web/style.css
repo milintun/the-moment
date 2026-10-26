@@ -6,6 +6,7 @@
   --ink: #000;
   --paper: #fff;
   --faint: #6b6b6b; /* secondary text, still black-and-white */
+  --alert: #c4001a; /* the one colour outside artwork: the way into admin */
   --line: 1px solid var(--ink);
   --gutter: 16px;
   --font: "Ubuntu Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
@@ -142,6 +143,16 @@ button.voted {
 button.voted:hover:not(:disabled) {
   background: var(--paper);
   color: var(--ink);
+}
+/* The way into admin: red, so it never passes for an ordinary link. */
+.admin-button {
+  border-color: var(--alert);
+  background: var(--alert);
+  color: var(--paper);
+}
+.button.admin-button:hover {
+  background: var(--paper);
+  color: var(--alert);
 }
 .link-button {
   border: 0;
@@ -432,6 +443,61 @@ section + section {
   margin-left: 0.6em;
 }
 
+/* ---------- admin ---------- */
+
+.admin {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 2.5rem;
+  align-items: start;
+}
+.admin-nav {
+  position: sticky;
+  top: 4rem;
+  display: flex;
+  flex-direction: column;
+  border-left: var(--line);
+}
+.admin-nav a {
+  padding: 0.4em 0 0.4em 1em;
+  text-decoration: none;
+}
+.admin-nav a.active {
+  font-weight: 700;
+  border-left: 3px solid var(--ink);
+  margin-left: -2px;
+}
+.admin-section > h2:first-child {
+  margin-top: 0;
+}
+.schedule {
+  border: var(--line);
+  padding: 0.8em 1em;
+  margin-bottom: 1.2rem;
+}
+.schedule h3 {
+  margin-top: 0;
+}
+.schedule h3 button {
+  margin-left: 0.6em;
+  font-size: 0.8rem;
+}
+.schedule.editing {
+  border-width: 2px;
+}
+.schedule-form label,
+.rows label {
+  margin-bottom: 0.4em;
+}
+.round-nav button {
+  margin: 0 0.6em;
+}
+/* An idea already chosen to become a gallery. */
+.chosen {
+  text-decoration: line-through;
+  color: var(--faint);
+}
+
 /* ---------- posting ---------- */
 
 .dropzone {
@@ -485,6 +551,21 @@ section + section {
   }
   .neighbours .after {
     text-align: left;
+    margin-left: 0;
+  }
+  .admin {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .admin-nav {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-left: 0;
+    border-bottom: var(--line);
+  }
+  .admin-nav a.active {
+    border-left: 0;
     margin-left: 0;
   }
 }

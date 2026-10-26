@@ -27,13 +27,14 @@ export async function register(request: APIRequestContext, username = unique("vi
   return username;
 }
 
-/** As the owner: an open gallery (a 1-day season starting now) named `name`. */
+let schedules = 0;
+/** As the owner: an open gallery named `name`, in its own schedule of 1-day seasons starting now. */
 export async function openGallery(owner: APIRequestContext, name = unique("gallery ")) {
   await signIn(owner, OWNER.username, OWNER.password);
-  const { cycle } = await call(owner, "/admin/cycles/create", { period: 24 * HOUR, runs: 1 });
-  const { group } = await call(owner, "/admin/groups/create", { name });
-  await call(owner, "/admin/cycles/add-item", { cycle, item: group });
-  return { group, name };
+  // Schedules of the same length and number of seasons can't overlap, so each gets its own number.
+  const runs = ++schedules;
+  const { groups } = await call(owner, "/admin/schedules/create", { period: 24 * HOUR, runs, start: new Date().toISOString(), names: [name] });
+  return { group: groups[0] as string, name };
 }
 
 /** Uploads the fixture image and posts it to `group` as whoever `request` is. */

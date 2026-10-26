@@ -1,18 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
+import { GroupingConcept } from "../../src/concepts/Grouping.ts";
 import { db } from "../../src/db.ts";
 import { S3Client } from "bun";
-import {
-  createCategory,
-  createCycle,
-  ok,
-  openCategory,
-  openGroup,
-  setUpPeople,
-  signUp,
-  uploadImage,
-  useApp,
-  type Sessions,
-} from "../app.ts";
+import { createGroup, createCategory, createCycle, ok, openCategory, openGroup, setUpPeople, signUp, uploadImage, useApp, type Sessions } from "../app.ts";
 import { HOUR, MINUTE } from "../helpers.ts";
 
 const app = useApp();
@@ -21,8 +11,8 @@ let cycle: string; // 1-hour runs, 3 of them, starting now
 let group: string; // "Doodles", open
 beforeEach(async () => {
   people = await setUpPeople(app.api);
-  cycle = await createCycle(app.api, people.milin, HOUR, 3);
-  group = await openGroup(app.api, people.milin, "Doodles", cycle);
+  cycle = await createCycle(app, HOUR, 3);
+  group = await openGroup(app, "Doodles", cycle);
 });
 
 const count = (collection: string) => db.collection(collection).countDocuments();
@@ -155,7 +145,7 @@ describe("posts/create", () => {
   });
 
   test("refuses GROUP_CLOSED for a category's identifier and creates no post", async () => {
-    const category = await openCategory(app.api, people.milin, "Future galleries", cycle);
+    const category = await openCategory("Future galleries", cycle);
     const content = await uploadImage(app.api, people.gigi);
     expect(await app.api.posts.create({ session: people.gigi, group: category, content })).toEqual({
       error: "GROUP_CLOSED",
@@ -164,7 +154,7 @@ describe("posts/create", () => {
   });
 
   test("refuses GROUP_CLOSED for a group with no cycle, and after the cycle ends", async () => {
-    const { group: uncycled } = ok(await app.api.admin.groups.create({ session: people.milin, name: "Wings" }));
+    const uncycled = await createGroup(app, "Wings");
     const content = await uploadImage(app.api, people.gigi);
     expect(await app.api.posts.create({ session: people.gigi, group: uncycled, content })).toEqual({
       error: "GROUP_CLOSED",
@@ -235,15 +225,15 @@ describe("posts/mine", () => {
 
   test("lists every gallery a post is in", async () => {
     const p = await post(people.gigi);
-    const sketches = await openGroup(app.api, people.milin, "Sketches", cycle);
-    ok(await app.api.admin.groups["add-post"]({ session: people.milin, group: sketches, post: p }));
+    const sketches = await openGroup(app, "Sketches", cycle);
+    await new GroupingConcept(db).addItem({ group: sketches, item: p, addedAt: app.clock.read() });
     const galleries = (await mine())[0]?.galleries.map((g) => g.name).sort();
     expect(galleries).toEqual(["Doodles", "Sketches"]);
   });
 
   test("still lists a post whose gallery was deleted, with no galleries", async () => {
     const p = await post(people.gigi);
-    ok(await app.api.admin.groups.delete({ session: people.milin, group }));
+    await new GroupingConcept(db).delete({ group });
     expect((await mine()).map((r) => [r.post, r.galleries, r.current])).toEqual([[p, [], null]]);
   });
 
@@ -300,7 +290,7 @@ describe("posts/my-votes", () => {
 describe("nominations/create", () => {
   let category: string;
   beforeEach(async () => {
-    category = await openCategory(app.api, people.milin, "Future galleries", cycle);
+    category = await openCategory("Future galleries", cycle);
   });
   const nominate = (session: string, name: string, into = category) =>
     app.api.nominations.create({ session, category: into, name });
@@ -343,7 +333,7 @@ describe("nominations: withdraw, vote, unvote, my-votes", () => {
   let category: string;
   let hands: string;
   beforeEach(async () => {
-    category = await openCategory(app.api, people.milin, "Future galleries", cycle);
+    category = await openCategory("Future galleries", cycle);
     hands = ok(await app.api.nominations.create({ session: people.gigi, category, name: "Hands" })).nomination;
   });
   const votes = async () =>
@@ -408,11 +398,11 @@ describe("nominations: withdraw, vote, unvote, my-votes", () => {
   test("mine lists your nominations from every round with votes, marking the current round's", async () => {
     ok(await app.api.nominations.vote({ session: people.sid, nomination: hands }));
     expect(await app.api.nominations.mine({ session: people.gigi })).toEqual({
-      mine: { nominations: [{ nomination: hands, name: "Hands", createdAt: expect.any(String), votes: 1, current: true }] },
+      mine: { nominations: [{ nomination: hands, name: "Hands", createdAt: expect.any(String), votes: 1, chosen: false, current: true }] },
     });
     app.clock.advance(HOUR + MINUTE); // the next round: Hands is from a past round now
     expect(ok(await app.api.nominations.mine({ session: people.gigi })).mine.nominations).toEqual([
-      { nomination: hands, name: "Hands", createdAt: expect.any(String), votes: 1, current: null },
+      { nomination: hands, name: "Hands", createdAt: expect.any(String), votes: 1, chosen: false, current: null },
     ]);
     expect(await app.api.nominations.mine({ session: people.sasha })).toEqual({ mine: { nominations: [] } });
     expect(await app.api.nominations.mine({ session: "invented" })).toEqual({ error: "UNKNOWN_SESSION" });

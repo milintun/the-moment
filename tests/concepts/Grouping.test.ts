@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import {
   AlreadyInGroup,
   GroupingConcept,
-  NameTaken,
+  DuplicateName,
+  InvalidName,
+  NoNames,
   NoSuchGroup,
   NotInGroup,
 } from "../../src/concepts/Grouping.ts";
@@ -34,10 +36,27 @@ describe("principle", () => {
 });
 
 describe("create", () => {
-  test("refuses NAME_TAKEN and there is still one group with that name", async () => {
+  test("two groups may share a name", async () => {
+    const { group: first } = await grouping.create({ name: "Doodles", createdAt: T0 });
+    const { group: second } = await grouping.create({ name: "Doodles", createdAt: at(HOUR) });
+    expect(await grouping._byName({ name: "Doodles" })).toEqual([{ group: first }, { group: second }]);
+  });
+});
+
+describe("createMany", () => {
+  test("makes a group per name, in order, even names an older group already has", async () => {
     await grouping.create({ name: "Doodles", createdAt: T0 });
-    await expect(grouping.create({ name: "Doodles", createdAt: T0 })).rejects.toBeInstanceOf(NameTaken);
-    expect((await grouping._groups({})).filter((g) => g.name === "Doodles")).toHaveLength(1);
+    const { groups } = await grouping.createMany({ names: ["Night Walks", "Doodles"], createdAt: at(HOUR) });
+    expect(await Promise.all(groups.map((group) => grouping._get({ group })))).toEqual([[{ name: "Night Walks" }], [{ name: "Doodles" }]]);
+  });
+
+  test("refuses NO_NAMES, INVALID_NAME, and DUPLICATE_NAME (ignoring case and spacing), making nothing", async () => {
+    await expect(grouping.createMany({ names: [], createdAt: T0 })).rejects.toBeInstanceOf(NoNames);
+    await expect(grouping.createMany({ names: ["A", "  "], createdAt: T0 })).rejects.toBeInstanceOf(InvalidName);
+    await expect(grouping.createMany({ names: ["Night Walks", " night   WALKS"], createdAt: T0 })).rejects.toBeInstanceOf(
+      DuplicateName,
+    );
+    expect(await grouping._groups({})).toEqual([]);
   });
 });
 
@@ -108,6 +127,21 @@ describe("queries", () => {
     const { group } = await grouping.create({ name: "Doodles", createdAt: T0 });
     expect(await grouping._byName({ name: "Doodles" })).toEqual([{ group }]);
     expect(await grouping._byName({ name: "Nope" })).toEqual([]);
+  });
+
+  test("_nameAmong answers the group's name when it matches one of the names, ignoring case and spacing", async () => {
+    const { group } = await grouping.create({ name: "Night Walks", createdAt: T0 });
+    expect(await grouping._nameAmong({ group, names: ["Doodles", " night   WALKS "] })).toEqual([{ name: "Night Walks" }]);
+    expect(await grouping._nameAmong({ group, names: ["Doodles"] })).toEqual([]);
+    expect(await grouping._nameAmong({ group: "unknown", names: ["Night Walks"] })).toEqual([]);
+  });
+
+  test("deleteMany deletes the given groups and their memberships, skipping unknown ones", async () => {
+    const { groups } = await grouping.createMany({ names: ["A", "B", "C"], createdAt: T0 });
+    await grouping.addItem({ group: groups[0]!, item: "p1", addedAt: T0 });
+    expect(await grouping.deleteMany({ groups: [groups[0]!, groups[1]!, "unknown"] })).toEqual({});
+    expect((await grouping._groups({})).map((g) => g.name)).toEqual(["C"]);
+    expect(await grouping._groupsOf({ item: "p1" })).toEqual([]);
   });
 
   test("_page answers a window of _groups, and nothing for a bad window", async () => {

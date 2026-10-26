@@ -24,6 +24,12 @@ export async function refreshMe() {
 /** Lowercase, trimmed, single-spaced: how the server decides two nominations name the same idea. */
 export const normalizeName = (name: string) => name.trim().replace(/\s+/g, " ").toLowerCase();
 
+/** The first name that repeats an earlier one, normalized, if any. */
+export function repeatedName(names: string[]) {
+  const normalized = names.map(normalizeName);
+  return normalized.find((name, i) => normalized.indexOf(name) !== i);
+}
+
 /** The application's one nomination category; the server creates it at startup. */
 export const FUTURE_GALLERIES = "Future galleries";
 

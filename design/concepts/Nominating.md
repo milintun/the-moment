@@ -116,8 +116,13 @@ _nominations (category: Category) : many (nomination: Nomination, nominator: Use
 _equivalent (category: Category, name: String) : many (nomination: Nomination, createdAt: DateTime)
   answers the nominations in category whose names are equivalent to name, newest first, and no rows when there are none
 
-_byNominator (nominator: User) : many (nomination: Nomination, category: Category, name: String, createdAt: DateTime)
-  answers every nomination by nominator in any category, newest first, and no rows when they have none
+_byNominator (nominator: User) : many (nomination: Nomination, category: Category, name: String, createdAt: DateTime, chosen: Flag)
+  answers every nomination by nominator in any category, newest first, with whether it has
+  been chosen, and no rows when they have none
+
+_unavailable (nominations: List<Nomination>) : many (nomination: Nomination)
+  answers each of nominations that is not in Nominations, is already chosen, or appears
+  more than once, and no rows when every one of them could be chosen together
 
 _get (nomination: Nomination) : optional (nominator: User, category: Category, name: String, createdAt: DateTime, chosen: Flag)
   answers the nomination's details, and no row when nomination is not in Nominations

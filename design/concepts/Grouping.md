@@ -8,7 +8,8 @@ unrelated items.
 ## Principle
 
 A group is created with a name, or several groups are created at once from a list of
-names. Names need not be unique: two groups may share one. Items are added to a group and
+different names. Names need not be unique across groups: two groups made at different
+times may share one. Items are added to a group and
 removed from it, and the group lists the items it holds, including just those added
 during a given span of time. Deleting the group leaves its items untouched. With many
 groups, they can be listed a page at a time.
@@ -47,7 +48,16 @@ create (name: String, createdAt: DateTime) : returns (group: Group)
     returns group
 
 createMany (names: List<String>, createdAt: DateTime) : returns (groups: List<Group>)
-  where any names are given, since names may repeat
+  where names is empty
+  then
+    refuses NO_NAMES "Name at least one group."
+  where some name is empty after trimming
+  then
+    refuses INVALID_NAME "Every group needs a name."
+  where two of names match after trimming outer spaces, collapsing inner spaces, and ignoring case
+  then
+    refuses DUPLICATE_NAME "Groups made together need different names."
+  where names is not empty and its names are present and different
   then
     create a new group for each name, each with createdAt and no memberships, listed in the order of names
     returns groups
@@ -71,6 +81,12 @@ addItem (group: Group, item: Item, addedAt: DateTime) : returns ()
   where group is in Groups and item is not in group
   then
     add a membership of item in group, added at addedAt
+    returns
+
+deleteMany (groups: List<Group>) : returns ()
+  where any groups are given; ones not in Groups are skipped
+  then
+    delete every one of groups that is in Groups, and their memberships
     returns
 
 removeItem (group: Group, item: Item) : returns ()
@@ -108,6 +124,10 @@ _itemsAdded (group: Group, from: DateTime, to: DateTime) : many (item: Item, add
 
 _groupsOf (item: Item) : many (group: Group)
   answers every group that holds item, ordered by group, and no rows when none does
+
+_nameAmong (group: Group, names: List<String>) : optional (name: String)
+  answers the group's name when it matches one of names ignoring case and spacing, and no
+  row when it matches none or group is not in Groups
 
 _byName (name: String) : many (group: Group)
   answers every group with this name, oldest first, and no rows when no group has it

@@ -1,6 +1,6 @@
 # Admin
 
-Curating groups, cycles, and nomination categories is reserved for admins, and only
+Scheduling galleries and moderating their walls is reserved for admins, and only
 the owner decides who the admins are. Every request resolves its session first, so a
 request without an active session is refused. A session
 [belongs to an admin](view:Admin.IsAdmin) when Administrating says its account is an
@@ -11,7 +11,8 @@ nothing. Likewise a session [belongs to the owner](view:Admin.IsOwner) or
 
 ## Admins
 
-The owner may [add an admin](reaction:Admin.AddAdmin) and
+The owner may [add an admin](reaction:Admin.AddAdmin), who must be a registered
+account (any other name answers `NO_SUCH_USER`), and
 [remove an admin](reaction:Admin.RemoveAdmin); Administrating refuses removing the
 owner. Any admin may [list the admins](reaction:Admin.ListAdmins) as
 [every admin and whether they are the owner](former:Admin.AdminList). The owner itself
@@ -28,70 +29,87 @@ Admin.RemoveAdmin at /admin/admins/remove
 Admin.ListAdmins at /admin/admins/list
 ```
 
-## Groups
+## Posts on gallery walls
 
-An admin may [create a group](reaction:Admin.CreateGroup) with a unique name and
-[delete a group](reaction:Admin.DeleteGroup). Deleting a group does not delete its
-posts; they simply stop appearing in any feed, because feeds reach posts through a
-group. A deleted group also
-[leaves the cycle it belonged to](reaction:Admin.DeletedGroupLeavesCycle).
+An admin may [remove a post from a gallery](reaction:Admin.RemovePostFromGroup). The
+post itself is kept: its owner still has it, it just no longer hangs there.
 
 ```endpoints
-Admin.CreateGroup at /admin/groups/create
-Admin.DeleteGroup at /admin/groups/delete
+Admin.RemovePostFromGroup at /admin/groups/remove-post
 ```
 
-An admin may also [add a post to a group](reaction:Admin.AddPostToGroup) or
-[remove a post from a group](reaction:Admin.RemovePostFromGroup).
+## Schedules
+
+A schedule is a cycle together with the galleries that run for it: a season length, a
+number of seasons, a start, and the galleries (wings, when seasons last 30 days or
+more). Galleries are only ever made for a schedule, so the only way to open new
+galleries is to schedule them, and a gallery's name only has to differ from the other
+names in its schedule. A schedule gains galleries only before it starts.
+
+An admin may [list every schedule](reaction:Admin.ListSchedules) as
+[each schedule with its galleries](former:Admin.ScheduleList), each gallery with the
+number of seasons it runs for. The cycle nomination rounds follow is not a schedule:
+one that [holds a nomination category](view:Admin.HoldsCategory) is left out.
+
+An admin may [create a schedule](reaction:Admin.CreateSchedule) from a season length,
+a number of seasons, a start, the gallery names, and the nominations those names were
+picked from. Nothing is made unless all of it can be: a schedule that
+[would overlap another](view:Admin.Overlaps) with the same season length and number of
+seasons answers `OVERLAPPING_SCHEDULE`, and picked nominations that
+[can't be chosen](view:Admin.PicksUnavailable) (gone, already chosen, or picked twice)
+answer `NOMINATION_UNAVAILABLE`. Then Grouping makes the galleries, refusing an empty
+list, an empty name, or two names that match ignoring case and spacing; Cycling makes
+the cycle, refusing a start in the past; the galleries join it; and Nominating marks the
+picked nominations chosen. The names go first because they are the one step that can
+still be refused after the checks, and there is no undoing an earlier step. If the cycle
+is refused after them, the new galleries belong to no schedule, so they never open.
 
 ```endpoints
-Admin.AddPostToGroup at /admin/groups/add-post
-Admin.RemovePostFromGroup at /admin/groups/remove-post
+Admin.ListSchedules at /admin/schedules/list
+Admin.CreateSchedule at /admin/schedules/create
+```
+
+Once made, a schedule can be edited in three ways. Before it starts, an admin may
+[add galleries](reaction:Admin.AddGalleries) to it, typed or picked from nominations as
+when creating it. A schedule that has started answers `ALREADY_STARTED`, a name that
+[matches a gallery already in the schedule](view:Admin.NameTaken) answers
+`DUPLICATE_NAME`, and unavailable nominations answer `NOMINATION_UNAVAILABLE`; then the
+galleries are made, join the cycle, and the picked nominations are marked chosen. An
+admin may also
+[change its number of seasons](reaction:Admin.SetScheduleRuns), either way, but never
+below the season underway (Cycling refuses `RUN_UNDERWAY`), and not to a number that
+[would overlap another schedule](view:Admin.OverlapsAnother) with the same season
+length. An admin may [remove a gallery](reaction:Admin.RemoveGallery): once the
+schedule has started, the gallery finishes the season underway and leaves from the next,
+so its past seasons stay in the archive; before it starts, the gallery is taken out
+entirely, and since it never ran [it is deleted](reaction:Admin.UnstartedGalleryIsDeleted).
+Every season keeps at least one gallery: removing the last one is refused (`LAST_ITEM`),
+as is removing one during the final season (`NO_LATER_RUN`).
+
+A schedule that [hasn't started](view:Admin.Upcoming) may be
+[cancelled](reaction:Admin.CancelSchedule), deleting it and its galleries; once it has
+started it answers `ALREADY_STARTED`.
+
+```endpoints
+Admin.AddGalleries at /admin/schedules/add-galleries
+Admin.SetScheduleRuns at /admin/schedules/set-runs
+Admin.RemoveGallery at /admin/schedules/remove-gallery
+Admin.CancelSchedule at /admin/schedules/cancel
 ```
 
 ## Future gallery nominations
 
-The application has exactly one nomination category, Future galleries, which the
-server creates when it starts if it does not exist yet; no endpoint creates or changes
-categories. It takes nominations only while it belongs to a cycle with a run happening,
-so an admin adds it to a cycle like a group.
+The application has exactly one nomination category, Future galleries. When the server
+starts it creates the category if missing and makes sure it follows the built-in weekly
+cycle (rounds start Mondays at 12 AM US Eastern), which no endpoint lists or changes.
+Admins never schedule nominations.
 
 Choosing the next galleries is the admin's decision, informed by the crowd. An admin
-may read [the previous round's ranking](reaction:Admin.PreviousRanking) of a category:
-[the round's nominations ranked by votes](former:Public.RoundRanking) for the most
-recent run of the category's cycle that has ended. By convention the top nomination
-becomes a gallery, and the admin chooses the rest.
+may read [a finished round's ranking](reaction:Admin.RoundOfNominations), counting
+rounds from 0: [the round's nominations ranked by votes](former:Public.RoundRanking),
+each saying whether it has been chosen. A round that hasn't finished, or doesn't exist,
+answers `NO_SUCH_ROUND`.
 
 ```endpoints
-Admin.PreviousRanking at /admin/nominations/previous
-```
-
-## Cycles
-
-A cycle sets the seasons for the groups and categories it holds. Gallery periods are
-dynamic: a cycle may have any period, and its number of runs may change while it runs.
-An admin may [list every cycle](reaction:Admin.ListCycles) as
-[each cycle with the items it holds](former:Admin.CycleList),
-[create a cycle](reaction:Admin.CreateCycle), which starts at the request's time with
-the given period and number of runs, and [delete a cycle](reaction:Admin.DeleteCycle),
-which closes every item it held.
-
-```endpoints
-Admin.ListCycles at /admin/cycles/list
-Admin.CreateCycle at /admin/cycles/create
-Admin.DeleteCycle at /admin/cycles/delete
-```
-
-A group or category is closed until it belongs to a cycle. An admin may
-[add an item to a cycle](reaction:Admin.AddItemToCycle) or
-[remove an item from a cycle](reaction:Admin.RemoveItemFromCycle); an item belongs to
-at most one cycle. Only an existing group or nomination category may be added; any
-other identifier answers `NO_SUCH_ITEM` and changes nothing. An admin may
-[change how many runs a cycle has](reaction:Admin.SetCycleRuns) to extend it or to end
-it immediately.
-
-```endpoints
-Admin.AddItemToCycle at /admin/cycles/add-item
-Admin.RemoveItemFromCycle at /admin/cycles/remove-item
-Admin.SetCycleRuns at /admin/cycles/set-runs
+Admin.RoundOfNominations at /admin/nominations/round
 ```

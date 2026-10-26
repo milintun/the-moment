@@ -9,9 +9,11 @@ The [group list](reaction:Public.ListGroups) shows
 [every group by name](former:Public.GroupList), each with
 [the cycle it belongs to](former:Public.GroupCycle) and
 [the run it is in right now](former:Public.GroupRun), either of which is blank when
-the group has none. The frontend hides groups with no cycle and tells wings from
-galleries by their cycle's period: 30 days or longer is a wing. Periods are dynamic,
-since a cycle may have any length and its number of runs may change.
+the group has none. A group's number of runs is its own: fewer than its schedule's when
+an admin removed it early, so its seasons end where it left. The frontend hides groups
+with no cycle and tells wings from galleries by their cycle's period: 30 days or longer
+is a wing. Periods are dynamic, since a cycle may have any length and its number of
+runs may change.
 
 ```endpoints
 Public.ListGroups at /groups/list
@@ -78,9 +80,9 @@ Public.ListCategories at /nominations/categories
 
 Anyone may [read a category's current ranking](reaction:Public.ListNominations):
 [the round's nominations ranked by votes](former:Public.RoundRanking) for the run
-happening now, most upvoted first and newest first among ties. A closed category's
-ranking is empty. Admins read the previous round's ranking through the same
-construction.
+happening now, most upvoted first and newest first among ties, each saying whether it
+has been chosen to become a gallery. A closed category's ranking is empty. Admins read
+finished rounds' rankings through the same construction.
 
 ```endpoints
 Public.ListNominations at /nominations/list

@@ -30,6 +30,7 @@ const DEFAULTS: Record<Category, string> = {
 };
 
 const ADMIN_ONLY = "only admins can do that.";
+const OVERLAP = "a schedule with the same season length and number of seasons already runs during those dates.";
 
 const MESSAGES: Partial<Record<Endpoint, Messages>> = {
   "/auth/register": {
@@ -73,22 +74,37 @@ const MESSAGES: Partial<Record<Endpoint, Messages>> = {
   "/nominations/withdraw": {
     FORBIDDEN: "only the person who nominated this can withdraw it.",
     NOT_FOUND: "this nomination was already withdrawn.",
+    CONFLICT: "this idea was chosen to become a gallery, so it stays.",
   },
   "/groups/archive": { NOT_FOUND: "this season isn't in the archive." },
-  "/admin/groups/create": { FORBIDDEN: ADMIN_ONLY, CONFLICT: "a gallery with that name already exists." },
-  "/admin/groups/delete": { FORBIDDEN: ADMIN_ONLY },
   "/admin/groups/remove-post": { FORBIDDEN: ADMIN_ONLY, NOT_FOUND: "this post is already off the wall." },
-  "/admin/cycles/create": {
+  "/admin/schedules/list": { FORBIDDEN: ADMIN_ONLY },
+  "/admin/schedules/create": {
     FORBIDDEN: ADMIN_ONLY,
-    INVALID_REQUEST: "seasons need a length above 0, and there must be a whole number of them, 1 or more.",
+    INVALID_REQUEST: "check the schedule: seasons longer than 0, a whole number of them, a start that isn't past, and a name for every gallery.",
+    NOT_FOUND: "a picked nomination was chosen or withdrawn meanwhile. the list has been refreshed.",
+    CONFLICT: OVERLAP,
   },
-  "/admin/cycles/add-item": { FORBIDDEN: ADMIN_ONLY, CONFLICT: "that's already in a cycle. remove it from that one first." },
-  "/admin/cycles/remove-item": { FORBIDDEN: ADMIN_ONLY },
-  "/admin/cycles/set-runs": { FORBIDDEN: ADMIN_ONLY, INVALID_REQUEST: "the number of seasons must be a whole number, 1 or more." },
-  "/admin/cycles/delete": { FORBIDDEN: ADMIN_ONLY },
-  "/admin/cycles/list": { FORBIDDEN: ADMIN_ONLY },
+  "/admin/schedules/add-galleries": {
+    FORBIDDEN: ADMIN_ONLY,
+    INVALID_REQUEST: "every gallery needs a name.",
+    NOT_FOUND: "a picked nomination was chosen or withdrawn meanwhile. the list has been refreshed.",
+    CONFLICT: "this schedule has started, or already has a gallery by one of those names.",
+  },
+  "/admin/schedules/set-runs": {
+    FORBIDDEN: ADMIN_ONLY,
+    INVALID_REQUEST: "the number of seasons must be a whole number, 1 or more.",
+    CONFLICT: OVERLAP,
+  },
+  "/admin/schedules/remove-gallery": { FORBIDDEN: ADMIN_ONLY, CONFLICT: "every season needs at least one gallery." },
+  "/admin/schedules/cancel": { FORBIDDEN: ADMIN_ONLY, CONFLICT: "this schedule has already started, so it can't be cancelled." },
+  "/admin/nominations/round": { FORBIDDEN: ADMIN_ONLY, NOT_FOUND: "that round hasn't finished yet." },
   "/admin/admins/list": { FORBIDDEN: ADMIN_ONLY },
-  "/admin/admins/add": { FORBIDDEN: "only the owner can add admins.", CONFLICT: "they're already an admin." },
+  "/admin/admins/add": {
+    FORBIDDEN: "only the owner can add admins.",
+    CONFLICT: "they're already an admin.",
+    NOT_FOUND: "nobody has registered that username.",
+  },
   "/admin/admins/remove": { FORBIDDEN: "only the owner can remove admins, and the owner can't be removed." },
 };
 

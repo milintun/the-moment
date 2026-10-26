@@ -175,7 +175,7 @@ describe("explain", () => {
 
   test("falls back to the category, then to a general message", () => {
     expect(explain("/posts/mine", "UNAUTHORIZED")).toBe(SESSION_ENDED);
-    expect(explain("/admin/cycles/delete", "NOT_FOUND")).toBe("this changed since the page opened, so it's been refreshed.");
+    expect(explain("/admin/schedules/cancel", "NOT_FOUND")).toBe("this changed since the page opened, so it's been refreshed.");
     expect(explain("/posts/mine", "BAD_STATUS")).toBe("something went wrong. try again.");
   });
 

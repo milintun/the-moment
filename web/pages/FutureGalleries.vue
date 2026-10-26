@@ -116,11 +116,12 @@ onMounted(async () => {
   <p v-if="!ranking.length">No nominations yet.</p>
   <ol>
     <li v-for="n in ranking" :key="n.nomination">
-      {{ n.name }} by {{ n.nominator }} | {{ n.votes }} vote(s)
+      <span :class="{ chosen: n.chosen }">{{ n.name }}</span> by {{ n.nominator }} | {{ n.votes }} vote(s)
+      <template v-if="n.chosen"> · chosen to become a gallery</template>
       <button v-if="me && me !== n.nominator" :class="{ voted: voted.has(n.nomination) }" @click="toggle(n.nomination)">
         {{ voted.has(n.nomination) ? "Unvote" : "Upvote" }}
       </button>
-      <template v-if="me === n.nominator">
+      <template v-if="me === n.nominator && !n.chosen">
         <button v-if="confirming !== n.nomination" @click="confirming = n.nomination">Withdraw</button>
         <template v-else>
           Withdraw this nomination?

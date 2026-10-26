@@ -323,11 +323,11 @@ const NominationCurrent = former("whether (nomination) is active at (now)", ({ n
 // is still in the current round (current is null when not).
 const MyNominations = former(
   "the nominations of (user) at (now)",
-  ({ user, now }, { nomination, name, createdAt, votes }) =>
+  ({ user, now }, { nomination, name, createdAt, votes, chosen }) =>
     form({
-      nominations: each(Nominating._byNominator({ nominator: user }).is({ nomination, name, createdAt }))
+      nominations: each(Nominating._byNominator({ nominator: user }).is({ nomination, name, createdAt, chosen }))
         .where(NominationVotes._count({ target: nomination }).is({ votes }))
-        .form({ nomination, name, createdAt, votes })
+        .form({ nomination, name, createdAt, votes, chosen })
         .splicing(whether(NominationCurrent({ nomination, now }))),
     }),
 );

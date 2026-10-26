@@ -6,6 +6,7 @@ export class InvalidName extends Error {} // 400
 export class TooSoon extends Error {} // 409 conflict
 export class NoSuchNomination extends Error {} // 404
 export class NotNominator extends Error {} // 403 forbidden
+export class Chosen extends Error {} // 409 conflict
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -21,6 +22,7 @@ interface Nomination {
   name: string; // as written
   normalized: string; // for equivalence
   createdAt: Date;
+  chosenAt?: Date; // set once the idea is chosen to become a gallery
 }
 
 interface Nominator {
@@ -97,8 +99,19 @@ export class NominatingConcept {
     const found = await this.nominations.findOne({ _id: nomination });
     if (found === null) throw new NoSuchNomination("There is no such nomination.");
     if (found.nominator !== nominator) throw new NotNominator("Only the nominator can withdraw a nomination.");
+    if (found.chosenAt) throw new Chosen("A chosen nomination can't be withdrawn.");
     // lastNominatedAt is left alone, so withdrawing never frees today's nomination.
     await this.nominations.deleteOne({ _id: nomination });
+    return {};
+  }
+
+  async choose({ nominations, chosenAt }: { nominations: string[]; chosenAt: Date }): Promise<Record<string, never>> {
+    const found = await this.nominations.find({ _id: { $in: nominations } }).toArray();
+    if (found.length !== new Set(nominations).size) throw new NoSuchNomination("There is no such nomination.");
+    if (found.length !== nominations.length || found.some((n) => n.chosenAt)) {
+      throw new Chosen("This nomination has already been chosen.");
+    }
+    await this.nominations.updateMany({ _id: { $in: nominations } }, { $set: { chosenAt } });
     return {};
   }
 
@@ -113,10 +126,10 @@ export class NominatingConcept {
   }
 
   async _nominations({ category }: { category: string }): Promise<
-    Array<{ nomination: string; nominator: string; name: string; createdAt: Date }>
+    Array<{ nomination: string; nominator: string; name: string; createdAt: Date; chosen: boolean }>
   > {
     const rows = await this.nominations.find({ category }).sort({ createdAt: -1, _id: 1 }).toArray();
-    return rows.map(({ _id, nominator, name, createdAt }) => ({ nomination: _id, nominator, name, createdAt }));
+    return rows.map(({ _id, nominator, name, createdAt, chosenAt }) => ({ nomination: _id, nominator, name, createdAt, chosen: !!chosenAt }));
   }
 
   async _equivalent({ category, name }: { category: string; name: string }): Promise<
@@ -130,18 +143,31 @@ export class NominatingConcept {
   }
 
   async _byNominator({ nominator }: { nominator: string }): Promise<
-    Array<{ nomination: string; category: string; name: string; createdAt: Date }>
+    Array<{ nomination: string; category: string; name: string; createdAt: Date; chosen: boolean }>
   > {
     const rows = await this.nominations.find({ nominator }).sort({ createdAt: -1, _id: 1 }).toArray();
-    return rows.map(({ _id, category, name, createdAt }) => ({ nomination: _id, category, name, createdAt }));
+    return rows.map(({ _id, category, name, createdAt, chosenAt }) => ({ nomination: _id, category, name, createdAt, chosen: !!chosenAt }));
+  }
+
+  async _unavailable({ nominations }: { nominations: string[] }): Promise<Array<{ nomination: string }>> {
+    const free = new Set(
+      (await this.nominations.find({ _id: { $in: nominations }, chosenAt: { $exists: false } }).toArray()).map((n) => n._id),
+    );
+    const seen = new Set<string>();
+    const unavailable = nominations.filter((n) => {
+      const repeat = seen.has(n);
+      seen.add(n);
+      return repeat || !free.has(n);
+    });
+    return [...new Set(unavailable)].map((nomination) => ({ nomination }));
   }
 
   async _get({ nomination }: { nomination: string }): Promise<
-    Array<{ nominator: string; category: string; name: string; createdAt: Date }>
+    Array<{ nominator: string; category: string; name: string; createdAt: Date; chosen: boolean }>
   > {
     const found = await this.nominations.findOne({ _id: nomination });
     if (found === null) return [];
-    const { nominator, category, name, createdAt } = found;
-    return [{ nominator, category, name, createdAt }];
+    const { nominator, category, name, createdAt, chosenAt } = found;
+    return [{ nominator, category, name, createdAt, chosen: !!chosenAt }];
   }
 }

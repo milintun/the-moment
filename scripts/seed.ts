@@ -68,14 +68,12 @@ async function uploadFrom(client: ReturnType<typeof clientFor>, url: string): Pr
 const admin = clientFor();
 ok("milin sign-in", await admin.auth["sign-in"]({ username: "milin", password: adminPassword }));
 
-const groupIds = new Map<string, string>();
-for (const name of GROUPS) {
-  groupIds.set(name, ok(`create group ${name}`, await admin.admin.groups.create({ name })).group);
-}
-const { cycle } = ok("create cycle", await admin.admin.cycles.create(CYCLE));
-for (const [name, group] of groupIds) {
-  ok(`add ${name} to cycle`, await admin.admin.cycles["add-item"]({ cycle, item: group }));
-}
+// Galleries are only ever made with their schedule, which starts now.
+const { groups } = ok(
+  "create schedule",
+  await admin.admin.schedules.create({ ...CYCLE, start: new Date().toISOString(), names: [...GROUPS] }),
+);
+const groupIds = new Map(GROUPS.map((name, i) => [name, groups[i]!] as const));
 console.log(`Created ${GROUPS.join(" and ")} in a ${CYCLE.period / DAY}-day cycle.`);
 
 const users = new Map<string, ReturnType<typeof clientFor>>();

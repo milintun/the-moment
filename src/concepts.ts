@@ -14,13 +14,24 @@ import { PostingConcept, NoSuchPost, NotOwner } from "./concepts/Posting.ts";
 import upvotingSpec from "@design/concepts/Upvoting.md" with { type: "text" };
 import { AlreadyVoted, NotVoted, UpvotingConcept } from "./concepts/Upvoting.ts";
 import groupingSpec from "@design/concepts/Grouping.md" with { type: "text" };
-import { AlreadyInGroup, GroupingConcept, NameTaken, NoSuchGroup, NotInGroup } from "./concepts/Grouping.ts";
+import { AlreadyInGroup, DuplicateName, GroupingConcept, InvalidName as InvalidGroupName, NoNames, NoSuchGroup, NotInGroup } from "./concepts/Grouping.ts";
 import cyclingSpec from "@design/concepts/Cycling.md" with { type: "text" };
-import { AlreadyCycling, CyclingConcept, InvalidCycle, NoSuchCycle, NotInCycle } from "./concepts/Cycling.ts";
+import {
+  AlreadyCycling,
+  CyclingConcept,
+  InvalidCycle,
+  LastItem,
+  NoLaterRun,
+  NoSuchCycle,
+  NotInCycle,
+  RunUnderway,
+  StartPassed,
+} from "./concepts/Cycling.ts";
 import administratingSpec from "@design/concepts/Administrating.md" with { type: "text" };
 import { AdministratingConcept, AlreadyAdmin, NotAdmin, OwnerExists, OwnerProtected } from "./concepts/Administrating.ts";
 import nominatingSpec from "@design/concepts/Nominating.md" with { type: "text" };
 import {
+  Chosen,
   InvalidName,
   NominatingConcept,
   NameTaken as CategoryNameTaken,
@@ -65,7 +76,9 @@ const grouping = registerConcept({
   class: GroupingConcept,
   spec: groupingSpec,
   refusals: {
-    NAME_TAKEN: NameTaken,
+    NO_NAMES: NoNames,
+    INVALID_NAME: InvalidGroupName,
+    DUPLICATE_NAME: DuplicateName,
     NO_SUCH_GROUP: NoSuchGroup,
     ALREADY_IN_GROUP: AlreadyInGroup,
     NOT_IN_GROUP: NotInGroup,
@@ -80,6 +93,10 @@ const cycling = registerConcept({
     ALREADY_CYCLING: AlreadyCycling,
     NO_SUCH_CYCLE: NoSuchCycle,
     NOT_IN_CYCLE: NotInCycle,
+    NO_LATER_RUN: NoLaterRun,
+    LAST_ITEM: LastItem,
+    RUN_UNDERWAY: RunUnderway,
+    START_PASSED: StartPassed,
   },
 });
 
@@ -104,6 +121,7 @@ const nominating = registerConcept({
     TOO_SOON: TooSoon,
     NO_SUCH_NOMINATION: NoSuchNomination,
     NOT_NOMINATOR: NotNominator,
+    CHOSEN: Chosen,
   },
 });
 

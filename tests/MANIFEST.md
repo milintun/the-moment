@@ -108,7 +108,10 @@ Times are fixed dates, never the real clock.
 ### Grouping.test.ts
 - **principle**: create "Doodles" → add p1 and p2 → `_items` lists both → remove p1 → delete the group → `_items` empty, and p2's other groups are unaffected (deleting removes only that group's memberships).
 - **create**
-  - refuses `NAME_TAKEN`; still only one group with that name
+  - two groups may share a name
+- **createMany**
+  - a group per name, in order, even names an older group has
+  - refuses `NO_NAMES`, `INVALID_NAME`, and `DUPLICATE_NAME` (ignoring case and spacing); nothing made
 - **delete**
   - refuses `NO_SUCH_GROUP`
 - **addItem**
@@ -123,37 +126,47 @@ Times are fixed dates, never the real clock.
   - `_items` most recently added first, and empty for an unknown group
   - `_groupsOf` lists every group holding the item, ordered
   - `_byName` finds the group, or no row when unknown
+  - `_nameAmong` answers the name when it matches one of the names ignoring case and spacing, else no row
+  - `deleteMany` deletes the given groups and their memberships, skipping unknown ones
   - `_page` answers a window of `_groups`; nothing past the end or for a bad offset/limit
   - `_itemsAdded` lists items added at or after `from` and before `to`, newest first
 
 ### Cycling.test.ts
-- **principle**: a 1-day cycle with 3 runs holds a group and a category → both are in run 0, then run 1, then run 2 → after run 2 neither has a current run → `setRuns` to 4 reopens run 3 for both.
+- **principle**: a 1-day cycle with 3 runs holds two items → run 0, run 1 → one item removed during run 1 finishes it and is gone from run 2 → the other runs on → shortening below the run underway refuses `RUN_UNDERWAY` → extending to 4 opens run 3 for the item that stayed only.
 - **create**
   - refuses `INVALID_CYCLE` for period 0, a negative period, 0 runs, and 1.5 runs; no cycle created
-- **addItem**
-  - refuses `NO_SUCH_CYCLE`
-  - refuses `ALREADY_CYCLING` for the same cycle and for a second cycle; the item stays in the first
+  - refuses `START_PASSED` more than a minute before `earliest`; within the minute is fine
+  - reads a start sent as an ISO string
+- **addItem and addItems**
+  - refuse `NO_SUCH_CYCLE`
+  - refuse `ALREADY_CYCLING` for the same cycle and for a second cycle; the item stays in the first
+  - `addItems` adds all or none: one already cycling, or one listed twice, adds nothing
 - **removeItem**
-  - removes the item (no current run afterwards)
+  - before the start: takes the item out entirely
+  - once started: stays for the run underway and leaves from the next
+  - refuses `NOT_IN_CYCLE` for an item elsewhere or already leaving
+  - refuses `NO_LATER_RUN` during the last run
+  - refuses `LAST_ITEM` when no other item would be left, before or after the start
   - refuses `NO_SUCH_CYCLE`
-  - refuses `NOT_IN_CYCLE`, including an item in another cycle, which stays there
 - **setRuns**
-  - extends a cycle
-  - lowering runs below the current run ends it immediately
-  - refuses `INVALID_CYCLE` (0 and 1.5); runs unchanged
-  - refuses `NO_SUCH_CYCLE`
+  - extends, and shortens down to the run underway
+  - before the start any number; after the end it can be extended again
+  - refuses `RUN_UNDERWAY` below the run underway; runs unchanged
+  - refuses `LAST_ITEM` extending a cycle no item would stay in
+  - refuses `INVALID_CYCLE` (0 and 1.5) and `NO_SUCH_CYCLE`
 - **delete**
-  - deletes the cycle, and its items can join another cycle
+  - deletes the cycle, answers its items, and they can join another cycle
   - refuses `NO_SUCH_CYCLE`
 - **queries**
   - `_currentRun` before start, at start, just before and at a run boundary, and after the last run
-  - `_run` gives any run's window, past or future, and nothing for runs the cycle doesn't have
-  - `_previousRun` has none during run 0, gives run k−1 during run k, and gives the last run after the cycle ends
-  - `_cycle` and `_items` for a member and a non-member
+  - `_previousRun` none in run 0, run k−1 in run k, and an item's own last run after it left
+  - `_run` gives the window of runs the item is in, and nothing past them
+  - `_cycle` and `_items` report each item's own number of runs
+  - `_overlapping` finds cycles of the same length and runs whose time overlaps (not ones touching at an end), leaving out `except`
   - `_all` ordered by start
 
 ### Nominating.test.ts
-- **principle**: create "Future galleries" → Gigi nominates "Hands" → `_equivalent(" hands ")` finds it → Gigi's second nomination that day refuses `TOO_SOON` → Sid nominates "Rainy days", listed before Gigi's → Gigi withdraws "Hands", which is no longer listed.
+- **principle**: create "Future galleries" → Gigi nominates "Hands" → `_equivalent(" hands ")` finds it → Gigi's second nomination that day refuses `TOO_SOON` → Sid nominates "Rainy days", listed before Gigi's → Gigi withdraws "Hands", which is no longer listed → Sid's "Rainy days" is chosen, stays listed marked chosen, and can't be withdrawn or chosen again.
 - **createCategory**
   - refuses `NAME_TAKEN`; still one category with that name
 - **nominate**
@@ -167,6 +180,10 @@ Times are fixed dates, never the real clock.
   - refuses `NO_SUCH_NOMINATION`, including withdrawing twice
   - refuses `NOT_NOMINATOR`; still listed
   - withdrawing does not reset the daily limit
+- **choose**
+  - marks every listed nomination chosen; a chosen one can't be withdrawn (`CHOSEN`)
+  - refuses `NO_SUCH_NOMINATION`, and `CHOSEN` for one already chosen or listed twice; none chosen
+  - `_unavailable` answers the missing, chosen, and repeated ones
 - **queries**
   - `_nominations` newest first, per category
   - `_equivalent` matches spacing and case variants but not "Hand", and only in its own category
@@ -199,7 +216,7 @@ Runs against local storage (RustFS), in the `the-moment-test` bucket.
 
 ## Setup steps (`tests/owner.test.ts`, `tests/nominations.test.ts`)
 - `makeOwner`: makes a registered account the owner; never an unregistered name; never replaces an owner
-- `ensureFutureGalleries`: creates the one Future galleries category; never a second one on restart
+- `ensureFutureGalleries`: creates the one Future galleries category; never a second one on restart; it follows a weekly cycle starting Monday 12 AM Eastern, running now, a week per round; restarting reuses that cycle; moves the category out of an admin-made cycle, leaving that cycle's galleries
 
 ## Composition tests (`tests/compositions/`)
 
@@ -267,22 +284,36 @@ Runs against local storage (RustFS), in the `the-moment-test` bucket.
   - every owner-only endpoint refuses `OWNER_ONLY` for an admin who isn't the owner
   - no session refuses `UNKNOWN_SESSION`
 - **admins**
-  - the owner adds and removes admins
-  - refuses `ALREADY_ADMIN` and `OWNER_PROTECTED`
+  - the owner adds and removes admins, who gain and lose access
+  - refuses `NO_SUCH_USER`, `ALREADY_ADMIN`, and `OWNER_PROTECTED`
   - an admin lists the admins
-- **groups**
-  - create, and refuses `NAME_TAKEN`
-  - delete: the group leaves its cycle
-  - add-post and remove-post
-- **previous ranking**
-  - empty during the first round
-  - after the round rolls over: that round's nominations, most votes first and newest first on ties
-- **cycles**
-  - create and list with items
-  - add-item for a group and for a category, and refuses `NO_SUCH_ITEM` for anything else
-  - remove-item
-  - set-runs ending a cycle early closes its group to posting
-  - delete
+- **groups/remove-post**
+  - takes a post off a wall, keeping the post
+- **schedules/create**
+  - makes the schedule and its galleries, open from the start, and lists them
+  - a later start keeps the galleries closed until then
+  - refuses `START_PASSED` beyond a minute's grace; no schedule
+  - refuses `NO_NAMES`, `INVALID_NAME`, `DUPLICATE_NAME`, `INVALID_CYCLE`; nothing made
+  - names only need to differ within a schedule
+  - refuses `OVERLAPPING_SCHEDULE` for the same length and number while one runs; touching ends, other numbers, and other lengths may overlap
+  - marks picked nominations chosen (then `CHOSEN` on withdraw); refuses `NOMINATION_UNAVAILABLE` for a chosen one, making nothing
+  - the cycle nomination rounds follow isn't listed, and never counts as overlapping
+- **schedules/add-galleries**
+  - adds typed and picked galleries to an upcoming schedule, marking nominations chosen; they open with it
+  - refuses `DUPLICATE_NAME` for a name already in the schedule (ignoring case and spacing), making nothing; other schedules' names don't count
+  - refuses `ALREADY_STARTED` once started, and `NOMINATION_UNAVAILABLE`
+- **schedules/set-runs**
+  - extends and ends early, never before the season underway (`RUN_UNDERWAY`)
+  - refuses `OVERLAPPING_SCHEDULE` when the new number matches an overlapping schedule
+- **schedules/remove-gallery**
+  - once started: finishes this season, leaves from the next, its season stays archived, and lists show its own number of seasons
+  - before the start: taken out and deleted
+  - refuses `LAST_ITEM` and `NO_LATER_RUN`
+- **schedules/cancel**
+  - cancels an upcoming schedule, deleting its galleries
+  - refuses `ALREADY_STARTED`
+- **nominations/round**
+  - a finished round ranked by votes, newest first on ties, with chosen flags; `NO_SUCH_ROUND` while running and for a round that doesn't exist
 
 ### Public.test.ts
 - **groups/list**
@@ -321,15 +352,16 @@ Runs against local storage (RustFS), in the `the-moment-test` bucket.
 | Administrating | setOwner, addAdmin, removeAdmin | OWNER_EXISTS, ALREADY_ADMIN, NOT_ADMIN, OWNER_PROTECTED |
 | Posting | create, delete | NO_SUCH_POST, NOT_OWNER |
 | Upvoting | upvote, unvote, clear | ALREADY_VOTED, NOT_VOTED |
-| Grouping | create, delete, addItem, removeItem | NAME_TAKEN, NO_SUCH_GROUP, ALREADY_IN_GROUP, NOT_IN_GROUP |
-| Cycling | create, addItem, removeItem, setRuns, delete | INVALID_CYCLE, NO_SUCH_CYCLE, ALREADY_CYCLING, NOT_IN_CYCLE |
-| Nominating | createCategory, nominate, withdraw | NAME_TAKEN, NO_SUCH_CATEGORY, INVALID_NAME, TOO_SOON, NO_SUCH_NOMINATION, NOT_NOMINATOR |
+| Grouping | create, createMany, delete, deleteMany, addItem, removeItem | NO_NAMES, INVALID_NAME, DUPLICATE_NAME, NO_SUCH_GROUP, ALREADY_IN_GROUP, NOT_IN_GROUP |
+| Cycling | create, addItem, addItems, removeItem, setRuns, delete | INVALID_CYCLE, START_PASSED, NO_SUCH_CYCLE, ALREADY_CYCLING, NOT_IN_CYCLE, NO_LATER_RUN, LAST_ITEM, RUN_UNDERWAY |
+| Nominating | createCategory, nominate, withdraw, choose | NAME_TAKEN, NO_SUCH_CATEGORY, INVALID_NAME, TOO_SOON, NO_SUCH_NOMINATION, NOT_NOMINATOR, CHOSEN |
 | Uploading | requestUpload, verify, remove, link | NO_SUCH_UPLOAD, NOT_YOUR_UPLOAD, NOT_UPLOADED, INVALID_FILE |
 
-Every endpoint (39) is called at least once in the composition tests, and every
+Every endpoint (36) is called at least once in the composition tests, and every
 composition-authored error (GROUP_CLOSED, OWN_POST, NOT_IN_SEASON, ADMIN_ONLY,
 OWNER_ONLY, CATEGORY_CLOSED, ALREADY_NOMINATED, OWN_NOMINATION, NOT_ACTIVE,
-NO_SUCH_ITEM, UNSUPPORTED_TYPE) is triggered at least once.
+UNSUPPORTED_TYPE, NO_SUCH_USER, OVERLAPPING_SCHEDULE, NOMINATION_UNAVAILABLE,
+ALREADY_STARTED, NO_SUCH_ROUND) is triggered at least once.
 
 ## Frontend tests
 
@@ -358,7 +390,14 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 - **gallery view**: artwork with caption, owner, votes, image; signed out has no buttons and posting goes to log in; closed gallery offers no posting; empty wall; upvote → "unvote" filled in → back; no voting on your own post, delete after confirming; admin removes someone's post after confirming; non-admins never see removal; a refusal shows next to its post; a post already gone leaves with the message above; an ended session links to log in
 - **gallery season notices**: new season says when it started; ending soon counts down; none mid-season and the last season is marked final; a season ending with the page open points to the archive, hides posting, and a vote then says votes are final without reloading the wall
 - **future galleries**: counts down to the close; an idea already nominated is caught before the server; a refusal in an open round means once a day; voting after the round closed says votes are final
-- **admin**: a refusal shows in its own section only
+- **chosen ideas**: Future galleries strikes a chosen idea and its nominator can't withdraw it; my nominations says "chosen" instead of withdraw
+
+### web/tests/admin.spec.ts
+- **home**: an admin gets a red admin button apart from sign out; others get none
+- **admin sections**: sidebar shows one section at a time, new schedule first; each section has its own address; non-admins turned away
+- **new schedule**: starts at the next 12 AM by default; 30+ day seasons say they make wings; last week's round first, older rounds by arrow, chosen ideas struck and unpickable; creates with typed and picked galleries and lands on schedules; no galleries, duplicate names, and a past start caught before the server; overlap explained; nothing to pick before any round finishes
+- **schedules**: read only until edited (edit / done); an upcoming one gains typed and picked galleries; a name already in it is caught before the server; a running one can't gain galleries; a running schedule's season, and removing says it stays this season; no removing in the final season, of a gallery already leaving, or of the last one staying; cancelling an upcoming one after confirming; a running one can't be cancelled or end before the season underway; finished schedules tucked away; a new one announced
+- **people**: adding an unregistered name is explained
 - **archive**: pages through `/archive/galleries` 20 at a time with "load more", showing only galleries with finished seasons; empty message
 
 ### e2e/museum.spec.ts
@@ -367,6 +406,7 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 - another visitor upvotes, then unvotes
 - an artist deletes their own post after confirming
 - an admin removes someone's post from a gallery
-- the owner creates a season and a gallery from the admin page; it opens on the map tagged "new", and its page says the season just started
-- refusals show their own message: a taken username, a gallery name in use
+- the owner schedules a gallery from the admin page (red admin button → new schedule); it's listed as running, opens on the map tagged "new"
+- an upcoming schedule shows only "edit" until edited, then gains a gallery
+- refusals show their own message: a taken username, adding an admin nobody registered
 - signed out, "post here" goes to log in

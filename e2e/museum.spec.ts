@@ -87,28 +87,51 @@ test("an admin takes someone's post off a gallery wall", async ({ page, playwrig
   await expect(page.locator(`#post-${post}`)).toHaveCount(0);
 });
 
-test("the owner starts a season and a gallery in it from the admin page, and it opens on the map", async ({ page }) => {
+test("the owner schedules galleries from the admin page, and they open on the map and in the schedule list", async ({ page }) => {
   const name = unique("Admin Made ");
   await logInAs(page, OWNER.username, OWNER.password);
-  await page.goto("/home/admin");
-  await page.getByLabel("Season length (days)").fill("7");
-  await page.getByLabel("Number of seasons").fill("2");
-  await page.getByRole("button", { name: "Create cycle (starts now)" }).click();
-  const gallerySection = page.locator("form").filter({ has: page.getByRole("button", { name: "Create", exact: true }) });
-  await gallerySection.getByLabel("Name").fill(name);
-  // The newest cycle is the one just made: a week-long season, 2 of them.
-  const option = gallerySection.locator("select option").filter({ hasText: /^\s*7-day seasons/ }).last();
-  await gallerySection.locator("select").selectOption({ label: (await option.textContent())!.trim() });
-  await gallerySection.getByRole("button", { name: "Create", exact: true }).click();
-  await expect(page.getByRole("link", { name })).toBeVisible();
+  await page.getByRole("link", { name: "admin" }).click();
+  await expect(page.getByRole("heading", { name: "New schedule" })).toBeVisible();
+  await page.getByLabel("season length (days)").fill("7");
+  await page.getByLabel("number of seasons").fill("13");
+  // Starting this minute rather than the default next 12 AM, so it opens straight away.
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+  await page.getByLabel("starts").fill(local);
+  await page.getByLabel("name", { exact: true }).fill(name);
+  await page.getByRole("button", { name: "add gallery" }).click();
+  await page.getByRole("button", { name: "create schedule" }).click();
+
+  await expect(page).toHaveURL(/\/home\/admin\/schedules\?made=1$/);
+  await expect(page.getByText("scheduled 1 gallery.")).toBeVisible();
+  await expect(page.locator(".schedule").filter({ hasText: name })).toContainText("running");
 
   await page.goto("/map");
   const room = page.getByRole("link", { name: new RegExp(name, "i") });
-  await expect(room.locator(".badge")).toHaveText("new"); // its first season just started
+  await expect(room.locator(".badge")).toHaveText("new");
   await room.click();
   await expect(page.getByRole("heading", { name })).toBeVisible();
-  await expect(page.locator(".season-notice")).toHaveText("new season · started less than a minute ago");
-  await expect(page.getByRole("link", { name: "post here" })).toBeVisible();
+});
+
+test("an upcoming schedule is read only until edited, then gains a gallery", async ({ page }) => {
+  const first = unique("Upcoming ");
+  const added = unique("Added ");
+  await logInAs(page, OWNER.username, OWNER.password);
+  await page.goto("/home/admin/new");
+  await page.getByLabel("season length (days)").fill("3");
+  await page.getByLabel("number of seasons").fill("2");
+  await page.getByLabel("name", { exact: true }).fill(first);
+  await page.getByRole("button", { name: "add gallery" }).click();
+  await page.getByRole("button", { name: "create schedule" }).click();
+
+  const card = page.locator(".schedule").filter({ hasText: first });
+  await expect(card).toContainText("upcoming");
+  await expect(card.getByRole("button")).toHaveText(["edit"]);
+  await card.getByRole("button", { name: "edit" }).click();
+  await card.getByLabel("name", { exact: true }).fill(added);
+  await card.getByRole("button", { name: "add gallery" }).click();
+  await card.getByRole("button", { name: "add to schedule" }).click();
+  await expect(card.getByRole("link", { name: added })).toBeVisible();
 });
 
 test("signed out, posting sends you to log in", async ({ page, playwright, baseURL }) => {
@@ -119,7 +142,7 @@ test("signed out, posting sends you to log in", async ({ page, playwright, baseU
   await expect(page).toHaveURL(/\/auth$/);
 });
 
-test("refusals show their own message: a taken username, and a gallery name in use", async ({ page }) => {
+test("refusals show their own message: a taken username, and adding an admin nobody registered", async ({ page }) => {
   const taken = await register(page.request);
   await page.request.post("/api/auth/sign-out", { data: {} });
   await page.goto("/auth");
@@ -129,13 +152,8 @@ test("refusals show their own message: a taken username, and a gallery name in u
   await expect(page.getByRole("alert")).toHaveText("that username is taken.");
 
   await logInAs(page, OWNER.username, OWNER.password);
-  await page.goto("/home/admin");
-  const form = page.locator("form").filter({ has: page.getByRole("button", { name: "Create", exact: true }) });
-  const name = unique("Twice ");
-  for (let i = 0; i < 2; i++) {
-    await form.getByLabel("Name").fill(name);
-    await form.getByRole("button", { name: "Create", exact: true }).click();
-    await expect(page.getByRole("link", { name, exact: true })).toBeVisible(); // the first one is made
-  }
-  await expect(form.getByRole("alert")).toHaveText("a gallery with that name already exists.");
+  await page.goto("/home/admin/people");
+  await page.getByLabel("username").fill(unique("nobody"));
+  await page.getByRole("button", { name: "add admin" }).click();
+  await expect(page.getByRole("alert")).toHaveText("nobody has registered that username.");
 });

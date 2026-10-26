@@ -109,8 +109,8 @@ User.ListMyPosts at /posts/mine
 
 ## Nominating
 
-A nomination category belongs to a cycle like a group, and a round is the cycle's
-current run. A nomination is [active](view:User.NominationActive) while its category's
+A nomination category belongs to a cycle like a group (for Future galleries, the
+built-in weekly one), and a round is the cycle's current run. A nomination is [active](view:User.NominationActive) while its category's
 cycle has a run happening and the nomination was made during that run. When the run
 ends, its nominations stop being active without anything changing, and the next round
 starts empty.

@@ -5,6 +5,8 @@ import { createHttpHandler } from "@mit-sdg/sync-engine-http/handler";
 import type { TheMomentWire } from "../generated/wire.ts";
 import { assembleApplication } from "../src/assembly.ts";
 import { AdministratingConcept } from "../src/concepts/Administrating.ts";
+import { CyclingConcept } from "../src/concepts/Cycling.ts";
+import { GroupingConcept } from "../src/concepts/Grouping.ts";
 import { NominatingConcept } from "../src/concepts/Nominating.ts";
 import { db } from "../src/db.ts";
 import { policy } from "../src/http.ts";
@@ -72,15 +74,26 @@ export async function setUpPeople(api: Api): Promise<Sessions> {
   return people;
 }
 
-/** Creates a cycle starting now with the given period and runs. */
-export async function createCycle(api: Api, admin: string, period: number, runs: number): Promise<string> {
-  return ok(await api.admin.cycles.create({ session: admin, period, runs })).cycle;
+// Fixtures made through the concepts directly: schedules are the only way the endpoints make
+// cycles and galleries (see Admin.test.ts), and most tests just need an open gallery.
+
+type App = ReturnType<typeof useApp>;
+
+/** Creates a cycle starting now (the app's clock) with the given period and runs. */
+export async function createCycle(app: App, period: number, runs: number): Promise<string> {
+  const now = app.clock.read();
+  return (await new CyclingConcept(db).create({ start: now, period, runs, earliest: now })).cycle;
 }
 
-/** Creates a group and puts it in the cycle, so it is open now. */
-export async function openGroup(api: Api, admin: string, name: string, cycle: string): Promise<string> {
-  const { group } = ok(await api.admin.groups.create({ session: admin, name }));
-  ok(await api.admin.cycles["add-item"]({ session: admin, cycle, item: group }));
+/** Creates a group, made now, that belongs to no cycle, so it is closed. */
+export async function createGroup(app: App, name: string): Promise<string> {
+  return (await new GroupingConcept(db).create({ name, createdAt: app.clock.read() })).group;
+}
+
+/** Creates a group and puts it in the cycle, so it is open while the cycle runs. */
+export async function openGroup(app: App, name: string, cycle: string): Promise<string> {
+  const group = await createGroup(app, name);
+  await new CyclingConcept(db).addItem({ cycle, item: group });
   return group;
 }
 
@@ -93,9 +106,9 @@ export async function createCategory(name: string): Promise<string> {
 }
 
 /** Creates a nomination category and puts it in the cycle, so it is open now. */
-export async function openCategory(api: Api, admin: string, name: string, cycle: string): Promise<string> {
+export async function openCategory(name: string, cycle: string): Promise<string> {
   const category = await createCategory(name);
-  ok(await api.admin.cycles["add-item"]({ session: admin, cycle, item: category }));
+  await new CyclingConcept(db).addItem({ cycle, item: category });
   return category;
 }
 

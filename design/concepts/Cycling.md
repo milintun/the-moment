@@ -46,11 +46,14 @@ a set of Memberships with
 ## Actions
 
 ```actions
-create (start: DateTime, period: Number, runs: Number) : returns (cycle: Cycle)
+create (start: DateTime, period: Number, runs: Number, earliest: DateTime) : returns (cycle: Cycle)
   where period is not positive or runs is not a whole number of at least 1
   then
     refuses INVALID_CYCLE "A cycle needs a positive period and at least one run."
-  where period and runs are valid
+  where start is more than one minute before earliest
+  then
+    refuses START_PASSED "A cycle can't start in the past."
+  where period and runs are valid and start is at most one minute before earliest
   then
     create a new cycle with this start, period, and runs, and no items
     returns cycle
@@ -119,14 +122,14 @@ setRuns (cycle: Cycle, runs: Number, now: DateTime) : returns ()
     set the cycle's runs to runs
     returns
 
-delete (cycle: Cycle) : returns ()
+delete (cycle: Cycle) : returns (items: List<Item>)
   where cycle is not in Cycles
   then
     refuses NO_SUCH_CYCLE "There is no such cycle."
   where cycle is in Cycles
   then
-    delete cycle and its memberships, so its items belong to no cycle
-    returns
+    delete cycle and its memberships, so its items belong to no cycle, with items the items it held
+    returns items
 ```
 
 ## Queries
@@ -151,10 +154,10 @@ _run (item: Item, run: Number) : optional (start: DateTime, end: DateTime)
   answers when run of item's cycle starts and ends, counting runs from 0, whether or not it
   has happened yet; no row when item belongs to no cycle or is not active in that run
 
-_overlapping (start: DateTime, period: Number, runs: Number) : many (cycle: Cycle)
-  answers every cycle with this period and this many runs whose time, from its start to
-  the end of its last run, overlaps the time from start to start plus runs periods, ordered
-  by start, and no rows when there are none
+_overlapping (start: DateTime, period: Number, runs: Number, except: String) : many (cycle: Cycle)
+  answers every cycle other than except with this period and this many runs whose time,
+  from its start to the end of its last run, overlaps the time from start to start plus
+  runs periods, ordered by start, and no rows when there are none
 
 _all () : many (cycle: Cycle, start: DateTime, period: Number, runs: Number)
   answers every cycle ordered by start, and no rows when there are none

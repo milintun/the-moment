@@ -1,7 +1,9 @@
 import { MongoServerError, type Collection, type Db } from "mongodb";
 
-export class NameTaken extends Error {} // 409 conflict
 export class NoSuchGroup extends Error {} // 404
+export class NoNames extends Error {} // 400
+export class InvalidName extends Error {} // 400
+export class DuplicateName extends Error {} // 409 conflict
 export class AlreadyInGroup extends Error {} // 409 conflict
 export class NotInGroup extends Error {} // 404
 
@@ -21,6 +23,8 @@ interface Membership {
 }
 
 const membershipId = (group: string, item: string) => `${group}|${item}`;
+/** A name ignoring case and spacing, the way names made together must differ. */
+const normalize = (name: string) => name.trim().replace(/\s+/g, " ").toLowerCase();
 
 export class GroupingConcept {
   private readonly groups: Collection<Group>;
@@ -34,8 +38,10 @@ export class GroupingConcept {
 
   async #ensureIndexes() {
     if (this.indexed) return;
-    // Unique names, and fast reads of a group's items by time and of an item's groups.
-    await this.groups.createIndex({ name: 1 }, { unique: true });
+    // Fast reads of groups by name, of a group's items by time, and of an item's groups.
+    // Names used to be unique; drop that index where an older database still has it.
+    await this.groups.dropIndex("name_1").catch(() => {});
+    await this.groups.createIndex({ name: 1, createdAt: 1 });
     await this.memberships.createIndex({ group: 1, addedAt: -1 });
     await this.memberships.createIndex({ item: 1 });
     this.indexed = true;
@@ -44,15 +50,19 @@ export class GroupingConcept {
   async create({ name, createdAt }: { name: string; createdAt: Date }): Promise<{ group: string }> {
     await this.#ensureIndexes();
     const group = crypto.randomUUID();
-    try {
-      await this.groups.insertOne({ _id: group, name, createdAt });
-    } catch (error) {
-      if (error instanceof MongoServerError && error.code === 11000) {
-        throw new NameTaken("A group with this name already exists.");
-      }
-      throw error;
-    }
+    await this.groups.insertOne({ _id: group, name, createdAt });
     return { group };
+  }
+
+  async createMany({ names, createdAt }: { names: string[]; createdAt: Date }): Promise<{ groups: string[] }> {
+    if (!names.length) throw new NoNames("Name at least one group.");
+    const normalized = names.map(normalize);
+    if (normalized.some((name) => !name)) throw new InvalidName("Every group needs a name.");
+    if (new Set(normalized).size !== names.length) throw new DuplicateName("Groups made together need different names.");
+    await this.#ensureIndexes();
+    const groups = names.map(() => crypto.randomUUID());
+    if (groups.length) await this.groups.insertMany(groups.map((_id, i) => ({ _id, name: names[i]!, createdAt })));
+    return { groups };
   }
 
   async delete({ group }: { group: string }): Promise<Record<string, never>> {
@@ -73,6 +83,12 @@ export class GroupingConcept {
       }
       throw error;
     }
+    return {};
+  }
+
+  async deleteMany({ groups }: { groups: string[] }): Promise<Record<string, never>> {
+    await this.groups.deleteMany({ _id: { $in: groups } });
+    await this.memberships.deleteMany({ group: { $in: groups } });
     return {};
   }
 
@@ -119,8 +135,13 @@ export class GroupingConcept {
     return rows.map(({ group }) => ({ group }));
   }
 
+  async _nameAmong({ group, names }: { group: string; names: string[] }): Promise<Array<{ name: string }>> {
+    const found = await this.groups.findOne({ _id: group });
+    return found && names.map(normalize).includes(normalize(found.name)) ? [{ name: found.name }] : [];
+  }
+
   async _byName({ name }: { name: string }): Promise<Array<{ group: string }>> {
-    const found = await this.groups.findOne({ name });
-    return found === null ? [] : [{ group: found._id }];
+    const rows = await this.groups.find({ name }).sort({ createdAt: 1, _id: 1 }).toArray();
+    return rows.map(({ _id }) => ({ group: _id }));
   }
 }

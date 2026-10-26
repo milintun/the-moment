@@ -28,7 +28,7 @@ export const routes: RouteRecordRaw[] = [
   { path: "/auth", component: Auth },
   { path: "/map", component: Map },
   { path: "/home", component: Home },
-  { path: "/home/admin", component: Admin },
+  { path: "/home/admin/:section?", component: Admin }, // section: new (default), schedules, or people
   { path: "/galleries/:id", component: View },
   { path: "/galleries/:id/post", component: PostPage },
   { path: "/nominations", component: FutureGalleries },

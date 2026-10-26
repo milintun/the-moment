@@ -25,9 +25,9 @@ async function signOut() {
     <h1>Home</h1>
     <p class="lede">
       signed in as {{ me }}.
-      <RouterLink v-if="isAdmin" to="/home/admin">admin</RouterLink>
       <button class="link-button" @click="signOut">sign out</button>
     </p>
+    <p v-if="isAdmin"><RouterLink class="button admin-button" to="/home/admin">admin</RouterLink></p>
     <section>
       <h2>New post</h2>
       <PostForm />

@@ -37,7 +37,8 @@ async function withdraw(nomination: string) {
     <li v-for="n in nominations" :key="n.nomination">
       {{ n.name }} · {{ n.votes }} vote(s) · {{ new Date(n.createdAt).toLocaleDateString() }}
       <template v-if="n.current"> · <strong>this round</strong></template>
-      <button v-if="confirming !== n.nomination" @click="confirming = n.nomination">withdraw</button>
+      <template v-if="n.chosen"> · <strong>chosen to become a gallery</strong></template>
+      <button v-else-if="confirming !== n.nomination" @click="confirming = n.nomination">withdraw</button>
       <template v-else>
         withdraw it?
         <button @click="withdraw(n.nomination)">yes, withdraw</button>

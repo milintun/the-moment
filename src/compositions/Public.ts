@@ -4,9 +4,10 @@ import { concepts } from "../concepts.ts";
 
 const { Posting, Grouping, Cycling, Upvoting, Nominating, NominationVotes, Uploading } = concepts;
 
-// The cycle a group belongs to, if any.
+// The cycle a group belongs to, if any. Its runs are the group's own: fewer than the cycle's
+// when the group was removed from the schedule early, so its seasons end where it left.
 const GroupCycle = former("the cycle of (group)", ({ group }, { cycle, start, period, runs }) =>
-  where(Cycling._cycle({ item: group }).is({ cycle, start, period, runs })).form({ cycle, start, period, runs }),
+  where(Cycling._cycle({ item: group }).is({ cycle, start, period, itemRuns: runs })).form({ cycle, start, period, runs }),
 ).optional();
 
 // The run a group is in at a moment, if any.
@@ -76,19 +77,19 @@ const CategoryList = former("every nomination category at (now)", ({ now }, { ca
 );
 
 // A category's nominations made between start and end, most upvoted first and newest
-// first among ties. Shared by the current ranking here and the admin's previous ranking.
+// first among ties. Shared by the current ranking here and the admin's finished rounds.
 export const RoundRanking = former(
   "the ranking of (category) from (start) to (end)",
-  ({ category, start, end }, { nomination, nominator, name, createdAt, votes }) =>
+  ({ category, start, end }, { nomination, nominator, name, createdAt, votes, chosen }) =>
     form({
-      nominations: each(Nominating._nominations({ category }).is({ nomination, nominator, name, createdAt }))
+      nominations: each(Nominating._nominations({ category }).is({ nomination, nominator, name, createdAt, chosen }))
         .where(
           is.ge(createdAt, start),
           is.lt(createdAt, end),
           NominationVotes._count({ target: nomination }).is({ votes }),
         )
         .arranged(votes, "descending")
-        .form({ nomination, nominator, name, createdAt, votes }),
+        .form({ nomination, nominator, name, createdAt, votes, chosen }),
     }),
 );
 

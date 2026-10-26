@@ -252,55 +252,49 @@ describe("future galleries", () => {
   });
 });
 
-describe("admin", () => {
-  test("a refused action shows its message in its own section", async () => {
-    signedInAs("milin", true);
+describe("chosen ideas", () => {
+  test("future galleries strikes a chosen idea, and its nominator can't withdraw it", async () => {
+    signedInAs("gigi");
     fakeApi({
-      "/admin/admins/list": () => ({ list: { admins: [{ user: "milin", owner: true }] } }),
-      "/groups/list": () => ({ list: { groups: [] } }),
-      "/nominations/categories": () => ({ list: { categories: [] } }),
-      "/admin/cycles/list": () => ({ list: { cycles: [] } }),
-      "/admin/groups/create": () => ({ error: "CONFLICT" }),
+      "/nominations/categories": () => ({
+        list: { categories: [{ category: "k", name: "Future galleries", run: 0, runStart: null, runEnd: new Date(Date.now() + 3_600_000).toISOString() }] },
+      }),
+      "/nominations/list": () => ({
+        ranking: {
+          nominations: [
+            { nomination: "n1", name: "Hands", nominator: "gigi", votes: 2, createdAt: new Date().toISOString(), chosen: true },
+            { nomination: "n2", name: "Feet", nominator: "gigi", votes: 0, createdAt: new Date().toISOString(), chosen: false },
+          ],
+        },
+      }),
+      "/nominations/my-votes": () => ({ votes: { nominations: [] } }),
     });
-    const { wrapper } = await mountAt("/home/admin");
-    const form = wrapper.findAll("form").find((f) => f.text().includes("Create") && f.find("select").exists())!;
-    await form.find("input").setValue("Doodles");
-    await form.trigger("submit");
-    await flushPromises();
-    expect(form.find("[role=alert]").text()).toBe("a gallery with that name already exists.");
-    expect(wrapper.findAll("[role=alert]")).toHaveLength(1);
-  });
-});
-
-describe("archive", () => {
-  const HOUR = 60 * 60 * 1000;
-  const past = new Date(Date.now() - 10 * HOUR).toISOString();
-  // n galleries; the even ones have one finished season, the odd ones have no cycle.
-  const galleries = (n: number) =>
-    Array.from({ length: n }, (_, i) =>
-      i % 2 === 0
-        ? { group: `g${i}`, name: `Gallery ${i}`, cycle: "c", start: past, period: HOUR, runs: 1 }
-        : { group: `g${i}`, name: `Gallery ${i}`, cycle: null, start: null, period: null, runs: null },
-    );
-  const archiveOf = (all: ReturnType<typeof galleries>) =>
-    fakeApi({ "/archive/galleries": ({ offset, limit }) => ({ page: { groups: all.slice(offset, offset + limit) } }) });
-
-  test("lists galleries with finished seasons, a page at a time, until there are no more", async () => {
-    const api = archiveOf(galleries(30));
-    const { wrapper } = await mountAt("/archive");
-    expect(api.called("/archive/galleries")).toEqual([{ offset: 0, limit: 20 }]);
-    expect(wrapper.findAll(".room")).toHaveLength(10);
-    expect(wrapper.find(".room a").attributes("href")).toBe("/archive/g0");
-    await wrapper.findAll("button").find((b) => b.text() === "load more galleries")!.trigger("click");
-    await flushPromises();
-    expect(api.called("/archive/galleries")[1]).toEqual({ offset: 20, limit: 20 });
-    expect(wrapper.findAll(".room")).toHaveLength(15);
-    expect(wrapper.text()).not.toContain("load more galleries");
+    const { wrapper } = await mountAt("/nominations");
+    const [hands, feet] = wrapper.findAll("ol li");
+    expect(hands!.find(".chosen").text()).toBe("Hands");
+    expect(hands!.text()).toContain("chosen to become a gallery");
+    expect(hands!.text()).not.toContain("Withdraw");
+    expect(feet!.text()).toContain("Withdraw");
   });
 
-  test("says when nothing has been archived", async () => {
-    archiveOf(galleries(0));
-    const { wrapper } = await mountAt("/archive");
-    expect(wrapper.text()).toContain("nothing has been archived yet.");
+  test("my nominations says which were chosen instead of offering to withdraw them", async () => {
+    signedInAs("gigi");
+    fakeApi({
+      "/posts/mine": () => ({ mine: { posts: [] } }),
+      "/groups/list": () => ({ list: { groups: [] } }),
+      "/nominations/mine": () => ({
+        mine: {
+          nominations: [
+            { nomination: "n1", name: "Hands", votes: 2, createdAt: new Date().toISOString(), chosen: true, current: null },
+            { nomination: "n2", name: "Feet", votes: 0, createdAt: new Date().toISOString(), chosen: false, current: true },
+          ],
+        },
+      }),
+    });
+    const { wrapper } = await mountAt("/home");
+    const rows = wrapper.findAll(".rows li");
+    expect(rows[0]!.text()).toContain("chosen to become a gallery");
+    expect(rows[0]!.text()).not.toContain("withdraw");
+    expect(rows[1]!.text()).toContain("withdraw");
   });
 });
