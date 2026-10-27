@@ -1,7 +1,6 @@
 // The museum's layout: every place a visitor can go, and what lies before and after each.
-// Today it is a straight ordered list. A drawn map can replace it later by returning the same
-// rooms and giving neighbours from its paths (forks included); pages only use rooms() and
-// neighbours(), so they won't change.
+// The order is the walk; floorplan.ts lays the same rooms out as a building, and pages only use
+// rooms() and neighbours(), so the drawing can change without them.
 import { WING_MIN_PERIOD, client, seasonPhase } from "./api.ts";
 
 export type RoomKind = "entrance" | "home" | "wing" | "gallery" | "nominations" | "archive";

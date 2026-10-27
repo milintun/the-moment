@@ -89,8 +89,8 @@ onMounted(async () => {
 <template>
   <h1>Future galleries</h1>
   <p>
-    Name the galleries you want to see next. Each round lasts one season, and the most upvoted
-    ideas help decide the next galleries.
+    Name the galleries you want to see next. Each round lasts a week, and nominations reset every
+    Monday at 12 AM EST. The most upvoted ideas help decide the next galleries.
   </p>
   <template v-if="loaded">
   <p v-if="!roundEnd">nominations are closed right now.</p>

@@ -392,6 +392,12 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 - **future galleries**: counts down to the close; an idea already nominated is caught before the server; a refusal in an open round means once a day; voting after the round closed says votes are final
 - **chosen ideas**: Future galleries strikes a chosen idea and its nominator can't withdraw it; my nominations says "chosen" instead of withdraw
 
+### web/tests/floorplan.spec.ts
+- **plan**, for 0–30 galleries and 0–5 wings: every room placed once, nothing overlapping, all inside the bounds; every room has a doorway; the entrance is lowest under a home that never moves; future galleries sit at the last row's end with the archive above; rows of four slots wind back and forth with a turning rotunda between; a wing is two slots by a whole row and galleries pair across the corridor; the same rooms give the same plan and more galleries leave earlier ones in place
+- **wrap**: fits words to two lines, cut short with …
+- **ringPath**: a full circle, or one arc per gap
+- **the map page**: every room a link in walking order, named with its kind and notice; clicking enters; list view and back
+
 ### web/tests/admin.spec.ts
 - **home**: an admin gets a red admin button apart from sign out; others get none
 - **admin sections**: sidebar shows one section at a time, new schedule first; each section has its own address; non-admins turned away
@@ -406,7 +412,7 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 - another visitor upvotes, then unvotes
 - an artist deletes their own post after confirming
 - an admin removes someone's post from a gallery
-- the owner schedules a gallery from the admin page (red admin button → new schedule); it's listed as running, opens on the map tagged "new"
+- the owner schedules a gallery from the admin page (red admin button → new schedule); it's listed as running, opens on the floor plan tagged "new"
 - an upcoming schedule shows only "edit" until edited, then gains a gallery
 - refusals show their own message: a taken username, adding an admin nobody registered
 - signed out, "post here" goes to log in

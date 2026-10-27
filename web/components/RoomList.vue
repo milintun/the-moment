@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Room } from "../museum.ts";
 
-// The stand-in map: rooms in walking order; clicking a room enters it. Compact mode is the
+// The map as a plain list: rooms in walking order; clicking a room enters it. Compact mode is the
 // small "you are here" version.
 defineProps<{ rooms: Room[]; current?: string; compact?: boolean }>();
 </script>

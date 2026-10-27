@@ -258,7 +258,7 @@ section + section {
   }
 }
 
-/* ---------- rooms (the stand-in map) ---------- */
+/* ---------- rooms (the map as a list) ---------- */
 
 .rooms {
   list-style: none;
@@ -348,6 +348,73 @@ section + section {
 }
 .rooms.compact .room.here .room-name {
   color: var(--ink);
+}
+
+/* ---------- floor plan ---------- */
+
+.plan {
+  display: block;
+  width: 100%;
+  margin: 0 auto;
+  max-height: 75vh;
+  font-family: var(--font);
+}
+.plan .wall {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+.plan .floor {
+  fill: var(--paper);
+}
+/* A doorway: paper painted over the wall, leaving a gap. */
+.plan .door {
+  stroke: var(--paper);
+  stroke-width: 4px;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+.plan-room {
+  text-decoration: none;
+}
+.plan-room text {
+  font-size: 13px;
+  text-anchor: middle;
+  fill: var(--ink);
+}
+.plan-room.kind-gallery text,
+.plan-room.kind-wing text {
+  font-weight: 700;
+}
+.plan-room.kind-wing > text {
+  font-size: 16px;
+}
+.plan-room:hover > text,
+.plan-room:focus-visible > text {
+  text-decoration: underline;
+}
+.plan-room:focus-visible {
+  outline: none;
+}
+.plan-room:focus-visible .wall {
+  stroke-width: 3px;
+}
+.plan-badge rect {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+.plan-room .plan-badge text {
+  font-size: 11px;
+  font-weight: 400;
+}
+.plan-badge.ending rect {
+  fill: var(--ink);
+}
+.plan-room .plan-badge.ending text {
+  fill: var(--paper);
 }
 
 /* ---------- view / walk ---------- */

@@ -108,7 +108,7 @@ test("the owner schedules galleries from the admin page, and they open on the ma
 
   await page.goto("/map");
   const room = page.getByRole("link", { name: new RegExp(name, "i") });
-  await expect(room.locator(".badge")).toHaveText("new");
+  await expect(room.locator(".plan-badge")).toHaveText("new");
   await room.click();
   await expect(page.getByRole("heading", { name })).toBeVisible();
 });
