@@ -352,12 +352,38 @@ section + section {
 
 /* ---------- floor plan ---------- */
 
+.plan-frame {
+  position: relative;
+  border: var(--line);
+}
 .plan {
   display: block;
   width: 100%;
-  margin: 0 auto;
-  max-height: 75vh;
+  height: 70vh;
   font-family: var(--font);
+  cursor: grab;
+  touch-action: none; /* the map takes swipes and pinches, not the page */
+  user-select: none;
+  -webkit-user-select: none;
+}
+.plan.dragging {
+  cursor: grabbing;
+}
+.plan:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+.plan-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  margin: 0;
+  display: flex;
+  gap: 4px;
+}
+.plan-controls button {
+  background: var(--paper);
+  min-width: 2.2em;
 }
 .plan .wall {
   fill: none;

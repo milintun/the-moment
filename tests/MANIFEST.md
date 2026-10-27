@@ -396,7 +396,7 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 - **plan**, for 0–30 galleries and 0–5 wings: every room placed once, nothing overlapping, all inside the bounds; every room has a doorway; the entrance is lowest under a home that never moves; future galleries sit at the last row's end with the archive above; rows of four slots wind back and forth with a turning rotunda between; a wing is two slots by a whole row and galleries pair across the corridor; the same rooms give the same plan and more galleries leave earlier ones in place
 - **wrap**: fits words to two lines, cut short with …
 - **ringPath**: a full circle, or one arc per gap
-- **the map page**: every room a link in walking order, named with its kind and notice; clicking enters; list view and back
+- **the map page**: every room a link in walking order, named with its kind and notice; clicking enters; list view and back; dragging moves the view (only past a few pixels) and the click ending a drag enters nothing; scrolling zooms, capped at 3×, and the buttons zoom and recenter; arrow keys pan and +/− zoom
 
 ### web/tests/admin.spec.ts
 - **home**: an admin gets a red admin button apart from sign out; others get none
@@ -414,5 +414,6 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 - an admin removes someone's post from a gallery
 - the owner schedules a gallery from the admin page (red admin button → new schedule); it's listed as running, opens on the floor plan tagged "new"
 - an upcoming schedule shows only "edit" until edited, then gains a gallery
+- on the map, dragging from a room pans without entering it, then a click enters
 - refusals show their own message: a taken username, adding an admin nobody registered
 - signed out, "post here" goes to log in

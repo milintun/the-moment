@@ -158,4 +158,54 @@ describe("the map page", () => {
     await wrapper.find(".lede button").trigger("click");
     expect(wrapper.find("svg.plan").exists()).toBe(true);
   });
+
+  // happy-dom has no layout, so the drawing keeps its default 800×600 size.
+  const box = (wrapper: any) => wrapper.find("svg.plan").attributes("viewBox").split(" ").map(Number);
+  const pointer = (x: number, y: number) => ({ pointerId: 1, pointerType: "mouse", button: 0, clientX: x, clientY: y });
+
+  test("dragging moves the view, and the click that ends a drag doesn't enter a room", async () => {
+    page();
+    const { wrapper, router } = await mountAt("/map");
+    const svg = wrapper.find("svg.plan");
+    const [x0, y0, w] = box(wrapper);
+    const k = 800 / w;
+    await svg.trigger("pointerdown", pointer(100, 100));
+    await svg.trigger("pointermove", pointer(103, 100)); // not yet a drag
+    expect(box(wrapper)[0]).toBe(x0);
+    await svg.trigger("pointermove", pointer(80, 90));
+    expect(svg.classes()).toContain("dragging");
+    expect(box(wrapper)[0]).toBeCloseTo(x0 + 23 / k); // moved from where the last move left it
+    expect(box(wrapper)[1]).toBeCloseTo(y0 + 10 / k);
+    await svg.trigger("pointerup", pointer(80, 90));
+    await wrapper.find('a.plan-room[href="/galleries/g2"]').trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.path).toBe("/map");
+  });
+
+  test("scrolling zooms in and out, within limits; the buttons zoom and recenter", async () => {
+    page();
+    const { wrapper } = await mountAt("/map");
+    const start = box(wrapper);
+    await wrapper.find("svg.plan").trigger("wheel", { deltaY: -200, clientX: 400, clientY: 300 });
+    expect(box(wrapper)[2]).toBeLessThan(start[2]!);
+    for (let i = 0; i < 20; i++) await wrapper.find('button[aria-label="zoom in"]').trigger("click");
+    expect(box(wrapper)[2]).toBeCloseTo(800 / 3); // at most 3×
+    await wrapper.findAll("button").find((b) => b.text() === "recenter")!.trigger("click");
+    expect(box(wrapper)).toEqual(start);
+  });
+
+  test("arrow keys move the view, + and − zoom", async () => {
+    page();
+    const { wrapper } = await mountAt("/map");
+    const svg = wrapper.find("svg.plan");
+    const [, , w0] = box(wrapper);
+    await svg.trigger("keydown", { key: "+" });
+    const [, , w1] = box(wrapper);
+    expect(w1).toBeCloseTo(w0! / 1.25);
+    const [x1] = box(wrapper);
+    await svg.trigger("keydown", { key: "ArrowRight" });
+    expect(box(wrapper)[0]).toBeGreaterThan(x1!);
+    await svg.trigger("keydown", { key: "-" });
+    expect(box(wrapper)[2]).toBeCloseTo(w0!);
+  });
 });

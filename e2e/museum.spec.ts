@@ -134,6 +134,23 @@ test("an upcoming schedule is read only until edited, then gains a gallery", asy
   await expect(card.getByRole("link", { name: added })).toBeVisible();
 });
 
+test("on the map, dragging from a room looks around without entering it; a click enters", async ({ page, playwright, baseURL }) => {
+  const owner = await playwright.request.newContext({ baseURL, extraHTTPHeaders: { Origin: baseURL! } });
+  const { group } = await openGallery(owner);
+  await page.goto("/map");
+  const room = page.locator(`a.plan-room[data-room="${group}"]`);
+  const before = (await room.boundingBox())!;
+  await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(before.x + before.width / 2 + 120, before.y + before.height / 2 + 60, { steps: 6 });
+  await page.mouse.up();
+  await expect(page).toHaveURL(/\/map$/);
+  const after = (await room.boundingBox())!;
+  expect(Math.round(after.x - before.x)).toBe(120);
+  await room.click();
+  await expect(page).toHaveURL(new RegExp(`/galleries/${group}$`));
+});
+
 test("signed out, posting sends you to log in", async ({ page, playwright, baseURL }) => {
   const owner = await playwright.request.newContext({ baseURL, extraHTTPHeaders: { Origin: baseURL! } });
   const { group } = await openGallery(owner);

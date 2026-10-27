@@ -16,7 +16,7 @@ onMounted(async () => {
 <template>
   <h1>Map</h1>
   <p class="lede">
-    click a room to enter it.
+    drag to look around, scroll or pinch to zoom, and click a room to enter it.
     <button class="link-button" @click="asList = !asList">{{ asList ? "floor plan" : "list view" }}</button>
   </p>
   <template v-if="loaded">
