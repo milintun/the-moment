@@ -1,19 +1,17 @@
 <script setup lang="ts">
 import type { Room } from "../museum.ts";
 
-// The map as a plain list: rooms in walking order; clicking a room enters it. Compact mode is the
-// small "you are here" version.
-defineProps<{ rooms: Room[]; current?: string; compact?: boolean }>();
+// The map as a plain list: rooms in walking order; clicking a room enters it.
+defineProps<{ rooms: Room[] }>();
 </script>
 
 <template>
-  <ol :class="['rooms', { compact }]">
-    <li v-for="r in rooms" :key="r.id" :class="['room', `kind-${r.kind}`, { here: r.id === current }]">
+  <ol class="rooms">
+    <li v-for="r in rooms" :key="r.id" :class="['room', `kind-${r.kind}`]">
       <RouterLink class="room-name" :to="r.to">
         {{ r.label }}
-        <span v-if="!compact && (r.kind === 'wing' || r.kind === 'gallery')" class="kind">{{ r.kind }}</span>
+        <span v-if="r.kind === 'wing' || r.kind === 'gallery'" class="kind">{{ r.kind }}</span>
         <span v-if="r.notice" :class="['badge', { ending: r.notice === 'ending soon' }]">{{ r.notice }}</span>
-        <template v-if="r.id === current"> (you are here)</template>
       </RouterLink>
     </li>
   </ol>

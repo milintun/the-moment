@@ -27,7 +27,8 @@ export async function register(request: APIRequestContext, username = unique("vi
   return username;
 }
 
-let schedules = 0;
+// A worker restarts after a failed test, so start somewhere random rather than at 0.
+let schedules = Math.floor(Math.random() * 100_000);
 /** As the owner: an open gallery named `name`, in its own schedule of 1-day seasons starting now. */
 export async function openGallery(owner: APIRequestContext, name = unique("gallery ")) {
   await signIn(owner, OWNER.username, OWNER.password);

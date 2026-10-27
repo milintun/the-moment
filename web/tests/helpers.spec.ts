@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { WING_MIN_PERIOD, finishedSeasons, isAdmin, isOwner, me, noticeWindow, normalizeName, refreshMe, seasonPhase, span } from "../api.ts";
 import { SESSION_ENDED, explain } from "../errors.ts";
-import { neighbours, rooms, type Room } from "../museum.ts";
+import { neighbours, roomAt, rooms, type Room } from "../museum.ts";
 import { fakeApi, groupRow, signedInAs } from "./fake.ts";
 
 const HOUR = 60 * 60 * 1000;
@@ -104,6 +104,13 @@ describe("rooms", () => {
   test("still gives the fixed rooms when the gallery list fails", async () => {
     fakeApi({});
     expect((await rooms()).map((r) => r.id)).toEqual(["entrance", "home", "nominations", "archive"]);
+  });
+});
+
+describe("roomAt", () => {
+  test("home, a gallery, future galleries, and the whole archive are rooms; other pages aren't", () => {
+    const at = ["/home", "/galleries/g1", "/nominations", "/archive", "/archive/g1/2", "/galleries/g1/post", "/map", "/home/admin", "/"].map(roomAt);
+    expect(at).toEqual(["home", "g1", "nominations", "archive", "archive", null, null, null, null]);
   });
 });
 

@@ -6,7 +6,8 @@
   --ink: #000;
   --paper: #fff;
   --faint: #6b6b6b; /* secondary text, still black-and-white */
-  --alert: #c4001a; /* the one colour outside artwork: the way into admin */
+  --alert: #c4001a; /* the one colour outside artwork: the way into admin, and the "you are here" pin */
+  --wash: #e6e6e6; /* a light grey fill, for a room about to be entered */
   --line: 1px solid var(--ink);
   --gutter: 16px;
   --font: "Ubuntu Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
@@ -309,12 +310,6 @@ section + section {
   background: var(--ink);
   color: var(--paper);
 }
-.rooms.compact .badge {
-  color: var(--ink);
-}
-.rooms.compact .badge.ending {
-  color: var(--paper);
-}
 /* A season notice under a gallery's name. */
 .season-notice {
   font-weight: 700;
@@ -322,32 +317,6 @@ section + section {
 .room.kind-wing > .room-name,
 .room.kind-gallery > .room-name {
   font-weight: 700;
-}
-.room.here > .room-name {
-  font-weight: 700;
-  text-decoration: none;
-}
-.room.here::before {
-  border-top-width: 3px;
-}
-
-.rooms.compact {
-  font-size: 0.85em;
-}
-.rooms.compact .room {
-  padding-block: 0.15em;
-  padding-left: 1.2em;
-}
-.rooms.compact .room::before {
-  top: 0.85em;
-  width: 0.8em;
-}
-.rooms.compact .room-name {
-  text-decoration: none;
-  color: var(--faint);
-}
-.rooms.compact .room.here .room-name {
-  color: var(--ink);
 }
 
 /* ---------- floor plan ---------- */
@@ -372,6 +341,79 @@ section + section {
 .plan:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: -2px;
+}
+.plan-frame.mini {
+  border: 0;
+  height: 100%;
+}
+.plan.mini {
+  height: 100%;
+  cursor: pointer;
+}
+/* The person: waiting in the corner, hanging from the pointer over the map, dropping into a room. */
+.pegman {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 4px 8px;
+  border: var(--line);
+  background: var(--paper);
+  line-height: 0;
+  pointer-events: none;
+}
+.pegman svg circle {
+  fill: var(--ink);
+}
+.pegman svg path {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.pegman.roaming {
+  right: auto;
+  bottom: auto;
+  margin: -6px 0 0 -20px; /* the raised hands at the pointer */
+  border-color: transparent;
+  background: none;
+  transform-origin: 50% 0;
+  transition: transform 0.15s ease-out;
+  z-index: 2;
+}
+.pegman.landing svg {
+  animation: drop 0.35s ease-in forwards;
+}
+@keyframes drop {
+  60% {
+    transform: translateY(14px);
+  }
+  80% {
+    transform: translateY(12px) scaleY(0.85);
+  }
+  100% {
+    transform: translateY(14px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pegman.roaming {
+    transition: none;
+  }
+}
+.plan-room:hover .floor {
+  fill: var(--wash);
+}
+.plan-room.here:hover .floor {
+  fill: var(--ink);
+}
+.you-are-here .pin {
+  fill: var(--alert);
+}
+.you-are-here .pin-dot {
+  fill: var(--paper);
+}
+.plan-room .you-are-here text {
+  font-size: 11px;
+  font-weight: 400;
 }
 .plan-controls {
   position: absolute;
@@ -426,6 +468,15 @@ section + section {
 .plan-room:focus-visible .wall {
   stroke-width: 3px;
 }
+.plan-room.here .floor {
+  fill: var(--ink);
+}
+.plan-room.here text {
+  fill: var(--paper);
+}
+.plan-room.target .floor {
+  fill: var(--wash);
+}
 .plan-badge rect {
   fill: var(--paper);
   stroke: var(--ink);
@@ -445,22 +496,23 @@ section + section {
 
 /* ---------- view / walk ---------- */
 
-.view {
-  position: relative;
-}
-.view-head {
-  max-width: calc(100% - 260px);
-}
+/* Every room's page: a mini map in the top corner, the page flowing around it. */
 .minimap {
-  position: absolute;
-  top: 0;
-  right: 0;
+  float: right;
+  position: relative; /* above positioned page content flowing beside it */
+  z-index: 1;
+  display: block;
   width: 230px;
-  max-height: 260px;
-  overflow-y: auto;
+  height: 200px;
+  margin: 0 0 1rem 1.5rem;
   border: var(--line);
-  padding: 0.6em 0.8em;
   background: var(--paper);
+  text-decoration: none;
+}
+.in-room h2,
+.in-room .walk,
+.in-room .neighbours {
+  clear: right;
 }
 .walk {
   display: flex;
@@ -627,14 +679,11 @@ section + section {
   body {
     font-size: 16px;
   }
-  .view-head {
-    max-width: none;
-  }
   .minimap {
-    position: static;
+    float: none;
     width: auto;
-    max-height: 180px;
-    margin-top: 1rem;
+    margin: 0 0 1rem;
+    height: 160px;
   }
   .walk {
     gap: 1.5rem;

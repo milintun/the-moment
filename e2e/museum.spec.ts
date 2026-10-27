@@ -151,6 +151,27 @@ test("on the map, dragging from a room looks around without entering it; a click
   await expect(page).toHaveURL(new RegExp(`/galleries/${group}$`));
 });
 
+test("the little person follows the pointer and drops into the room clicked; every room page marks where you are", async ({ page, playwright, baseURL }) => {
+  const owner = await playwright.request.newContext({ baseURL, extraHTTPHeaders: { Origin: baseURL! } });
+  const { group } = await openGallery(owner);
+  await page.goto(`/map?at=${group}`);
+  const room = page.locator(`a.plan-room[data-room="${group}"]`);
+  await expect(room).toHaveClass(/here/);
+  await expect(room).toContainText("you are here");
+  const box = (await room.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 4 });
+  await expect(page.locator(".pegman")).toHaveClass(/roaming/);
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(page.locator(".pegman")).toHaveClass(/landing/);
+  await expect(page).toHaveURL(new RegExp(`/galleries/${group}$`));
+
+  await page.getByRole("link", { name: /open the map/ }).click();
+  await expect(page).toHaveURL(new RegExp(`/map\\?at=${group}$`));
+  await page.goto("/nominations");
+  await expect(page.locator('.minimap [data-room="nominations"]')).toContainText("you are here");
+  await expect(page.locator(".neighbours")).toContainText("archive →");
+});
+
 test("signed out, posting sends you to log in", async ({ page, playwright, baseURL }) => {
   const owner = await playwright.request.newContext({ baseURL, extraHTTPHeaders: { Origin: baseURL! } });
   const { group } = await openGallery(owner);

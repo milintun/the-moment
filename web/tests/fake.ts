@@ -3,6 +3,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createMemoryHistory, createRouter, RouterView } from "vue-router";
 import { isAdmin, isOwner, me } from "../api.ts";
+import App from "../App.vue";
 import { routes } from "../router.ts";
 import { backend } from "./setup.ts";
 
@@ -35,6 +36,16 @@ export async function mountAt(path: string) {
   await router.push(path);
   await router.isReady();
   const wrapper = mount(RouterView, { global: { plugins: [router] }, attachTo: document.body });
+  await flushPromises();
+  return { wrapper, router };
+}
+
+/** Like mountAt, but the whole app: top bar, and the mini map and neighbours of a room's page. */
+export async function mountAppAt(path: string) {
+  const router = createRouter({ history: createMemoryHistory(), routes });
+  await router.push(path);
+  await router.isReady();
+  const wrapper = mount(App, { global: { plugins: [router] }, attachTo: document.body });
   await flushPromises();
   return { wrapper, router };
 }

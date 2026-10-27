@@ -2,7 +2,7 @@ import { flushPromises } from "@vue/test-utils";
 import { describe, expect, test } from "vitest";
 import { SLOT, SLOTS_PER_ROW, plan, ringPath, wrap, type Shape } from "../floorplan.ts";
 import type { Room } from "../museum.ts";
-import { fakeApi, groupRow, mountAt } from "./fake.ts";
+import { fakeApi, groupRow, mountAppAt, mountAt, signedInAs } from "./fake.ts";
 
 /** Rooms as rooms() lists them, with `wings` wings and `galleries` galleries. */
 function museum(wings: number, galleries: number): Room[] {
@@ -207,5 +207,109 @@ describe("the map page", () => {
     expect(box(wrapper)[0]).toBeGreaterThan(x1!);
     await svg.trigger("keydown", { key: "-" });
     expect(box(wrapper)[2]).toBeCloseTo(w0!);
+  });
+
+  test("?at= opens the map on that room, marked", async () => {
+    page();
+    const { wrapper } = await mountAt("/map?at=g2");
+    expect(wrapper.find('[data-room="g2"]').classes()).toContain("here");
+    const [x, y, w, h] = box(wrapper);
+    const floor = wrapper.find('[data-room="g2"] rect');
+    expect(x! + w! / 2).toBeCloseTo(Number(floor.attributes("x")) + Number(floor.attributes("width")) / 2);
+    expect(y! + h! / 2).toBeCloseTo(Number(floor.attributes("y")) + Number(floor.attributes("height")) / 2);
+  });
+});
+
+describe("the little person", () => {
+  const page = () =>
+    fakeApi({ "/groups/list": () => ({ list: { groups: [groupRow("g1", "Doodles"), groupRow("g2", "Night Walks")] } }) });
+  const at = (x: number, y: number, pointerType = "mouse") => ({ pointerId: 1, pointerType, button: 0, clientX: x, clientY: y });
+  const person = (wrapper: any) => wrapper.find(".pegman");
+  const wait = (ms: number) => new Promise((done) => setTimeout(done, ms));
+
+  test("waits in the corner, follows the pointer over the map, and goes back when it leaves", async () => {
+    page();
+    const { wrapper } = await mountAt("/map");
+    expect(person(wrapper).classes()).not.toContain("roaming");
+    await wrapper.find("svg.plan").trigger("pointermove", at(300, 200));
+    expect(person(wrapper).classes()).toContain("roaming");
+    expect(person(wrapper).attributes("style")).toContain("left: 300px; top: 200px");
+    await wrapper.find("svg.plan").trigger("pointerleave");
+    expect(person(wrapper).classes()).not.toContain("roaming");
+  });
+
+  test("a touch doesn't summon them; only a pointer that hovers does", async () => {
+    page();
+    const { wrapper } = await mountAt("/map");
+    await wrapper.find("svg.plan").trigger("pointermove", at(300, 200, "touch"));
+    expect(person(wrapper).classes()).not.toContain("roaming");
+  });
+
+  test("clicking a room drops them into it, then enters it", async () => {
+    page();
+    const { wrapper, router } = await mountAt("/map");
+    await wrapper.find('a[data-room="g2"]').trigger("click", { detail: 1, clientX: 300, clientY: 200 });
+    expect(person(wrapper).classes()).toContain("landing");
+    expect(wrapper.find('[data-room="g2"]').classes()).toContain("target");
+    expect(router.currentRoute.value.path).toBe("/map"); // still falling
+    await wait(400);
+    await flushPromises();
+    expect(router.currentRoute.value.path).toBe("/galleries/g2");
+  });
+
+  test("a keyboard press enters at once, like any link", async () => {
+    page();
+    const { wrapper, router } = await mountAt("/map");
+    await wrapper.find('a[data-room="g2"]').trigger("click", { detail: 0 });
+    await flushPromises();
+    expect(router.currentRoute.value.path).toBe("/galleries/g2");
+  });
+});
+
+describe("where you are, on every room's page", () => {
+  const groups = () =>
+    fakeApi({
+      "/groups/list": () => ({ list: { groups: [groupRow("g1", "Doodles"), groupRow("g2", "Night Walks")] } }),
+      "/groups/feed": () => ({ feed: { posts: [] } }),
+      "/nominations/categories": () => ({ list: { categories: [] } }),
+      "/archive/galleries": () => ({ page: { groups: [] } }),
+    });
+
+  test("a gallery shows a still mini map marking it \"you are here\", which opens the map there", async () => {
+    groups();
+    const { wrapper, router } = await mountAppAt("/galleries/g1");
+    const mini = wrapper.find("a.minimap");
+    expect([mini.attributes("href"), mini.attributes("aria-label")]).toEqual(["/map?at=g1", "you are in Doodles. open the map"]);
+    expect(mini.find('[data-room="g1"]').classes()).toContain("here");
+    expect(mini.find('[data-room="g1"] .you-are-here').text()).toBe("you are here");
+    expect(mini.find('[data-room="g1"] .pin').exists()).toBe(true);
+    expect(mini.find("svg").attributes("aria-hidden")).toBe("true");
+    expect(mini.findAll("svg a")).toHaveLength(0); // no links inside the link
+    expect(mini.find(".pegman").exists()).toBe(false);
+    await mini.trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.fullPath).toBe("/map?at=g1");
+  });
+
+  test.each([
+    ["/home", "home", "entrance", "Doodles"],
+    ["/nominations", "nominations", "Night Walks", "archive"],
+    ["/archive", "archive", "future galleries", null],
+    ["/galleries/g2", "g2", "Doodles", "future galleries"],
+  ])("%s has the mini map and the rooms before and after", async (path, room, before, after) => {
+    signedInAs(null);
+    groups();
+    const { wrapper } = await mountAppAt(path);
+    expect(wrapper.find(`a.minimap [data-room="${room}"]`).classes()).toContain("here");
+    expect(wrapper.find(".neighbours .before").text()).toBe(`← ${before}`);
+    expect(wrapper.find(".neighbours .after").text()).toBe(after ? `${after} →` : "");
+  });
+
+  test("the map itself, and pages that aren't rooms, have neither", async () => {
+    groups();
+    for (const path of ["/map", "/auth"]) {
+      const { wrapper } = await mountAppAt(path);
+      expect([path, wrapper.find(".minimap").exists(), wrapper.find(".neighbours").exists()]).toEqual([path, false, false]);
+    }
   });
 });

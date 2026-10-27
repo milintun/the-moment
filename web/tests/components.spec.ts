@@ -31,12 +31,6 @@ describe("RoomList", () => {
     expect(rooms.map((r) => r.text())).toEqual(["home", "doodles gallery", "still life wing"]);
   });
 
-  test("marks the room you are in; compact leaves out kinds", () => {
-    const rooms = list({ current: "g1", compact: true }).findAll("li");
-    expect(rooms[1]!.classes()).toContain("here");
-    expect(rooms.map((r) => r.text().replace(/\s+/g, " "))).toEqual(["home", "doodles (you are here)", "still life"]);
-  });
-
   test("clicking a room enters it", async () => {
     const router = newRouter();
     fakeApi({ "/posts/mine": () => ({ error: "UNAUTHORIZED" }) });

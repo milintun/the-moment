@@ -376,12 +376,13 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 - `refreshMe`: owner admin; non-admin; signed out without asking for admins
 - `rooms`: walking order with wings before galleries, closed ones left out; fixed rooms when the list fails
 - `rooms` tags galleries "new" and "ending soon"
+- `roomAt`: home, galleries, future galleries, and the whole archive are rooms; other pages aren't
 - `neighbours`: before and after, ends, unknown room
 - **season notices**: the window is 20% of the season, at most a day; new / open / ending / ended at the exact edges, for short and long seasons; none without a season; `span` wording
 - **explain**: the endpoint's message; a page's tie wins; category then general fallbacks; network failure
 
 ### web/tests/components.spec.ts
-- **RoomList**: links and kind labels; "you are here" and compact; clicking enters
+- **RoomList**: links and kind labels; clicking enters
 - **AuthForm**: log in sends what was typed, learns who you are, goes home; refusals (wrong password, taken, bad username vs bad password told apart by what was typed) show their message and stay put
 - **ErrorNote**: a message, or a problem only at its own spot; an ended session links to log in
 - **routes**: entrance on first visit, skipped to the map after entering; entrance reachable by link; old addresses redirect
@@ -396,7 +397,9 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 - **plan**, for 0–30 galleries and 0–5 wings: every room placed once, nothing overlapping, all inside the bounds; every room has a doorway; the entrance is lowest under a home that never moves; future galleries sit at the last row's end with the archive above; rows of four slots wind back and forth with a turning rotunda between; a wing is two slots by a whole row and galleries pair across the corridor; the same rooms give the same plan and more galleries leave earlier ones in place
 - **wrap**: fits words to two lines, cut short with …
 - **ringPath**: a full circle, or one arc per gap
-- **the map page**: every room a link in walking order, named with its kind and notice; clicking enters; list view and back; dragging moves the view (only past a few pixels) and the click ending a drag enters nothing; scrolling zooms, capped at 3×, and the buttons zoom and recenter; arrow keys pan and +/− zoom
+- **the map page**: every room a link in walking order, named with its kind and notice; clicking enters; list view and back; dragging moves the view (only past a few pixels) and the click ending a drag enters nothing; scrolling zooms, capped at 3×, and the buttons zoom and recenter; arrow keys pan and +/− zoom; `?at=` opens on that room, marked
+- **the little person**: waits in the corner, follows a hovering pointer over the map, and goes back when it leaves; a touch doesn't summon them; clicking a room drops them in, then enters; a keyboard press enters at once
+- **where you are, on every room's page**: a gallery's still mini map marks it "you are here" with a pin, has no links of its own, and opens `/map?at=` there; home, future galleries, the archive, and galleries each have the mini map and the rooms before and after; the map and non-room pages have neither
 
 ### web/tests/admin.spec.ts
 - **home**: an admin gets a red admin button apart from sign out; others get none
@@ -415,5 +418,6 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 - the owner schedules a gallery from the admin page (red admin button → new schedule); it's listed as running, opens on the floor plan tagged "new"
 - an upcoming schedule shows only "edit" until edited, then gains a gallery
 - on the map, dragging from a room pans without entering it, then a click enters
+- the little person follows the pointer and drops into the room clicked; the mini map opens the map there; future galleries marks "you are here" with its neighbours
 - refusals show their own message: a taken username, adding an admin nobody registered
 - signed out, "post here" goes to log in

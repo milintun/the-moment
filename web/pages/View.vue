@@ -2,16 +2,13 @@
 import { computed, nextTick, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import ErrorNote from "../components/ErrorNote.vue";
-import RoomList from "../components/RoomList.vue";
 import { client, isAdmin, me, seasonPhase, span, useNow } from "../api.ts";
 import { explain, type Problem } from "../errors.ts";
-import { neighbours, rooms, type Room } from "../museum.ts";
 
 type Post = Extract<Awaited<ReturnType<typeof client.groups.feed>>, { feed: unknown }>["feed"]["posts"][number];
 
 const route = useRoute();
 const group = route.params.id as string;
-const all = ref<Room[]>([]);
 const name = ref("");
 // The running season, or null when the gallery is closed.
 const season = ref<{ run: number; runs: number; runStart: string; runEnd: string } | null>(null);
@@ -21,8 +18,6 @@ const confirming = ref<string | null>(null); // the post waiting for "yes, delet
 const confirmingRemoval = ref<string | null>(null); // the post an admin is about to remove
 const problem = ref<Problem | null>(null); // at "page", or at a post's id
 const loaded = ref(false); // render once the first load is done, so nothing flashes
-
-const around = computed(() => neighbours(all.value, group));
 
 const now = useNow();
 const phase = computed(() => (season.value ? seasonPhase(season.value, now.value) : null));
@@ -88,7 +83,7 @@ async function removeFromGallery(post: string) {
 }
 
 onMounted(async () => {
-  [all.value] = await Promise.all([rooms(), load()]);
+  await load();
   loaded.value = true;
   if (target) {
     await nextTick();
@@ -121,10 +116,6 @@ onMounted(async () => {
         <RouterLink class="button" :to="me ? `/galleries/${group}/post` : '/auth'">post here</RouterLink>
       </p>
     </header>
-
-    <aside class="minimap" aria-label="where you are">
-      <RoomList :rooms="all" :current="group" compact />
-    </aside>
 
     <p v-if="problem?.at === 'page'"><ErrorNote :problem="problem" at="page" /></p>
     <p v-if="loaded && !posts.length && problem?.at !== 'page'" class="empty">no art on these walls yet this season.</p>
@@ -165,14 +156,5 @@ onMounted(async () => {
         </figcaption>
       </figure>
     </div>
-
-    <nav class="neighbours">
-      <span class="before">
-        <RouterLink v-for="r in around.before" :key="r.id" :to="r.to">← {{ r.label }}</RouterLink>
-      </span>
-      <span class="after">
-        <RouterLink v-for="r in around.after" :key="r.id" :to="r.to">{{ r.label }} →</RouterLink>
-      </span>
-    </nav>
   </div>
 </template>

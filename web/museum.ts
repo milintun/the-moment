@@ -36,6 +36,14 @@ export async function rooms(now = Date.now()): Promise<Room[]> {
   ];
 }
 
+/** The room a page is in, if it is one: home, a gallery or wing, future galleries, or anywhere in the archive. */
+export function roomAt(path: string): string | null {
+  if (path === "/home") return "home";
+  if (path === "/nominations") return "nominations";
+  if (path === "/archive" || path.startsWith("/archive/")) return "archive";
+  return path.match(/^\/galleries\/([^/]+)$/)?.[1] ?? null;
+}
+
 /** The rooms directly before and after a room. Lists allow forks, which a map may add later. */
 export function neighbours(all: Room[], id: string): { before: Room[]; after: Room[] } {
   const at = all.findIndex((r) => r.id === id);
