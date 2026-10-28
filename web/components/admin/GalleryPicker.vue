@@ -100,3 +100,9 @@ defineExpose({ reload: () => (round.value == null ? undefined : showRound(round.
     </ol>
   </template>
 </template>
+
+<style scoped>
+.round-nav button {
+  margin: 0 0.6em;
+}
+</style>

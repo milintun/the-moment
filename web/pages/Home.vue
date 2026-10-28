@@ -42,3 +42,17 @@ async function signOut() {
     </section>
   </template>
 </template>
+
+<style scoped>
+/* The way into admin: red, so it never passes for an ordinary link. */
+.admin-button {
+  border-color: var(--alert);
+  background: var(--alert);
+  color: var(--paper);
+}
+.button.admin-button:hover {
+  background: var(--paper);
+  border-color: var(--alert);
+  color: var(--alert);
+}
+</style>

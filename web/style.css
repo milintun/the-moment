@@ -1,4 +1,8 @@
-/* The Moment: black and white, Inter Tight, with titles in Gloria Hallelujah. Titles are ALL CAPS and everything else is
+/* The Moment's shared look: colours, fonts, and the basics every page uses (text, links,
+   buttons, fields, lists of rooms and rows, the art wall). Anything only one page or component
+   uses lives in that .vue file's <style scoped> block.
+
+   The Moment: black and white with one accent colour for whatever is hovered, Inter Tight, with titles in Gloria Hallelujah. Titles are ALL CAPS and everything else is
    lowercase, including what people write; fields show text exactly as it is typed.
    Artwork keeps its colour. */
 
@@ -7,7 +11,8 @@
   --paper: #fff;
   --faint: #6b6b6b; /* secondary text, still black-and-white */
   --alert: #c4001a; /* the one colour outside artwork: the way into admin, and the "you are here" pin */
-  --wash: #e6e6e6; /* a light grey fill, for a room about to be entered */
+  --accent: #ff4400; /* hovered things: links, buttons, rooms on the map; the entrance figure's highlight */
+  --wash: color-mix(in srgb, var(--accent) 14%, var(--paper)); /* a light accent fill, for a room hovered or about to be entered */
   --line: 1px solid var(--ink);
   --gutter: 16px;
   --font: "Inter Tight", system-ui, sans-serif;
@@ -73,6 +78,7 @@ a {
   text-decoration-thickness: 1px;
 }
 a:hover {
+  color: var(--accent);
   text-decoration-thickness: 2px;
 }
 
@@ -102,15 +108,6 @@ strong {
 .lede {
   margin-bottom: 1.6em;
 }
-.error {
-  border: var(--line);
-  padding: 0.4em 0.7em;
-  display: inline-block;
-}
-.error::before {
-  content: "! ";
-  font-weight: 700;
-}
 
 /* ---------- controls ---------- */
 
@@ -131,7 +128,8 @@ button,
 }
 button:hover:not(:disabled),
 .button:hover {
-  background: var(--ink);
+  background: var(--accent);
+  border-color: var(--accent);
   color: var(--paper);
 }
 button:disabled {
@@ -145,17 +143,8 @@ button.voted {
 }
 button.voted:hover:not(:disabled) {
   background: var(--paper);
-  color: var(--ink);
-}
-/* The way into admin: red, so it never passes for an ordinary link. */
-.admin-button {
-  border-color: var(--alert);
-  background: var(--alert);
-  color: var(--paper);
-}
-.button.admin-button:hover {
-  background: var(--paper);
-  color: var(--alert);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 .link-button {
   border: 0;
@@ -166,7 +155,7 @@ button.voted:hover:not(:disabled) {
 }
 .link-button:hover:not(:disabled) {
   background: none;
-  color: var(--ink);
+  color: var(--accent);
   text-decoration-thickness: 2px;
 }
 
@@ -195,73 +184,11 @@ form p {
   max-width: none;
 }
 
-/* ---------- shell ---------- */
-
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: flex;
-  justify-content: space-between;
-  gap: 1em;
-  padding: 0.7em var(--gutter);
-  border-bottom: var(--line);
-  background: var(--paper);
-}
-.brand {
-  text-decoration: none;
-  font-weight: 700;
-}
-
-.page {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding-inline: var(--gutter);
-  padding-block: 2rem 4rem;
-}
-
 section + section {
   margin-top: 1rem;
 }
 
-/* ---------- entrance ---------- */
-
-.entrance {
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: grid;
-  place-items: center;
-  padding: var(--gutter);
-  cursor: pointer;
-  position: relative;
-}
-.entrance-account {
-  position: absolute;
-  top: var(--gutter);
-  right: var(--gutter);
-}
-.entrance-body {
-  max-width: 60ch;
-}
-.entrance h1 {
-  font-size: clamp(2rem, 6vw, 3.2rem);
-}
-.enter-hint {
-  margin-top: 3em;
-  animation: blink 1.6s steps(2, start) infinite;
-}
-@keyframes blink {
-  to {
-    visibility: hidden;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .enter-hint {
-    animation: none;
-  }
-}
-
-/* ---------- rooms (the map as a list) ---------- */
+/* ---------- lists of rooms (the map's list view, the archive) ---------- */
 
 .rooms {
   list-style: none;
@@ -298,224 +225,8 @@ section + section {
   font-size: 0.85em;
   margin-left: 0.4em;
 }
-/* "new" and "ending soon" tags on rooms; ending soon is filled in so it stands out. */
-.badge {
-  display: inline-block;
-  border: var(--line);
-  padding: 0 0.4em;
-  margin-left: 0.5em;
-  font-size: 0.8em;
-  font-weight: 400;
-  line-height: 1.4;
-}
-.badge.ending {
-  background: var(--ink);
-  color: var(--paper);
-}
-/* A season notice under a gallery's name. */
-.season-notice {
-  font-weight: 700;
-}
-.room.kind-wing > .room-name,
-.room.kind-gallery > .room-name {
-  font-weight: 700;
-}
+/* ---------- the art wall (a gallery, an archived season) ---------- */
 
-/* ---------- floor plan ---------- */
-
-.plan-frame {
-  position: relative;
-  border: var(--line);
-}
-.plan {
-  display: block;
-  width: 100%;
-  height: 70vh;
-  font-family: var(--font);
-  cursor: grab;
-  touch-action: none; /* the map takes swipes and pinches, not the page */
-  user-select: none;
-  -webkit-user-select: none;
-}
-.plan.dragging {
-  cursor: grabbing;
-}
-.plan:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: -2px;
-}
-.plan-frame.mini {
-  border: 0;
-  height: 100%;
-}
-.plan.mini {
-  height: 100%;
-  cursor: pointer;
-}
-/* The person: waiting in the corner, hanging from the pointer over the map, dropping into a room. */
-.pegman {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  padding: 4px 8px;
-  border: var(--line);
-  background: var(--paper);
-  line-height: 0;
-  pointer-events: none;
-}
-.pegman svg circle {
-  fill: var(--ink);
-}
-.pegman svg path {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 2.5;
-  stroke-linecap: round;
-}
-.pegman.roaming {
-  right: auto;
-  bottom: auto;
-  margin: -6px 0 0 -20px; /* the raised hands at the pointer */
-  border-color: transparent;
-  background: none;
-  transform-origin: 50% 0;
-  transition: transform 0.15s ease-out;
-  z-index: 2;
-}
-.pegman.landing svg {
-  animation: drop 0.35s ease-in forwards;
-}
-@keyframes drop {
-  60% {
-    transform: translateY(14px);
-  }
-  80% {
-    transform: translateY(12px) scaleY(0.85);
-  }
-  100% {
-    transform: translateY(14px);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .pegman.roaming {
-    transition: none;
-  }
-}
-.plan-room:hover .floor {
-  fill: var(--wash);
-}
-.plan-room.here:hover .floor {
-  fill: var(--ink);
-}
-.you-are-here .pin {
-  fill: var(--alert);
-}
-.you-are-here .pin-dot {
-  fill: var(--paper);
-}
-.plan-room .you-are-here text {
-  font-size: 11px;
-  font-weight: 400;
-}
-.plan-controls {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  margin: 0;
-  display: flex;
-  gap: 4px;
-}
-.plan-controls button {
-  background: var(--paper);
-  min-width: 2.2em;
-}
-.plan .wall {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 1.5px;
-  vector-effect: non-scaling-stroke;
-}
-.plan .floor {
-  fill: var(--paper);
-}
-/* A doorway: paper painted over the wall, leaving a gap. */
-.plan .door {
-  stroke: var(--paper);
-  stroke-width: 4px;
-  vector-effect: non-scaling-stroke;
-  pointer-events: none;
-}
-.plan-room {
-  text-decoration: none;
-}
-.plan-room text {
-  font-size: 13px;
-  text-anchor: middle;
-  fill: var(--ink);
-}
-.plan-room.kind-gallery text,
-.plan-room.kind-wing text {
-  font-weight: 700;
-}
-.plan-room.kind-wing > text {
-  font-size: 16px;
-}
-.plan-room:hover > text,
-.plan-room:focus-visible > text {
-  text-decoration: underline;
-}
-.plan-room:focus-visible {
-  outline: none;
-}
-.plan-room:focus-visible .wall {
-  stroke-width: 3px;
-}
-.plan-room.here .floor {
-  fill: var(--ink);
-}
-.plan-room.here text {
-  fill: var(--paper);
-}
-.plan-room.target .floor {
-  fill: var(--wash);
-}
-.plan-badge rect {
-  fill: var(--paper);
-  stroke: var(--ink);
-  stroke-width: 1px;
-  vector-effect: non-scaling-stroke;
-}
-.plan-room .plan-badge text {
-  font-size: 11px;
-  font-weight: 400;
-}
-.plan-badge.ending rect {
-  fill: var(--ink);
-}
-.plan-room .plan-badge.ending text {
-  fill: var(--paper);
-}
-
-/* ---------- view / walk ---------- */
-
-/* Every room's page: a mini map in the top corner, the page flowing around it. */
-.minimap {
-  float: right;
-  position: relative; /* above positioned page content flowing beside it */
-  z-index: 1;
-  display: block;
-  width: 230px;
-  height: 200px;
-  margin: 0 0 1rem 1.5rem;
-  border: var(--line);
-  background: var(--paper);
-  text-decoration: none;
-}
-.in-room h2,
-.in-room .walk,
-.in-room .neighbours {
-  clear: right;
-}
 .walk {
   display: flex;
   gap: 3rem;
@@ -542,41 +253,14 @@ section + section {
 .artwork figcaption {
   margin-top: 0.8em;
 }
-.empty {
-  padding: 2rem 0;
-}
-.neighbours {
-  display: flex;
-  justify-content: space-between;
-  gap: 1em;
-  margin-top: 1.4rem;
-}
-.neighbours .after {
-  text-align: right;
-  margin-left: auto;
+
+/* A season notice under a gallery's name (also on future galleries and schedules). */
+.season-notice {
+  font-weight: 700;
 }
 
-/* ---------- lists on home and admin ---------- */
+/* ---------- lists of rows ---------- */
 
-.cards {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 1.5rem;
-}
-.card {
-  border: var(--line);
-  padding: 0.8em;
-  min-width: 0;
-}
-.card img {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-  margin-bottom: 0.6em;
-}
 .rows {
   list-style: none;
   padding: 0;
@@ -590,89 +274,15 @@ section + section {
   margin-left: 0.6em;
 }
 
-/* ---------- admin ---------- */
-
-.admin {
-  display: grid;
-  grid-template-columns: 180px minmax(0, 1fr);
-  gap: 2.5rem;
-  align-items: start;
-}
-.admin-nav {
-  position: sticky;
-  top: 4rem;
-  display: flex;
-  flex-direction: column;
-  border-left: var(--line);
-}
-.admin-nav a {
-  padding: 0.4em 0 0.4em 1em;
-  text-decoration: none;
-}
-.admin-nav a.active {
-  font-weight: 700;
-  border-left: 3px solid var(--ink);
-  margin-left: -2px;
-}
-.admin-section > h2:first-child {
-  margin-top: 0;
-}
-.schedule {
-  border: var(--line);
-  padding: 0.8em 1em;
-  margin-bottom: 1.2rem;
-}
-.schedule h3 {
-  margin-top: 0;
-}
-.schedule h3 button {
-  margin-left: 0.6em;
-  font-size: 0.8rem;
-}
-.schedule.editing {
-  border-width: 2px;
-}
+/* Labels in rows and in schedule forms (including the gallery picker inside them). */
 .schedule-form label,
 .rows label {
   margin-bottom: 0.4em;
 }
-.round-nav button {
-  margin: 0 0.6em;
-}
-/* An idea already chosen to become a gallery. */
+/* An idea already chosen to become a gallery (future galleries, my nominations, admin). */
 .chosen {
   text-decoration: line-through;
   color: var(--faint);
-}
-
-/* ---------- posting ---------- */
-
-.dropzone {
-  display: block;
-  border: 1px dashed var(--ink);
-  padding: 2rem 1rem;
-  margin: 0 0 1em;
-  text-align: center;
-  cursor: pointer;
-  max-width: 560px;
-}
-.dropzone.dragging {
-  background: var(--ink);
-  color: var(--paper);
-}
-.dropzone img {
-  max-height: 320px;
-  margin: 0 auto;
-}
-.dropzone input[type="file"] {
-  display: block;
-  margin: 1em auto 0;
-  border: 0;
-  padding: 0;
-}
-.post-form,
-.auth {
-  max-width: 560px;
 }
 
 /* ---------- small screens ---------- */
@@ -681,35 +291,7 @@ section + section {
   body {
     font-size: 14px;
   }
-  .minimap {
-    float: none;
-    width: auto;
-    margin: 0 0 1rem;
-    height: 160px;
-  }
   .walk {
     gap: 1.5rem;
-  }
-  .neighbours {
-    flex-direction: column;
-  }
-  .neighbours .after {
-    text-align: left;
-    margin-left: 0;
-  }
-  .admin {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-  .admin-nav {
-    position: static;
-    flex-direction: row;
-    flex-wrap: wrap;
-    border-left: 0;
-    border-bottom: var(--line);
-  }
-  .admin-nav a.active {
-    border-left: 0;
-    margin-left: 0;
   }
 }

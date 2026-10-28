@@ -307,3 +307,178 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
     </template>
   </div>
 </template>
+
+<style scoped>
+.plan-frame {
+  position: relative;
+  border: var(--line);
+}
+.plan {
+  display: block;
+  width: 100%;
+  height: 70vh;
+  font-family: var(--font);
+  cursor: grab;
+  touch-action: none; /* the map takes swipes and pinches, not the page */
+  user-select: none;
+  -webkit-user-select: none;
+}
+.plan.dragging {
+  cursor: grabbing;
+}
+.plan:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+.plan-frame.mini {
+  border: 0;
+  height: 100%;
+}
+.plan.mini {
+  height: 100%;
+  cursor: pointer;
+}
+/* The person: waiting in the corner, hanging from the pointer over the map, dropping into a room. */
+.pegman {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 4px 8px;
+  border: var(--line);
+  background: var(--paper);
+  line-height: 0;
+  pointer-events: none;
+}
+.pegman svg circle {
+  fill: var(--ink);
+}
+.pegman svg path {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.pegman.roaming {
+  right: auto;
+  bottom: auto;
+  margin: -6px 0 0 -20px; /* the raised hands at the pointer */
+  border-color: transparent;
+  background: none;
+  transform-origin: 50% 0;
+  transition: transform 0.15s ease-out;
+  z-index: 2;
+}
+.pegman.landing svg {
+  animation: drop 0.35s ease-in forwards;
+}
+@keyframes drop {
+  60% {
+    transform: translateY(14px);
+  }
+  80% {
+    transform: translateY(12px) scaleY(0.85);
+  }
+  100% {
+    transform: translateY(14px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pegman.roaming {
+    transition: none;
+  }
+}
+.plan-room:hover .floor {
+  fill: var(--wash);
+}
+.plan-room.here:hover .floor {
+  fill: var(--ink);
+}
+.you-are-here .pin {
+  fill: var(--alert);
+}
+.you-are-here .pin-dot {
+  fill: var(--paper);
+}
+.plan-room .you-are-here text {
+  font-size: 11px;
+  font-weight: 400;
+}
+.plan-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  margin: 0;
+  display: flex;
+  gap: 4px;
+}
+.plan-controls button {
+  min-width: 2.2em;
+}
+.plan .wall {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+.plan .floor {
+  fill: var(--paper);
+}
+/* A doorway: paper painted over the wall, leaving a gap. */
+.plan .door {
+  stroke: var(--paper);
+  stroke-width: 4px;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+.plan-room {
+  text-decoration: none;
+}
+.plan-room text {
+  font-size: 13px;
+  text-anchor: middle;
+  fill: var(--ink);
+}
+.plan-room.kind-gallery text,
+.plan-room.kind-wing text {
+  font-weight: 700;
+}
+.plan-room.kind-wing > text {
+  font-size: 16px;
+}
+.plan-room:hover > text,
+.plan-room:focus-visible > text {
+  fill: var(--accent);
+  text-decoration: underline;
+}
+.plan-room:focus-visible {
+  outline: none;
+}
+.plan-room:focus-visible .wall {
+  stroke-width: 3px;
+}
+.plan-room.here .floor {
+  fill: var(--ink);
+}
+.plan-room.here text {
+  fill: var(--paper);
+}
+.plan-room.target .floor {
+  fill: var(--wash);
+}
+.plan-badge rect {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+.plan-room .plan-badge text {
+  font-size: 11px;
+  font-weight: 400;
+}
+.plan-badge.ending rect {
+  fill: var(--ink);
+}
+.plan-room .plan-badge.ending text {
+  fill: var(--paper);
+}
+</style>

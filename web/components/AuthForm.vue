@@ -37,3 +37,9 @@ async function submit(action: "register" | "sign-in") {
     <p v-if="error"><ErrorNote :problem="error" /></p>
   </form>
 </template>
+
+<style scoped>
+.auth {
+  max-width: 560px;
+}
+</style>

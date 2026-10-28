@@ -128,3 +128,32 @@ onUnmounted(() => {
     <p v-if="error"><ErrorNote :problem="error" /></p>
   </form>
 </template>
+
+<style scoped>
+.dropzone {
+  display: block;
+  border: 1px dashed var(--ink);
+  padding: 2rem 1rem;
+  margin: 0 0 1em;
+  text-align: center;
+  cursor: pointer;
+  max-width: 560px;
+}
+.dropzone.dragging {
+  background: var(--ink);
+  color: var(--paper);
+}
+.dropzone img {
+  max-height: 320px;
+  margin: 0 auto;
+}
+.dropzone input[type="file"] {
+  display: block;
+  margin: 1em auto 0;
+  border: 0;
+  padding: 0;
+}
+.post-form {
+  max-width: 560px;
+}
+</style>

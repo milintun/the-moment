@@ -39,3 +39,49 @@ const section = computed(() => (route.params.section as string | undefined) || "
     </section>
   </div>
 </template>
+
+<style scoped>
+.admin {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 2.5rem;
+  align-items: start;
+}
+.admin-nav {
+  position: sticky;
+  top: 4rem;
+  display: flex;
+  flex-direction: column;
+  border-left: var(--line);
+}
+.admin-nav a {
+  padding: 0.4em 0 0.4em 1em;
+  text-decoration: none;
+}
+.admin-nav a.active {
+  font-weight: 700;
+  border-left: 3px solid var(--ink);
+  margin-left: -2px;
+}
+.admin-section > :deep(h2:first-child) {
+  margin-top: 0;
+}
+
+@media (max-width: 720px) {
+  .admin {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .admin-nav {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-left: 0;
+    border-bottom: var(--line);
+  }
+  .admin-nav a.active {
+    border-left: 0;
+    margin-left: 0;
+  }
+}
+</style>

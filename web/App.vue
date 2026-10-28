@@ -46,3 +46,72 @@ const around = computed(() => (current.value ? neighbours(all.value, current.val
     </main>
   </template>
 </template>
+
+<style scoped>
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+  padding: 0.7em var(--gutter);
+  border-bottom: var(--line);
+  background: var(--paper);
+}
+.brand {
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding-inline: var(--gutter);
+  padding-block: 2rem 4rem;
+}
+
+/* Every room's page: a mini map in the top corner, the page flowing around it. */
+.minimap {
+  float: right;
+  position: relative; /* above positioned page content flowing beside it */
+  z-index: 1;
+  display: block;
+  width: 230px;
+  height: 200px;
+  margin: 0 0 1rem 1.5rem;
+  border: var(--line);
+  background: var(--paper);
+  text-decoration: none;
+}
+.in-room :deep(h2),
+.in-room :deep(.walk),
+.in-room .neighbours {
+  clear: right;
+}.neighbours {
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+  margin-top: 1.4rem;
+}
+.neighbours .after {
+  text-align: right;
+  margin-left: auto;
+}
+
+@media (max-width: 720px) {
+  .minimap {
+    float: none;
+    width: auto;
+    margin: 0 0 1rem;
+    height: 160px;
+  }
+  .neighbours {
+    flex-direction: column;
+  }
+  .neighbours .after {
+    text-align: left;
+    margin-left: 0;
+  }
+}
+</style>

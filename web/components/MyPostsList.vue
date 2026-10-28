@@ -60,3 +60,25 @@ async function remove(post: string) {
     </li>
   </ul>
 </template>
+
+<style scoped>
+.cards {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+.card {
+  border: var(--line);
+  padding: 0.8em;
+  min-width: 0;
+}
+.card img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  margin-bottom: 0.6em;
+}
+</style>

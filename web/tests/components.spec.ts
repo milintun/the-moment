@@ -8,7 +8,7 @@ import { SESSION_ENDED } from "../errors.ts";
 import RoomList from "../components/RoomList.vue";
 import type { Room } from "../museum.ts";
 import { routes } from "../router.ts";
-import { fakeApi, signedInAs } from "./fake.ts";
+import { fakeApi, mountAt, signedInAs } from "./fake.ts";
 
 const newRouter = () => createRouter({ history: createMemoryHistory(), routes });
 
@@ -127,3 +127,20 @@ describe("routes", () => {
     expect(router.currentRoute.value.fullPath).toBe(to);
   });
 });
+
+describe("entrance", () => {
+  test("the half of the page the pointer is on lights up that side of the figure, and its column", async () => {
+    const { wrapper } = await mountAt("/");
+    const page = wrapper.find(".entrance");
+    const [visitor, artist] = [wrapper.findAll(".entrance-columns p")[0]!, wrapper.findAll(".entrance-columns p")[1]!];
+    const shown = () => wrapper.findAll(".entrance-figure img").map((img) => img.classes().includes("shown"));
+    expect([visitor.classes("active"), artist.classes("active")]).toEqual([false, false]);
+    await page.trigger("pointermove", { clientX: 10, pointerType: "mouse" });
+    expect([visitor.classes("active"), artist.classes("active"), shown()]).toEqual([true, false, [true, false]]);
+    await page.trigger("pointermove", { clientX: window.innerWidth - 10, pointerType: "mouse" });
+    expect([visitor.classes("active"), artist.classes("active"), shown()]).toEqual([false, true, [false, true]]);
+    await page.trigger("pointerleave");
+    expect(artist.classes("active")).toBe(false);
+  });
+});
+

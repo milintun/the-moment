@@ -158,3 +158,9 @@ onMounted(async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.empty {
+  padding: 2rem 0;
+}
+</style>

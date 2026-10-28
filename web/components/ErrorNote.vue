@@ -16,3 +16,15 @@ const message = computed(() =>
     <RouterLink v-if="message === SESSION_ENDED" to="/auth">log in</RouterLink>
   </span>
 </template>
+
+<style scoped>
+.error {
+  border: var(--line);
+  padding: 0.4em 0.7em;
+  display: inline-block;
+}
+.error::before {
+  content: "! ";
+  font-weight: 700;
+}
+</style>

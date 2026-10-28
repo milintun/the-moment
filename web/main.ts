@@ -1,8 +1,9 @@
+// The shared styles first, so each component's own styles come after them and win ties.
+import "./style.css";
 import { createApp } from "vue";
 import App from "./App.vue";
 import { refreshMe } from "./api.ts";
 import { router } from "./router.ts";
-import "./style.css";
 
 // Trying fonts in development: ?font=Some+Font&title=Other+Font loads them from Google Fonts
 // and uses them for this tab (kept as you click around; ?font=&title= goes back to the defaults).

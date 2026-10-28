@@ -183,3 +183,21 @@ const cancel = (s: Schedule) => act(s.cycle, "/admin/schedules/cancel", client.a
     </article>
   </details>
 </template>
+
+<style scoped>
+.schedule {
+  border: var(--line);
+  padding: 0.8em 1em;
+  margin-bottom: 1.2rem;
+}
+.schedule h3 {
+  margin-top: 0;
+}
+.schedule h3 button {
+  margin-left: 0.6em;
+  font-size: 0.8rem;
+}
+.schedule.editing {
+  border-width: 2px;
+}
+</style>

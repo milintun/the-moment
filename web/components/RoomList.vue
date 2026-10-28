@@ -16,3 +16,24 @@ defineProps<{ rooms: Room[] }>();
     </li>
   </ol>
 </template>
+
+<style scoped>
+/* "new" and "ending soon" tags on rooms; ending soon is filled in so it stands out. */
+.badge {
+  display: inline-block;
+  border: var(--line);
+  padding: 0 0.4em;
+  margin-left: 0.5em;
+  font-size: 0.8em;
+  font-weight: 400;
+  line-height: 1.4;
+}
+.badge.ending {
+  background: var(--ink);
+  color: var(--paper);
+}
+.room.kind-wing > .room-name,
+.room.kind-gallery > .room-name {
+  font-weight: 700;
+}
+</style>
