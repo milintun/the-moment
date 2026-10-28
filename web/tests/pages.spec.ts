@@ -316,6 +316,21 @@ describe("archive", () => {
       `Future (${day(t0)} – ${day(t0 + 9 * DAY)})`, // three of nine over; never-run Never left out
     ]);
   });
+
+  test("a gallery opens into its finished seasons, each \"season n\" going to that season's wall", async () => {
+    const DAY = 24 * 60 * 60 * 1000;
+    const start = new Date(Date.now() - 10 * DAY).toISOString();
+    fakeApi({ "/archive/galleries": () => ({ page: { groups: [{ group: "g1", name: "Doodles", cycle: "c", start, period: 3 * DAY, runs: 9 }] } }) });
+    const { wrapper } = await mountAt("/archive");
+    const gallery = wrapper.find("details");
+    expect((gallery.element as HTMLDetailsElement).open).toBe(false);
+    await gallery.find("summary").trigger("click");
+    expect(gallery.findAll(".seasons a").map((a) => [a.text(), a.attributes("href")])).toEqual([
+      ["season 1", "/archive/g1/0"],
+      ["season 2", "/archive/g1/1"],
+      ["season 3", "/archive/g1/2"],
+    ]);
+  });
 });
 
 describe("archive search", () => {
