@@ -146,7 +146,7 @@ Defined in [Nominating](../design/concepts/Nominating.md), line 1.
   - Refuses `NAME_TAKEN`: A category with this name already exists.
 - `nominate(nominator: User, category: Category, name: String, createdAt: DateTime) : returns (nomination: Nomination)`
   - Refuses `NO_SUCH_CATEGORY`: There is no such category.
-  - Refuses `INVALID_NAME`: A nomination needs a name.
+  - Refuses `INVALID_NAME`: A nomination needs a name of at most 40 characters.
   - Refuses `TOO_SOON`: You can nominate once a day.
 - `withdraw(nominator: User, nomination: Nomination) : returns ()`
   - Refuses `NO_SUCH_NOMINATION`: There is no such nomination.

@@ -171,7 +171,7 @@ Times are fixed dates, never the real clock.
   - refuses `NAME_TAKEN`; still one category with that name
 - **nominate**
   - refuses `NO_SUCH_CATEGORY`
-  - refuses `INVALID_NAME` for a blank name; nothing created
+  - refuses `INVALID_NAME` for a blank name or one over 40 characters (40 after trimming is fine); nothing created
   - refuses `TOO_SOON` 23h59m later; nothing created and the limit is still measured from the first nomination
   - allows exactly 24h later
   - the limit applies across categories

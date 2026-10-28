@@ -60,13 +60,13 @@ nominate (nominator: User, category: Category, name: String, createdAt: DateTime
   where category is not in Categories
   then
     refuses NO_SUCH_CATEGORY "There is no such category."
-  where name is empty after trimming
+  where name is empty after trimming, or longer than 40 characters after trimming
   then
-    refuses INVALID_NAME "A nomination needs a name."
+    refuses INVALID_NAME "A nomination needs a name of at most 40 characters."
   where nominator's lastNominatedAt is less than one day before createdAt
   then
     refuses TOO_SOON "You can nominate once a day."
-  where category is in Categories, name is not empty, and nominator may nominate
+  where category is in Categories, name is 1 to 40 characters after trimming, and nominator may nominate
   then
     create a new nomination with nominator, category, name as written, and createdAt
     set nominator's lastNominatedAt to createdAt

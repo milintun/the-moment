@@ -56,12 +56,17 @@ describe("nominate", () => {
     ).rejects.toBeInstanceOf(NoSuchCategory);
   });
 
-  test("refuses INVALID_NAME for a blank name and creates nothing, not even a used-up day", async () => {
+  test("refuses INVALID_NAME for a blank name or one over 40 characters, creating nothing, not even a used-up day", async () => {
     await expect(nominating.nominate({ nominator: "gigi", category, name: "   ", createdAt: T0 })).rejects.toBeInstanceOf(
       InvalidName,
     );
+    await expect(
+      nominating.nominate({ nominator: "gigi", category, name: "x".repeat(41), createdAt: T0 }),
+    ).rejects.toBeInstanceOf(InvalidName);
     expect(await names()).toEqual([]);
     await nominating.nominate({ nominator: "gigi", category, name: "Hands", createdAt: T0 });
+    // Exactly 40, with spaces around it trimmed, is fine.
+    await nominating.nominate({ nominator: "sid", category, name: ` ${"y".repeat(40)} `, createdAt: T0 });
   });
 
   test("refuses TOO_SOON within a day, creating nothing and keeping the first nomination's time", async () => {

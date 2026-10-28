@@ -202,10 +202,16 @@ describe("gallery season notices", () => {
 
 describe("future galleries", () => {
   const roundEnd = () => new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
+  const ROUND_START = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const when = (iso: string) => {
+    const d = new Date(iso);
+    const time = `${d.getHours() % 12 || 12}${d.getMinutes() ? `:${String(d.getMinutes()).padStart(2, "0")}` : ""}${d.getHours() < 12 ? "am" : "pm"}`;
+    return `${d.toLocaleDateString([], { weekday: "long" })} ${d.getMonth() + 1}/${d.getDate()} at ${time}`;
+  };
   const nomination = (id: string, name: string, nominator: string) => ({ nomination: id, name, nominator, votes: 0, createdAt: new Date().toISOString() });
   const page = (handlers: Record<string, (input: any) => unknown>, end: string | null = roundEnd()) =>
     fakeApi({
-      "/nominations/categories": () => ({ list: { categories: [{ category: "k", name: "Future galleries", run: end ? 0 : null, runStart: null, runEnd: end }] } }),
+      "/nominations/categories": () => ({ list: { categories: [{ category: "k", name: "Future galleries", run: end ? 0 : null, runStart: ROUND_START, runEnd: end }] } }),
       "/nominations/list": () => ({ ranking: { nominations: [nomination("n1", "Night Walks", "gigi")] } }),
       "/nominations/my-votes": () => ({ votes: { nominations: [] } }),
       ...handlers,
@@ -216,10 +222,40 @@ describe("future galleries", () => {
     await flushPromises();
   };
 
-  test("counts down to the round's close", async () => {
+  test("one line counts down to the round's close, with its start and end", async () => {
+    const end = roundEnd();
+    page({}, end);
+    const { wrapper } = await mountAt("/nominations");
+    expect(wrapper.find(".round").text()).toBe(`current round closes in 3h (${when(ROUND_START)} – ${when(end)})`);
+    expect(wrapper.text()).not.toContain("open until");
+  });
+
+  test("round times read as a day and an hour, minutes only when there are some", async () => {
+    const start = new Date(2026, 9, 26, 1, 0).toISOString(); // Monday, 1 AM local
+    const end = new Date(2026, 10, 1, 23, 30).toISOString(); // Sunday, 11:30 PM local
+    fakeApi({
+      "/nominations/categories": () => ({ list: { categories: [{ category: "k", name: "Future galleries", run: 0, runStart: start, runEnd: end }] } }),
+      "/nominations/list": () => ({ ranking: { nominations: [] } }),
+    });
+    const { wrapper } = await mountAt("/nominations");
+    expect(wrapper.find(".round").text()).toContain("(Monday 10/26 at 1am – Sunday 11/1 at 11:30pm)");
+  });
+
+  test("an idea can be at most 40 characters", async () => {
+    signedInAs("sasha");
     page({});
     const { wrapper } = await mountAt("/nominations");
-    expect(wrapper.find(".season-notice").text()).toBe("nominations close in 3h");
+    expect(wrapper.find("form input").attributes("maxlength")).toBe("40");
+  });
+
+  test("the ranking is a table: nominations, votes, by, and when each was added", async () => {
+    page({});
+    const { wrapper } = await mountAt("/nominations");
+    expect(wrapper.findAll(".ranking th").map((th) => th.text())).toEqual(["nominations", "votes", "by", "added", "actions"]);
+    const [cells] = wrapper.findAll(".ranking tbody tr").map((tr) => tr.findAll("td").map((td) => td.text()));
+    expect(cells!.slice(0, 3)).toEqual(["Night Walks", "0", "gigi"]);
+    expect(cells![3]).toMatch(/\d/);
+    expect(wrapper.find("ol").exists()).toBe(false);
   });
 
   test("an idea already nominated is caught before asking the server", async () => {
@@ -246,9 +282,9 @@ describe("future galleries", () => {
     const categories = () => ({ list: { categories: [{ category: "k", name: "Future galleries", run: end ? 0 : null, runStart: null, runEnd: end }] } });
     page({ "/nominations/categories": categories, "/nominations/vote": () => ((end = null), { error: "CONFLICT" }) });
     const { wrapper } = await mountAt("/nominations");
-    await wrapper.findAll("li button").find((b) => b.text() === "Upvote")!.trigger("click");
+    await wrapper.findAll(".ranking button").find((b) => b.text() === "Upvote")!.trigger("click");
     await flushPromises();
-    expect(wrapper.find("li [role=alert]").text()).toBe("this round is over, so its votes are final.");
+    expect(wrapper.find(".ranking [role=alert]").text()).toBe("this round is over, so its votes are final.");
   });
 });
 
@@ -270,7 +306,7 @@ describe("chosen ideas", () => {
       "/nominations/my-votes": () => ({ votes: { nominations: [] } }),
     });
     const { wrapper } = await mountAt("/nominations");
-    const [hands, feet] = wrapper.findAll("ol li");
+    const [hands, feet] = wrapper.findAll(".ranking tbody tr");
     expect(hands!.find(".chosen").text()).toBe("Hands");
     expect(hands!.text()).toContain("chosen to become a gallery");
     expect(hands!.text()).not.toContain("Withdraw");

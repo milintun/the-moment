@@ -9,6 +9,7 @@ export class NotNominator extends Error {} // 403 forbidden
 export class Chosen extends Error {} // 409 conflict
 
 const DAY = 24 * 60 * 60 * 1000;
+const MAX_NAME = 40; // characters, after trimming
 
 interface Category {
   _id: string;
@@ -75,7 +76,9 @@ export class NominatingConcept {
       throw new NoSuchCategory("There is no such category.");
     }
     const normalized = normalize(name);
-    if (normalized === "") throw new InvalidName("A nomination needs a name.");
+    if (normalized === "" || name.trim().length > MAX_NAME) {
+      throw new InvalidName("A nomination needs a name of at most 40 characters.");
+    }
     try {
       // Claims today's nomination in one step: updates lastNominatedAt only when it is at
       // least a day old, and otherwise the upsert collides with the existing _id.

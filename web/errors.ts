@@ -57,7 +57,7 @@ const MESSAGES: Partial<Record<Endpoint, Messages>> = {
     CONFLICT: "this season is over, so its votes are final.",
   },
   "/nominations/create": {
-    INVALID_REQUEST: "give your idea a name.",
+    INVALID_REQUEST: "give your idea a name of at most 40 characters.",
     NOT_FOUND: "nominations aren't set up yet.",
     CONFLICT: "you can nominate once a day.",
   },
