@@ -98,6 +98,26 @@ const clickOutside = (e: MouseEvent) => e.target === dialog.value && closeMap();
   letter-spacing: 0.08em;
   text-decoration: none;
 }
+/* Narrower than 1450px, the name turns on its side (reading upward) and sits in the left margin,
+   clear of the page; at 1200px and under there's no margin for it, so it's left out. */
+@media (max-width: 1449.98px) {
+  .topbar {
+    position: fixed;
+    top: var(--gutter);
+    left: 0;
+    padding: 0 var(--gutter);
+  }
+  .brand {
+    display: block;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+}
+@media (max-width: 1200px) {
+  .topbar {
+    display: none;
+  }
+}
 
 .page {
   max-width: 1100px;
