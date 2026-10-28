@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { useRoute } from "vue-router";
-import { me } from "./api.ts";
 import FloorPlan from "./components/FloorPlan.vue";
 import { neighbours, roomAt, rooms, type Room } from "./museum.ts";
 
@@ -27,8 +26,7 @@ const around = computed(() => (current.value ? neighbours(all.value, current.val
   <RouterView v-if="atEntrance" />
   <template v-else>
     <header class="topbar">
-      <RouterLink to="/map" class="brand">the moment · map</RouterLink>
-      <RouterLink :to="me ? '/home' : '/auth'">{{ me ? `home (${me})` : "register / log in" }}</RouterLink>
+      <RouterLink to="/map" class="brand" aria-label="the moment: back to the map">The Moment</RouterLink>
     </header>
     <main :class="['page', { 'in-room': current }]">
       <RouterLink v-if="current" :key="current.id" class="minimap" :to="`/map?at=${current.id}`" :aria-label="`you are in ${current.label}. open the map`">
@@ -48,20 +46,20 @@ const around = computed(() => (current.value ? neighbours(all.value, current.val
 </template>
 
 <style scoped>
+/* The top bar: just the name, in the title font, as the way back to the map. */
 .topbar {
   position: sticky;
   top: 0;
   z-index: 10;
-  display: flex;
-  justify-content: space-between;
-  gap: 1em;
   padding: 0.7em var(--gutter);
-  border-bottom: var(--line);
-  background: var(--paper);
 }
 .brand {
-  text-decoration: none;
+  font-family: var(--title-font);
+  font-size: 1.4rem;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-decoration: none;
 }
 
 .page {
