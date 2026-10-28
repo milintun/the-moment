@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { flushPromises } from "@vue/test-utils";
+import { dayAndHour } from "../api.ts";
 import { fakeApi, groupRow, mountAt, signedInAs } from "./fake.ts";
 
 beforeEach(() => signedInAs(null));
@@ -41,14 +42,23 @@ describe("gallery view", () => {
     const art = wrapper.find("#post-p1");
     expect(art.find("img").attributes("src")).toBe("/api/images/u-p1");
     expect(art.text()).toContain("caption p1");
-    expect(art.text()).toContain("by gigi · 2 vote(s)");
+    expect(art.findAll("figcaption .meta").map((m) => m.text())).toEqual(["by gigi", "2 votes"]);
   });
 
-  test("signed out: no buttons on the art, and posting asks you to log in", async () => {
+  test("signed out: no buttons on the art, and a link to log in to post and vote", async () => {
     gallery();
     const { wrapper } = await mountAt("/galleries/g1");
     expect(buttons(wrapper, "p1")).toEqual([]);
-    expect(wrapper.find('a[href="/auth"]').text()).toBe("post here");
+    expect(wrapper.find('a[href="/auth"]').text()).toBe("log in to post and vote");
+    expect(wrapper.text()).not.toContain("post here");
+  });
+
+  test("signed in: a post here button", async () => {
+    signedInAs("sasha");
+    gallery();
+    const { wrapper } = await mountAt("/galleries/g1");
+    expect(wrapper.find("a.button").text()).toBe("post here");
+    expect(wrapper.find("a.button").attributes("href")).toBe("/galleries/g1/post");
   });
 
   test("a closed gallery offers no posting", async () => {
@@ -166,32 +176,38 @@ describe("gallery season notices", () => {
     });
   const notice = async () => (await mountAt("/galleries/g1")).wrapper;
 
-  test("a new season says when it started", async () => {
+  test("a new season gets a \"new\" badge beside the name, then its season and when it started and ends", async () => {
     season(5 * MINUTE, HOUR);
-    expect((await notice()).find(".season-notice").text()).toBe("new season · started 5 min ago");
+    const wrapper = await notice();
+    expect(wrapper.find("h1 .badge").text()).toBe("new");
+    expect(wrapper.find("h1 .badge").classes()).not.toContain("ending");
+    expect(wrapper.find(".season-line").text()).toBe("season 1 of 3");
+    expect(wrapper.find(".season-dates").text()).toBe(`${dayAndHour(new Date(T - 5 * MINUTE))} to ${dayAndHour(new Date(T + HOUR))}`);
   });
 
-  test("a season ending soon counts down", async () => {
+  test("a season ending soon gets a filled-in \"ending soon\" badge", async () => {
     season(HOUR, 5 * MINUTE);
-    expect((await notice()).find(".season-notice").text()).toBe("ending soon · 5 min left to post and vote");
+    const badge = (await notice()).find("h1 .badge");
+    expect([badge.text(), badge.classes()]).toEqual(["ending soon", expect.arrayContaining(["ending"])]);
   });
 
-  test("mid-season there is no notice, and the last season is marked final", async () => {
+  test("mid-season there is no badge, and the last season is marked final", async () => {
     season(HOUR / 2, HOUR / 2, { run: 2, runs: 3 });
     const wrapper = await notice();
-    expect(wrapper.find(".season-notice").exists()).toBe(false);
-    expect(wrapper.find(".meta").text()).toContain("season 3 of 3 · final season");
+    expect(wrapper.find(".badge").exists()).toBe(false);
+    expect(wrapper.find(".season-line").text()).toBe("season 3 of 3 · final season");
   });
 
   test("when the season ends with the page open, it points to the archive and votes are final", async () => {
     signedInAs("sasha");
     const api = season(HOUR, MINUTE / 2);
     const wrapper = await notice();
-    expect(wrapper.find(".season-notice").text()).toContain("less than a minute left");
+    expect(wrapper.find("h1 .badge").text()).toBe("ending soon");
     vi.advanceTimersByTime(MINUTE);
     await flushPromises();
     expect(wrapper.find(".season-notice").text()).toBe("this season just ended. see it in the archive");
     expect(wrapper.find('.season-notice a').attributes("href")).toBe("/archive/g1/0");
+    expect(wrapper.find(".badge").exists()).toBe(false);
     expect(wrapper.text()).not.toContain("post here");
     await wrapper.find("#post-p1 button").trigger("click");
     await flushPromises();
@@ -398,6 +414,59 @@ describe("archive search", () => {
     expect(api.called("/archive/galleries").map((c) => c.offset)).toEqual([0, 20]);
     expect(wrapper.findAll(".room-name").map((a) => a.text().split(" (")[0])).toEqual(["Oldest Doodles"]);
     expect(wrapper.text()).not.toContain("load more galleries");
+  });
+});
+
+describe("wall order", () => {
+  test("sorted by votes as it comes; the sort menu re-sorts it newest or oldest first, and back", async () => {
+    const at = (minutesAgo: number) => new Date(Date.now() - minutesAgo * 60_000).toISOString();
+    fakeApi({
+      "/groups/list": () => ({ list: { groups: [groupRow("g1", "Doodles")] } }),
+      "/groups/feed": () => ({
+        feed: {
+          posts: [
+            { post: "old-popular", owner: "gigi", content: "u1", caption: "", createdAt: at(50), votes: 5 },
+            { post: "new-quiet", owner: "sid", content: "u2", caption: "", createdAt: at(5), votes: 0 },
+            { post: "mid", owner: "sash", content: "u3", caption: "", createdAt: at(20), votes: 2 },
+          ],
+        },
+      }),
+    });
+    const { wrapper } = await mountAt("/galleries/g1");
+    const ids = () => wrapper.findAll(".artwork").map((f) => f.attributes("id"));
+    const menu = wrapper.find(".wall-order");
+    const pick = async (label: string) => {
+      await menu.find("button.current").trigger("click");
+      await menu.findAll("[role=option]").find((o) => o.text() === label)!.trigger("click");
+    };
+    expect(menu.find("button.current").text()).toContain("votes");
+    expect(menu.find("[role=listbox]").exists()).toBe(false); // closed until clicked
+    expect(ids()).toEqual(["post-old-popular", "post-new-quiet", "post-mid"]); // the server's order
+    await pick("newest");
+    expect(menu.find("[role=listbox]").exists()).toBe(false); // closes on choosing
+    expect(ids()).toEqual(["post-new-quiet", "post-mid", "post-old-popular"]);
+    await pick("oldest");
+    expect(ids()).toEqual(["post-old-popular", "post-mid", "post-new-quiet"]);
+    await pick("votes");
+    expect(ids()).toEqual(["post-old-popular", "post-new-quiet", "post-mid"]);
+  });
+
+  test("the sort menu works from the keyboard: an arrow opens it, arrows move, Enter chooses, Esc closes", async () => {
+    fakeApi({
+      "/groups/list": () => ({ list: { groups: [groupRow("g1", "Doodles")] } }),
+      "/groups/feed": () => ({ feed: { posts: [] } }),
+    });
+    const { wrapper } = await mountAt("/galleries/g1");
+    const menu = wrapper.find(".wall-order");
+    await menu.trigger("keydown", { key: "ArrowDown" });
+    expect(menu.find("button.current").attributes("aria-expanded")).toBe("true");
+    await menu.trigger("keydown", { key: "ArrowDown" });
+    await menu.trigger("keydown", { key: "Enter" });
+    expect(menu.find("button.current").text()).toContain("newest");
+    await menu.trigger("keydown", { key: "ArrowDown" });
+    await menu.trigger("keydown", { key: "Escape" });
+    expect(menu.find("[role=listbox]").exists()).toBe(false);
+    expect(menu.find("button.current").text()).toContain("newest");
   });
 });
 

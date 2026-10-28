@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import ErrorNote from "../components/ErrorNote.vue";
-import { client, isAdmin, me, seasonPhase, span, useNow } from "../api.ts";
+import WallEnd from "../components/WallEnd.vue";
+import WallOrder from "../components/WallOrder.vue";
+import { client, dayAndHour, isAdmin, me, seasonPhase, useNow, wallOrder, type WallSort } from "../api.ts";
 import { explain, type Problem } from "../errors.ts";
 
 type Post = Extract<Awaited<ReturnType<typeof client.groups.feed>>, { feed: unknown }>["feed"]["posts"][number];
@@ -13,6 +15,11 @@ const name = ref("");
 // The running season, or null when the gallery is closed.
 const season = ref<{ run: number; runs: number; runStart: string; runEnd: string } | null>(null);
 const posts = ref<Post[]>([]);
+const order = ref<WallSort>("votes");
+const wall = computed(() => wallOrder(posts.value, order.value));
+// A new order starts the walk again from the wall's beginning.
+const walk = ref<HTMLElement>();
+watch(order, () => walk.value?.scrollTo?.({ left: 0 }));
 const voted = ref(new Set<string>());
 const confirming = ref<string | null>(null); // the post waiting for "yes, delete"
 const confirmingRemoval = ref<string | null>(null); // the post an admin is about to remove
@@ -95,33 +102,37 @@ onMounted(async () => {
 <template>
   <div v-if="loaded" class="view">
     <header class="view-head">
-      <h1>{{ name }}</h1>
-      <p v-if="!season" class="meta">closed</p>
+      <h1>
+        {{ name }}
+        <span v-if="phase === 'new' || phase === 'ending'" :class="['badge', { ending: phase === 'ending' }]">
+          {{ phase === "new" ? "new" : "ending soon" }}
+        </span>
+      </h1>
+      <p v-if="!season">closed</p>
       <template v-else>
-        <p class="meta">
+        <p class="season-line">
           season {{ season.run + 1 }} of {{ season.runs }}<template v-if="season.run === season.runs - 1"> · final season</template>
-          <template v-if="phase !== 'ended'"> · until {{ new Date(season.runEnd).toLocaleString() }}</template>
         </p>
-        <p v-if="phase === 'new'" class="season-notice">
-          new season · started {{ span(now - new Date(season.runStart).getTime()) }} ago
+        <p class="season-dates">
+          {{ dayAndHour(season.runStart) }} to {{ dayAndHour(season.runEnd) }}
         </p>
-        <p v-else-if="phase === 'ending'" class="season-notice">
-          ending soon · {{ span(new Date(season.runEnd).getTime() - now) }} left to post and vote
-        </p>
-        <p v-else-if="phase === 'ended'" class="season-notice">
+        <p v-if="phase === 'ended'" class="season-notice">
           this season just ended. <RouterLink :to="`/archive/${group}/${season.run}`">see it in the archive</RouterLink>
         </p>
       </template>
-      <p v-if="open">
-        <RouterLink class="button" :to="me ? `/galleries/${group}/post` : '/auth'">post here</RouterLink>
+      <p v-if="open" class="post-line">
+        <RouterLink v-if="me" class="button" :to="`/galleries/${group}/post`">post here</RouterLink>
+        <RouterLink v-else to="/auth">log in to post and vote</RouterLink>
       </p>
     </header>
 
     <p v-if="problem?.at === 'page'"><ErrorNote :problem="problem" at="page" /></p>
-    <p v-if="loaded && !posts.length && problem?.at !== 'page'" class="empty">no art on these walls yet this season.</p>
 
-    <div class="walk">
-      <figure v-for="p in posts" :id="`post-${p.post}`" :key="p.post" class="artwork">
+    <p class="sort-note"><WallOrder v-model="order" /></p>
+    <div ref="walk" class="walk">
+      <WallEnd side="before" />
+      <p v-if="loaded && !posts.length && problem?.at !== 'page'" class="empty">no art on the walls yet this season.</p>
+      <figure v-for="p in wall" :id="`post-${p.post}`" :key="p.post" class="artwork">
         <!-- Images load after the first scroll and shift the wall, so walk again once the target's loads. -->
         <img
           :src="`/api/images/${p.content}`"
@@ -129,8 +140,13 @@ onMounted(async () => {
           @load="target === `post-${p.post}` && scrollToTarget()"
         />
         <figcaption>
-          <p v-if="p.caption">{{ p.caption }}</p>
-          <p class="meta">by {{ p.owner }} · {{ p.votes }} vote(s)</p>
+          <div class="credit">
+            <div>
+              <p v-if="p.caption">{{ p.caption }}</p>
+              <p class="meta">by {{ p.owner }}</p>
+            </div>
+            <p class="meta votes">{{ p.votes }} {{ p.votes == 1 ? "vote" : "votes" }}</p>
+          </div>
           <p>
             <button v-if="me && me !== p.owner" :class="{ voted: voted.has(p.post) }" @click="toggle(p.post)">
               {{ voted.has(p.post) ? "unvote" : "upvote" }}
@@ -155,12 +171,57 @@ onMounted(async () => {
           <p v-if="problem?.at === p.post"><ErrorNote :problem="problem" :at="p.post" /></p>
         </figcaption>
       </figure>
+      <WallEnd side="after" />
     </div>
   </div>
 </template>
 
 <style scoped>
+/* The name, then its season and dates close under it, then (lower) the way to post. */
+.view-head h1 {
+  margin-bottom: 0.3em;
+}
+.season-line,
+.season-dates {
+  margin: 0 0 0.15em;
+}
+.post-line {
+  margin-top: 2.8em; /* low, near the wall: "sorted by" can't rise past the mini map's bottom */
+  margin-bottom: 0;
+}
+/* Just above the wall, saying how it's ordered. */
+.sort-note {
+  clear: right; /* below the mini map, with the wall */
+  margin: 0.5rem 0 0;
+}
+.sort-note + .walk {
+  margin-top: 0.5rem;
+}
+/* "new" or "ending soon", beside the gallery's name; ending soon is filled in so it stands out. */
+.badge {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 0.6rem;
+  padding: 0 0.4em;
+  border: var(--line);
+  font-family: var(--font);
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: lowercase;
+  line-height: 1.5;
+}
+.badge.ending {
+  background: var(--ink);
+  color: var(--paper);
+}
+/* On an empty wall, the message fills the middle, pushing the two ends out to the edges. */
 .empty {
+  flex: 1;
+  align-self: center;
+  margin: 0;
+  max-width: none;
   padding: 2rem 0;
+  text-align: center;
 }
 </style>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import ErrorNote from "../components/ErrorNote.vue";
-import { FUTURE_GALLERIES, client, me, normalizeName, span, useNow } from "../api.ts";
+import { FUTURE_GALLERIES, client, dayAndHour, me, normalizeName, span, useNow } from "../api.ts";
 import { explain, type Problem } from "../errors.ts";
 
 type Nomination = Extract<Awaited<ReturnType<typeof client.nominations.list>>, { ranking: unknown }>["ranking"]["nominations"][number];
@@ -82,14 +82,6 @@ async function withdraw(nomination: string) {
   if ("error" in result) problem.value = { at: "page", message: explain("/nominations/withdraw", result.error) };
 }
 
-/** The round's ends, as a day and an hour: "monday 10/26 at 1am", "sunday 11/1 at 11:30pm". */
-function roundWhen(iso: string) {
-  const d = new Date(iso);
-  const weekday = d.toLocaleDateString([], { weekday: "long" });
-  const hour = d.getHours() % 12 || 12;
-  const minutes = d.getMinutes() ? `:${String(d.getMinutes()).padStart(2, "0")}` : "";
-  return `${weekday} ${d.getMonth() + 1}/${d.getDate()} at ${hour}${minutes}${d.getHours() < 12 ? "am" : "pm"}`;
-}
 /** A date and time, short: "10/26/2026, 1:00 AM". */
 const when = (iso: string) => new Date(iso).toLocaleString([], { dateStyle: "short", timeStyle: "short" });
 
@@ -121,7 +113,7 @@ onMounted(async () => {
   <h2 v-if="!roundEnd" class="round">nominations are closed right now.</h2>
   <h2 v-else class="round">
     {{ new Date(roundEnd).getTime() > now ? `current round closes in ${span(new Date(roundEnd).getTime() - now)}` : "this round just closed" }}
-    <template v-if="roundStart">({{ roundWhen(roundStart) }} – {{ roundWhen(roundEnd) }})</template>
+    <template v-if="roundStart">({{ dayAndHour(roundStart) }} – {{ dayAndHour(roundEnd) }})</template>
   </h2>
   <p v-if="!ranking.length">No nominations yet.</p>
   <table v-if="ranking.length" class="ranking">

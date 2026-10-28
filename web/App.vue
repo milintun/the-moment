@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, provide, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import FloorPlan from "./components/FloorPlan.vue";
 import { neighbours, roomAt, rooms, type Room } from "./museum.ts";
@@ -20,6 +20,10 @@ watch(
 );
 const current = computed(() => all.value.find((r) => r.id === here.value));
 const around = computed(() => (current.value ? neighbours(all.value, current.value.id) : { before: [], after: [] }));
+// Pages with an art wall (a gallery, an archived season) put these at the wall's two ends instead
+// (see WallEnd); every other room's page has them at the bottom.
+provide("around", around);
+const onWall = computed(() => /^\/galleries\/[^/]+$|^\/archive\/[^/]+\/[^/]+$/.test(route.path));
 
 // The map: an overlay over the page you're on, opened from its mini map, with the room you're in
 // pinned "you are here". It's the browser's own modal dialog, so Esc closes it, focus stays inside
@@ -59,7 +63,7 @@ const clickOutside = (e: MouseEvent) => e.target === dialog.value && closeMap();
         <span class="minimap-label" aria-hidden="true">Map</span>
       </div>
       <RouterView :key="route.fullPath" />
-      <nav v-if="current" class="neighbours" aria-label="rooms before and after">
+      <nav v-if="current && !onWall" class="neighbours" aria-label="rooms before and after">
         <span class="before">
           <RouterLink v-for="r in around.before" :key="r.id" :to="r.to">← {{ r.label }}</RouterLink>
         </span>
@@ -215,6 +219,9 @@ const clickOutside = (e: MouseEvent) => e.target === dialog.value && closeMap();
 .neighbours .after {
   text-align: right;
   margin-left: auto;
+}
+.neighbours a {
+  text-decoration: none;
 }
 
 @media (max-width: 720px) {

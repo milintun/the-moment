@@ -50,12 +50,13 @@ test("another visitor upvotes a post, then takes the vote back", async ({ page, 
   await register(page.request); // shares the page's cookies, so the page is signed in
   await page.goto(`/galleries/${group}`);
   const art = page.locator(`#post-${post}`);
-  await expect(art).toContainText(`by ${artistName} · 0 vote(s)`);
+  await expect(art).toContainText(`by ${artistName}`);
+  await expect(art).toContainText("0 votes");
   await art.getByRole("button", { name: "upvote" }).click();
-  await expect(art).toContainText("1 vote(s)");
+  await expect(art).toContainText("1 vote");
   await expect(art.getByRole("button", { name: "unvote" })).toHaveClass(/voted/);
   await art.getByRole("button", { name: "unvote" }).click();
-  await expect(art).toContainText("0 vote(s)");
+  await expect(art).toContainText("0 votes");
 });
 
 test("an artist deletes their own post after confirming", async ({ page, playwright, baseURL }) => {
@@ -179,11 +180,11 @@ test("the map opens over the page; the little person drops into the room clicked
   await expect(page.locator(".neighbours")).toContainText("archive →");
 });
 
-test("signed out, posting sends you to log in", async ({ page, playwright, baseURL }) => {
+test("signed out, a gallery links to log in to post and vote", async ({ page, playwright, baseURL }) => {
   const owner = await playwright.request.newContext({ baseURL, extraHTTPHeaders: { Origin: baseURL! } });
   const { group } = await openGallery(owner);
   await page.goto(`/galleries/${group}`);
-  await page.getByRole("link", { name: "post here" }).click();
+  await page.getByRole("link", { name: "log in to post and vote" }).click();
   await expect(page).toHaveURL(/\/auth$/);
 });
 

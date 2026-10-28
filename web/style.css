@@ -230,6 +230,7 @@ section + section {
 
 .walk {
   display: flex;
+  align-items: center; /* artworks of every shape share a middle line */
   gap: 3rem;
   overflow-x: auto;
   scroll-snap-type: x proximity;
@@ -238,21 +239,39 @@ section + section {
   border-top: var(--line);
   border-bottom: var(--line);
 }
+/* Each artwork is as wide as its picture, and its caption wraps to that width, starting where the
+   picture does (a table and its caption: the caption can't make it wider). */
 .artwork {
   flex: 0 0 auto;
-  width: min(78vw, 440px);
+  display: table;
+  width: 1px;
   margin: 0;
   scroll-snap-align: center;
 }
 .artwork img {
-  width: 100%;
+  width: auto;
+  height: auto;
+  max-width: min(78vw, 600px);
   max-height: 60vh;
-  object-fit: contain;
-  border: var(--line);
   background: var(--paper);
 }
 .artwork figcaption {
+  display: table-caption;
+  caption-side: bottom;
   margin-top: 0.8em;
+}
+/* The caption and who made it as one block on the left, the votes at the picture's right edge. */
+.artwork figcaption p {
+  margin: 0;
+}
+.artwork .credit {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1em;
+}
+.artwork .credit .votes {
+  flex: none;
 }
 
 /* A season notice under a gallery's name (also on future galleries and schedules). */

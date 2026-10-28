@@ -83,6 +83,27 @@ export function span(ms: number): string {
   return `${Math.round(ms / DAY)} days`;
 }
 
+export type WallSort = "votes" | "newest" | "oldest";
+
+/**
+ * An art wall in the order chosen: as it came (most votes first, newest first among ties),
+ * newest first, or oldest first.
+ */
+export function wallOrder<T extends { createdAt: string }>(posts: T[], order: WallSort): T[] {
+  if (order === "votes") return posts;
+  const time = (p: T) => new Date(p.createdAt).getTime();
+  return [...posts].sort((a, b) => (order === "newest" ? time(b) - time(a) : time(a) - time(b)));
+}
+
+/** A moment as a day and an hour: "monday 10/26 at 1am", "sunday 11/1 at 11:30pm". */
+export function dayAndHour(when: string | Date): string {
+  const d = new Date(when);
+  const weekday = d.toLocaleDateString([], { weekday: "long" });
+  const hour = d.getHours() % 12 || 12;
+  const minutes = d.getMinutes() ? `:${String(d.getMinutes()).padStart(2, "0")}` : "";
+  return `${weekday} ${d.getMonth() + 1}/${d.getDate()} at ${hour}${minutes}${d.getHours() < 12 ? "am" : "pm"}`;
+}
+
 /** The current time, updated every minute while the component using it is on screen. */
 export function useNow() {
   const now = ref(Date.now());

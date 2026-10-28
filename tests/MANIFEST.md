@@ -388,8 +388,9 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 - **entrance**: wide screens enter through the doorway only (page clicks do nothing); narrow screens have no doorway and an enter button; either way you land home; pointing at either half of the figure lights that side and its blurb, and the last side holds
 
 ### web/tests/pages.spec.ts
-- **gallery view**: artwork with caption, owner, votes, image; signed out has no buttons and posting goes to log in; closed gallery offers no posting; empty wall; upvote → "unvote" filled in → back; no voting on your own post, delete after confirming; admin removes someone's post after confirming; non-admins never see removal; a refusal shows next to its post; a post already gone leaves with the message above; an ended session links to log in
-- **gallery season notices**: new season says when it started; ending soon counts down; none mid-season and the last season is marked final; a season ending with the page open points to the archive, hides posting, and a vote then says votes are final without reloading the wall
+- **gallery view**: artwork with caption, owner, votes, image; signed out has no buttons and a "log in to post and vote" link, signed in a "post here" button; closed gallery offers no posting; empty wall; upvote → "unvote" filled in → back; no voting on your own post, delete after confirming; admin removes someone's post after confirming; non-admins never see removal; a refusal shows next to its post; a post already gone leaves with the message above; an ended session links to log in
+- **wall order**: sorted by votes as it comes; the "sorted by" menu re-sorts newest or oldest first, and back, closing on choosing; from the keyboard an arrow opens it, arrows move, Enter chooses, Esc closes
+- **gallery season notices**: a "new" or filled-in "ending soon" badge beside the name, then "season n of m", then when it started and ends; no badge mid-season and the last season is marked final; a season ending with the page open points to the archive, hides posting, and a vote then says votes are final without reloading the wall
 - **future galleries**: counts down to the close; an idea already nominated is caught before the server; a refusal in an open round means once a day; voting after the round closed says votes are final
 - **chosen ideas**: Future galleries strikes a chosen idea and its nominator can't withdraw it; my nominations says "chosen" instead of withdraw
 
@@ -401,7 +402,7 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 - **ringPath**: a full circle, or one arc per gap
 - **the map** (an overlay over the page, opened from its mini map): every room a link in walking order, named with its kind and notice; pins the room you're in "you are here" and opens on it; choosing a room goes there and closes the map; × and a click on the dimmed page close it, the mini map opens it again; dragging moves the view (only past a few pixels) and the click ending a drag enters nothing; scrolling zooms, capped at 3×, and the buttons zoom and recenter; arrow keys pan and +/− zoom
 - **the little person**: waits in the corner, follows a hovering pointer over the map, and goes back when it leaves; a touch doesn't summon them; clicking a room drops them in, then enters; a keyboard press enters at once
-- **where you are, on every room's page**: a gallery's mini map marks it "you are here" with a pin under a MAP label, and Enter on it opens the map; the mini map pans when dragged, a click outside its rooms expands it, a click on a room goes there, and its rooms stay out of the tab order; home, future galleries, the archive, and galleries each have the mini map and the rooms before and after; non-room pages have neither; the top bar's name goes to the entrance
+- **where you are, on every room's page**: a gallery's mini map marks it "you are here" with a pin under a MAP label, and Enter on it opens the map; the mini map pans when dragged, a click outside its rooms expands it, a click on a room goes there, and its rooms stay out of the tab order; home, future galleries, the archive, and galleries each have the mini map and the rooms before and after (at the bottom; a gallery puts them at its art wall's two ends); non-room pages have neither; the top bar's name goes to the entrance
 
 ### web/tests/admin.spec.ts
 - **home**: an admin gets a red admin button apart from sign out; others get none
@@ -421,4 +422,4 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 - on the map, dragging from a room pans without entering it, then a click enters
 - the map opens over the page, pinning where you are; the little person drops into the room clicked, closing it; Esc closes it; future galleries marks "you are here" with its neighbours
 - refusals show their own message: a taken username, adding an admin nobody registered
-- signed out, "post here" goes to log in
+- signed out, a gallery's "log in to post and vote" goes to log in

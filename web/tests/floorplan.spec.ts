@@ -332,14 +332,24 @@ describe("where you are, on every room's page", () => {
     ["/home", "home", "entrance", "Doodles"],
     ["/nominations", "nominations", "Night Walks", "archive"],
     ["/archive", "archive", "future galleries", null],
-    ["/galleries/g2", "g2", "Doodles", "future galleries"],
-  ])("%s has the mini map and the rooms before and after", async (path, room, before, after) => {
+  ])("%s has the mini map and the rooms before and after at the bottom", async (path, room, before, after) => {
     signedInAs(null);
     groupsApi();
     const { wrapper } = await mountAppAt(path);
     expect(wrapper.find(`.minimap [data-room="${room}"]`).classes()).toContain("here");
     expect(wrapper.find(".neighbours .before").text()).toBe(`← ${before}`);
     expect(wrapper.find(".neighbours .after").text()).toBe(after ? `${after} →` : "");
+  });
+
+  test("a gallery puts the rooms before and after at the two ends of its art wall instead", async () => {
+    signedInAs(null);
+    groupsApi();
+    const { wrapper } = await mountAppAt("/galleries/g2");
+    expect(wrapper.find(".neighbours").exists()).toBe(false);
+    const wall = wrapper.findAll(".walk > *");
+    const [first, last] = [wall[0]!, wall.at(-1)!];
+    expect([first.classes(), first.attributes("href"), first.text()]).toEqual([expect.arrayContaining(["wall-end", "before"]), "/galleries/g1", "Doodles←"]);
+    expect([last.classes(), last.attributes("href"), last.text()]).toEqual([expect.arrayContaining(["wall-end", "after"]), "/nominations", "future galleries→"]);
   });
 
   test("pages that aren't rooms have neither", async () => {

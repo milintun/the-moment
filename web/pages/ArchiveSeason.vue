@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import ErrorNote from "../components/ErrorNote.vue";
-import { client, finishedSeasons } from "../api.ts";
+import WallEnd from "../components/WallEnd.vue";
+import WallOrder from "../components/WallOrder.vue";
+import { client, dayAndHour, finishedSeasons, wallOrder, type WallSort } from "../api.ts";
 import { explain } from "../errors.ts";
 
 type Post = Extract<Awaited<ReturnType<typeof client.groups.archive>>, { archive: unknown }>["archive"]["posts"][number];
@@ -10,17 +12,24 @@ type Post = Extract<Awaited<ReturnType<typeof client.groups.archive>>, { archive
 const route = useRoute();
 const group = route.params.group as string;
 const season = Number(route.params.season);
-const title = ref("");
+const name = ref("");
+const runs = ref<number | null>(null);
+const dates = ref<{ start: Date; end: Date } | null>(null);
 const posts = ref<Post[]>([]);
+const order = ref<WallSort>("votes");
+const wall = computed(() => wallOrder(posts.value, order.value));
+// A new order starts the walk again from the wall's beginning.
+const walk = ref<HTMLElement>();
+watch(order, () => walk.value?.scrollTo?.({ left: 0 }));
 const error = ref("");
 const loaded = ref(false);
 
 onMounted(async () => {
   const [list, archive] = await Promise.all([client.groups.list({}), client.groups.archive({ group, season })]);
   const found = "error" in list ? undefined : list.list.groups.find((g) => g.group === group);
-  const dates = found ? finishedSeasons(found).find((s) => s.season === season) : undefined;
-  title.value = `${found?.name ?? "unknown gallery"}, season ${season + 1}`;
-  if (dates) title.value += ` (${dates.start.toLocaleDateString()} to ${dates.end.toLocaleDateString()})`;
+  name.value = found?.name ?? "unknown gallery";
+  runs.value = found?.runs ?? null;
+  dates.value = (found && finishedSeasons(found).find((s) => s.season === season)) || null;
   if ("error" in archive) error.value = explain("/groups/archive", archive.error);
   else posts.value = archive.archive.posts;
   loaded.value = true;
@@ -28,17 +37,55 @@ onMounted(async () => {
 </script>
 
 <template>
-  <h1>{{ title }}</h1>
+  <h1>{{ name }}</h1>
+  <p class="season-line">season {{ season + 1 }}<template v-if="runs"> of {{ runs }}</template></p>
+  <p v-if="dates" class="season-dates">{{ dayAndHour(dates.start) }} to {{ dayAndHour(dates.end) }}</p>
   <p v-if="error"><ErrorNote :problem="error" /></p>
-  <p v-else-if="loaded && !posts.length">no art was hung this season.</p>
-  <div class="walk">
-    <figure v-for="p in posts" :key="p.post" class="artwork">
+  <p class="sort-note"><WallOrder v-model="order" /></p>
+  <div ref="walk" class="walk">
+    <WallEnd side="before" />
+    <p v-if="loaded && !error && !posts.length" class="empty">no art was hung this season.</p>
+    <figure v-for="p in wall" :key="p.post" class="artwork">
       <img :src="`/api/images/${p.content}`" :alt="p.caption || `post by ${p.owner}`" />
       <figcaption>
-        <p v-if="p.caption">{{ p.caption }}</p>
-        <p class="meta">by {{ p.owner }} · {{ p.votes }} vote(s)</p>
+        <div class="credit">
+          <div>
+            <p v-if="p.caption">{{ p.caption }}</p>
+            <p class="meta">by {{ p.owner }}</p>
+          </div>
+          <p class="meta votes">{{ p.votes }} {{ p.votes == 1 ? "vote" : "votes" }}</p>
+        </div>
       </figcaption>
     </figure>
+    <WallEnd side="after" />
   </div>
   <p><RouterLink :to="`/archive/${group}`">← all seasons</RouterLink></p>
 </template>
+
+<style scoped>
+/* The name, then its season and dates close under it. */
+h1 {
+  margin-bottom: 0.3em;
+}
+.season-line,
+.season-dates {
+  margin: 0 0 0.15em;
+}
+/* Just above the wall, saying how it's ordered. */
+.sort-note {
+  clear: right; /* below the mini map, with the wall */
+  margin: 0.5rem 0 0;
+}
+/* On an empty wall, the message fills the middle, pushing the two ends out to the edges. */
+.empty {
+  flex: 1;
+  align-self: center;
+  margin: 0;
+  max-width: none;
+  padding: 2rem 0;
+  text-align: center;
+}
+.sort-note + .walk {
+  margin-top: 0.4rem;
+}
+</style>
