@@ -85,15 +85,15 @@ export function span(ms: number): string {
 
 export type WallSort = "votes" | "newest" | "oldest";
 
-/**
- * An art wall in the order chosen: as it came (most votes first, newest first among ties),
- * newest first, or oldest first.
- */
-export function wallOrder<T extends { createdAt: string }>(posts: T[], order: WallSort): T[] {
-  if (order === "votes") return posts;
+/** Art in the order chosen: most votes first (newest first among ties), newest first, or oldest first. */
+export function wallOrder<T extends { createdAt: string; votes: number }>(posts: T[], order: WallSort): T[] {
   const time = (p: T) => new Date(p.createdAt).getTime();
+  if (order === "votes") return [...posts].sort((a, b) => b.votes - a.votes || time(b) - time(a));
   return [...posts].sort((a, b) => (order === "newest" ? time(b) - time(a) : time(a) - time(b)));
 }
+
+/** A date and time, short: "10/26/26, 1:00 AM". */
+export const dateTime = (iso: string) => new Date(iso).toLocaleString([], { dateStyle: "short", timeStyle: "short" });
 
 /** A moment as a day and an hour: "monday 10/26 at 1am", "sunday 11/1 at 11:30pm". */
 export function dayAndHour(when: string | Date): string {

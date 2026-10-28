@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import ErrorNote from "../components/ErrorNote.vue";
-import PostForm from "../components/PostForm.vue";
+import PostWindow from "../components/PostWindow.vue";
 import WallEnd from "../components/WallEnd.vue";
 import WallOrder from "../components/WallOrder.vue";
 import { client, dayAndHour, isAdmin, me, seasonPhase, useNow, wallOrder, type WallSort } from "../api.ts";
@@ -60,26 +60,12 @@ async function load() {
   }
 }
 
-// Posting opens a window over the wall (the browser's own modal dialog: Esc closes it, focus
-// stays inside). Once posted, it closes and the wall walks to the new post.
-const postDialog = ref<HTMLDialogElement>();
-const posting = ref(false);
-function openPosting() {
-  posting.value = true;
-  postDialog.value?.showModal?.();
-}
-function closePosting() {
-  posting.value = false;
-  if (postDialog.value?.open) postDialog.value.close();
-}
+// Once posted (from POST + in the wall's corner), the wall reloads and walks to the new post.
 async function posted(post: string) {
-  closePosting();
   await load();
   await nextTick();
   document.getElementById(`post-${post}`)?.scrollIntoView({ inline: "center", block: "nearest" });
 }
-/** A click on the dimmed page around the window (the dialog itself, outside its panel) closes it. */
-const clickOutside = (e: MouseEvent) => e.target === postDialog.value && closePosting();
 
 const SEASON_OVER = "this season is over, so its votes are final.";
 
@@ -161,7 +147,7 @@ onMounted(async () => {
 
     <p class="sort-note"><WallOrder v-model="order" /></p>
     <div :class="['wall', { 'can-post': open && me }]">
-      <button v-if="open && me" type="button" class="post-button accent-button" aria-haspopup="dialog" @click="openPosting">post +</button>
+      <div v-if="open && me" class="post-corner"><PostWindow :group="group" :title="`post to ${name}`" @posted="posted" /></div>
       <div ref="walk" class="walk">
         <WallEnd side="before" />
         <p v-if="loaded && !posts.length && problem?.at !== 'page'" class="empty">no art on the walls yet this season.</p>
@@ -217,16 +203,6 @@ onMounted(async () => {
         <WallEnd side="after" />
       </div>
     </div>
-
-    <dialog ref="postDialog" class="post-overlay" aria-label="post to this gallery" @close="closePosting" @click="clickOutside">
-      <div class="post-panel">
-        <header class="post-head">
-          <h2>post to {{ name }}</h2>
-          <button type="button" class="post-close" aria-label="close" @click="closePosting">×</button>
-        </header>
-        <PostForm v-if="posting" :group="group" :on-posted="posted" />
-      </div>
-    </dialog>
   </div>
 </template>
 
@@ -256,7 +232,7 @@ onMounted(async () => {
 .wall {
   position: relative;
 }
-.wall .post-button {
+.wall .post-corner {
   position: absolute;
   top: calc(1px + 0.6rem);
   left: 0;
@@ -309,41 +285,6 @@ onMounted(async () => {
   .art-button::after {
     transition: none;
   }
-}
-/* The post window: the form over the dimmed gallery. */
-.post-overlay {
-  width: min(640px, calc(100vw - 2 * var(--gutter)));
-  max-height: calc(100dvh - 4 * var(--gutter));
-  padding: 0;
-  border: var(--line);
-  background: var(--paper);
-  color: var(--ink);
-}
-.post-overlay::backdrop {
-  background: rgb(0 0 0 / 0.4);
-}
-.post-panel {
-  padding: var(--gutter);
-}
-.post-head {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-.post-head h2 {
-  margin: 0;
-  padding: 0;
-  border: 0;
-  flex: 1;
-}
-.post-close {
-  margin: 0;
-}
-/* In the window, the form, its drop zone, and its caption box fill the width. */
-.post-panel :deep(.post-form),
-.post-panel :deep(.dropzone) {
-  max-width: none;
 }
 /* "new" or "ending soon", beside the gallery's name; ending soon is filled in so it stands out. */
 .badge {

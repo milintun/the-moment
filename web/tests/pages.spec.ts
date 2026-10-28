@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { flushPromises } from "@vue/test-utils";
 import { dayAndHour } from "../api.ts";
-import { fakeApi, groupRow, mountAt, signedInAs } from "./fake.ts";
+import { fakeApi, groupRow, mountAppAt, mountAt, signedInAs } from "./fake.ts";
 
 beforeEach(() => signedInAs(null));
 
@@ -455,7 +455,7 @@ describe("chosen ideas", () => {
     expect(feet!.find(".withdraw-label").exists()).toBe(true);
   });
 
-  test("my nominations says which were chosen instead of offering to withdraw them", async () => {
+  test("my nominations is a table like future galleries' (no BY); chosen ones say so, the rest withdraw by their row", async () => {
     signedInAs("gigi");
     fakeApi({
       "/posts/mine": () => ({ mine: { posts: [] } }),
@@ -470,10 +470,14 @@ describe("chosen ideas", () => {
       }),
     });
     const { wrapper } = await mountAt("/home");
-    const rows = wrapper.findAll(".rows li");
+    expect(wrapper.findAll(".ranking th").map((th) => th.text())).toEqual(["nominations", "votes", "added", "actions"]);
+    const rows = wrapper.findAll(".ranking tbody tr");
     expect(rows[0]!.text()).toContain("chosen to become a gallery");
-    expect(rows[0]!.text()).not.toContain("withdraw");
-    expect(rows[1]!.text()).toContain("withdraw");
+    expect(rows[0]!.find(".withdraw-label").exists()).toBe(false);
+    expect(rows[0]!.classes()).not.toContain("votable");
+    expect(rows[1]!.find(".withdraw-label").text()).toBe("withdraw");
+    await rows[1]!.trigger("click");
+    expect(wrapper.findAll(".ranking tbody tr")[1]!.text()).toContain("withdraw it?");
   });
 });
 
@@ -593,6 +597,91 @@ describe("wall order", () => {
     await menu.trigger("keydown", { key: "Escape" });
     expect(menu.find("[role=listbox]").exists()).toBe(false);
     expect(menu.find("button.current").text()).toContain("newest");
+  });
+});
+
+describe("archived season", () => {
+  test("no rooms before and after anywhere; just a plain way back to the archive", async () => {
+    const DAY = 24 * 60 * 60 * 1000;
+    const start = new Date(Date.now() - 10 * DAY).toISOString();
+    fakeApi({
+      "/groups/list": () => ({ list: { groups: [{ ...groupRow("g1", "Doodles"), start, period: 3 * DAY, runs: 2, run: null, runStart: null, runEnd: null }] } }),
+      "/groups/archive": () => ({ archive: { posts: [] } }),
+      "/archive/galleries": () => ({ page: { groups: [] } }),
+    });
+    const { wrapper } = await mountAppAt("/archive/g1/0");
+    expect(wrapper.find(".wall-end").exists()).toBe(false);
+    expect(wrapper.find(".neighbours").exists()).toBe(false);
+    const back = wrapper.find(".back a");
+    expect([back.text(), back.attributes("href")]).toEqual(["← back to archive", "/archive"]);
+  });
+});
+
+describe("home, signed in", () => {
+  const at = (minutesAgo: number) => new Date(Date.now() - minutesAgo * 60_000).toISOString();
+  const mine = (post: string, votes: number, minutesAgo: number) => ({
+    post, content: `u-${post}`, caption: "", createdAt: at(minutesAgo), votes, current: true, galleries: [],
+  });
+  const home = (roundOpen = true) =>
+    fakeApi({
+      "/posts/mine": () => ({ mine: { posts: [mine("new-quiet", 0, 5), mine("old-popular", 4, 50), mine("mid", 1, 20)] } }),
+      "/nominations/mine": () => ({ mine: { nominations: [] } }),
+      "/groups/list": () => ({ list: { groups: [groupRow("g1", "Doodles")] } }),
+      "/nominations/categories": () => ({
+        list: { categories: [{ category: "k", name: "Future galleries", run: roundOpen ? 0 : null, runStart: null, runEnd: roundOpen ? at(-60) : null }] },
+      }),
+    });
+
+  test("two lists, my posts (sorted by, in its title) and my nominations, and no post form on the page", async () => {
+    signedInAs("sasha");
+    home();
+    const { wrapper } = await mountAt("/home");
+    expect(wrapper.findAll(".section-head > h2").map((h) => h.text())).toEqual(["my posts", "my nominations"]);
+    expect(wrapper.find(".section-head > h2 + .wall-order").exists()).toBe(true); // "my posts sorted by …", on the left
+    expect(wrapper.find(".post-form").exists()).toBe(false); // only inside the window
+  });
+
+  test("my posts sort like a gallery's wall: most votes, newest, or oldest first", async () => {
+    signedInAs("sasha");
+    home();
+    const { wrapper } = await mountAt("/home");
+    const order = () => wrapper.findAll(".card img").map((i) => i.attributes("src")!.split("u-")[1]);
+    expect(order()).toEqual(["old-popular", "mid", "new-quiet"]);
+    const menu = wrapper.find(".wall-order");
+    const pick = async (label: string) => {
+      await menu.find("button.current").trigger("click");
+      await menu.findAll("[role=option]").find((o) => o.text() === label)!.trigger("click");
+    };
+    await pick("newest");
+    expect(order()).toEqual(["new-quiet", "mid", "old-popular"]);
+    await pick("oldest");
+    expect(order()).toEqual(["old-popular", "mid", "new-quiet"]);
+  });
+
+  test("+ on my posts' line opens the new post window, choosing among open galleries", async () => {
+    signedInAs("sasha");
+    home();
+    const { wrapper } = await mountAt("/home");
+    const plus = wrapper.find(".section-head button.post-button");
+    expect([plus.text(), plus.attributes("aria-label")]).toEqual(["+", "new post"]);
+    const dialog = () => wrapper.find("dialog.post-overlay").element as HTMLDialogElement;
+    await wrapper.find(".section-head button.post-button").trigger("click");
+    await flushPromises();
+    expect(dialog().open).toBe(true);
+    expect(wrapper.find("dialog h2").text()).toBe("new post");
+    expect(wrapper.findAll("dialog select option").map((o) => o.text())).toContain("Doodles (gallery)");
+  });
+
+  test("+ on my nominations' line (NOMINATE) while a round is open, and not otherwise", async () => {
+    signedInAs("sasha");
+    home(true);
+    const open = await mountAt("/home");
+    const button = open.wrapper.findAll(".section-head")[1]!.find(".nominate .accent-button");
+    expect([button.text(), button.attributes("aria-label")]).toEqual(["+", "nominate an idea"]);
+    open.wrapper.unmount();
+    home(false);
+    const closed = await mountAt("/home");
+    expect(closed.wrapper.find(".nominate").exists()).toBe(false);
   });
 });
 

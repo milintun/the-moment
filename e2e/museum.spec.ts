@@ -28,13 +28,13 @@ test("register, post an image with a caption from the gallery's post window, and
   await page.goto(`/galleries/${group}`);
   await expect(page.getByRole("heading", { name })).toBeVisible();
   await page.getByRole("button", { name: "post +" }).click();
-  await expect(page.getByRole("dialog", { name: "post to this gallery" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: `post to ${name}` })).toBeVisible();
   await page.locator('input[type="file"]').setInputFiles(ART);
   await expect(page.getByAltText("preview")).toBeVisible();
   await page.getByLabel("caption (optional)").fill("my first piece");
   await page.getByRole("button", { name: "post", exact: true }).click();
 
-  await expect(page.getByRole("dialog", { name: "post to this gallery" })).toBeHidden();
+  await expect(page.getByRole("dialog", { name: `post to ${name}` })).toBeHidden();
   await expect(page).toHaveURL(new RegExp(`/galleries/${group}$`));
   const art = page.locator("figure.artwork").filter({ hasText: "my first piece" });
   await expect(art).toContainText(`by ${username}`);

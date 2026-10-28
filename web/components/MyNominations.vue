@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import { client } from "../api.ts";
+import { client, dateTime } from "../api.ts";
 import { explain, type Problem } from "../errors.ts";
 import ErrorNote from "./ErrorNote.vue";
 
@@ -33,18 +33,51 @@ async function withdraw(nomination: string) {
   <p v-if="loaded && !nominations.length && problem?.at !== 'list'">
     you haven't nominated anything yet. <RouterLink to="/nominations">nominate a future gallery</RouterLink>.
   </p>
-  <ul class="rows">
-    <li v-for="n in nominations" :key="n.nomination">
-      {{ n.name }} · {{ n.votes }} vote(s) · {{ new Date(n.createdAt).toLocaleDateString() }}
-      <template v-if="n.current"> · <strong>this round</strong></template>
-      <template v-if="n.chosen"> · <strong>chosen to become a gallery</strong></template>
-      <button v-else-if="confirming !== n.nomination" @click="confirming = n.nomination">withdraw</button>
-      <template v-else>
-        withdraw it?
-        <button @click="withdraw(n.nomination)">yes, withdraw</button>
-        <button @click="confirming = null">no</button>
-      </template>
-      <ErrorNote :problem="problem" :at="n.nomination" />
-    </li>
-  </ul>
+  <!-- Like future galleries' table, without who nominated (you did): click an idea's row to
+       withdraw it (then confirm); chosen ones stay. -->
+  <table v-if="nominations.length" class="ranking">
+    <thead>
+      <tr>
+        <th scope="col">nominations</th>
+        <th scope="col">votes</th>
+        <th scope="col">added</th>
+        <th scope="col"><span class="hidden">actions</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr
+        v-for="n in nominations"
+        :key="n.nomination"
+        :class="{ votable: !n.chosen && confirming !== n.nomination }"
+        @click="!n.chosen && (confirming = n.nomination)"
+      >
+        <td>
+          <span :class="{ chosen: n.chosen }">{{ n.name }}</span>
+          <template v-if="n.chosen"> · chosen to become a gallery</template>
+          <template v-else-if="n.current"> · this round</template>
+        </td>
+        <td>{{ n.votes }}</td>
+        <td>{{ dateTime(n.createdAt) }}</td>
+        <td>
+          <template v-if="!n.chosen">
+            <button
+              v-if="confirming !== n.nomination"
+              type="button"
+              class="vote-label withdraw-label"
+              :aria-label="`withdraw ${n.name}`"
+              @click.stop="confirming = n.nomination"
+            >
+              withdraw
+            </button>
+            <template v-else>
+              withdraw it?
+              <button @click.stop="withdraw(n.nomination)">yes, withdraw</button>
+              <button @click.stop="confirming = null">no</button>
+            </template>
+          </template>
+          <ErrorNote :problem="problem" :at="n.nomination" />
+        </td>
+      </tr>
+    </tbody>
+  </table>
 </template>

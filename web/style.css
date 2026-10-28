@@ -287,6 +287,76 @@ section + section {
   flex: none;
 }
 
+/* ---------- tables of ideas (future galleries, my nominations) ---------- */
+
+.ranking {
+  width: 100%;
+  border-collapse: collapse;
+}
+.ranking th,
+.ranking td {
+  text-align: left;
+  vertical-align: baseline;
+  padding: 0.45em 1em 0.45em 0;
+  border-bottom: var(--line);
+}
+.ranking th {
+  font-weight: 400;
+  text-transform: uppercase;
+}
+.ranking th:first-child,
+.ranking td:first-child {
+  padding-left: 0.6rem; /* so a filled row's text doesn't touch its edge */
+}
+.ranking td:last-child {
+  padding-right: 0.8rem;
+  text-align: right;
+}
+/* A row that does something when clicked (vote, withdraw): pointing at it washes it in the
+   accent colour and shows what a click does at its right end; your votes show in the accent colour. */
+.ranking tr.votable {
+  cursor: pointer;
+}
+.ranking tr.votable:hover td,
+.ranking tr.votable:focus-within td {
+  background: color-mix(in srgb, var(--accent) 18%, var(--paper));
+}
+.ranking .mine {
+  color: var(--accent);
+}
+.vote-label {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0;
+}
+.vote-label:hover:not(:disabled) {
+  background: none;
+  color: var(--accent);
+}
+/* WITHDRAW, on your own ideas, is black. */
+.withdraw-label,
+.withdraw-label:hover:not(:disabled) {
+  color: var(--ink);
+}
+.ranking tr.votable:hover .vote-label,
+.vote-label:focus-visible {
+  opacity: 1;
+}
+/* Named for screen readers, but nothing to show sighted readers above the buttons. */
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
 /* A season notice under a gallery's name (also on future galleries and schedules). */
 .season-notice {
   font-weight: 700;

@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import { client } from "../api.ts";
+import { computed, onMounted, ref } from "vue";
+import { client, wallOrder, type WallSort } from "../api.ts";
 import { explain, type Problem } from "../errors.ts";
 import ErrorNote from "./ErrorNote.vue";
 
 type Post = Extract<Awaited<ReturnType<typeof client.posts.mine>>, { mine: unknown }>["mine"]["posts"][number];
 
+const props = defineProps<{ order: WallSort }>();
 const posts = ref<Post[]>([]);
+const shown = computed(() => wallOrder(posts.value, props.order));
 const confirming = ref<string | null>(null); // the post waiting for "yes, delete"
 const loaded = ref(false);
 const problem = ref<Problem | null>(null); // at "list", or at an item
@@ -32,7 +34,7 @@ async function remove(post: string) {
   <p v-if="problem?.at === 'list'"><ErrorNote :problem="problem" at="list" /></p>
   <p v-if="loaded && !posts.length && problem?.at !== 'list'">you haven't posted anything yet.</p>
   <ul class="cards">
-    <li v-for="p in posts" :key="p.post" class="card">
+    <li v-for="p in shown" :key="p.post" class="card">
       <img :src="`/api/images/${p.content}`" :alt="p.caption || 'your post'" />
       <p v-if="p.caption">{{ p.caption }}</p>
       <p class="meta">

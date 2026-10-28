@@ -2,7 +2,6 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import ErrorNote from "../components/ErrorNote.vue";
-import WallEnd from "../components/WallEnd.vue";
 import WallOrder from "../components/WallOrder.vue";
 import { client, dayAndHour, finishedSeasons, wallOrder, type WallSort } from "../api.ts";
 import { explain } from "../errors.ts";
@@ -43,7 +42,6 @@ onMounted(async () => {
   <p v-if="error"><ErrorNote :problem="error" /></p>
   <p class="sort-note"><WallOrder v-model="order" /></p>
   <div ref="walk" class="walk">
-    <WallEnd side="before" />
     <p v-if="loaded && !error && !posts.length" class="empty">no art was hung this season.</p>
     <figure v-for="p in wall" :key="p.post" class="artwork">
       <img :src="`/api/images/${p.content}`" :alt="p.caption || `post by ${p.owner}`" />
@@ -57,9 +55,8 @@ onMounted(async () => {
         </div>
       </figcaption>
     </figure>
-    <WallEnd side="after" />
   </div>
-  <p><RouterLink :to="`/archive/${group}`">← all seasons</RouterLink></p>
+  <p class="back"><RouterLink to="/archive">← back to archive</RouterLink></p>
 </template>
 
 <style scoped>
@@ -75,6 +72,13 @@ h1 {
 .sort-note {
   clear: right; /* below the mini map, with the wall */
   margin: 0.5rem 0 0;
+}
+/* The way back, clear of the wall's bottom line. */
+.back {
+  margin-top: 2rem;
+}
+.back a {
+  text-decoration: none;
 }
 /* On an empty wall, the message fills the middle, pushing the two ends out to the edges. */
 .empty {
