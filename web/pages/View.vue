@@ -161,7 +161,7 @@ onMounted(async () => {
 
     <p class="sort-note"><WallOrder v-model="order" /></p>
     <div :class="['wall', { 'can-post': open && me }]">
-      <button v-if="open && me" type="button" class="post-button" aria-haspopup="dialog" @click="openPosting">post +</button>
+      <button v-if="open && me" type="button" class="post-button accent-button" aria-haspopup="dialog" @click="openPosting">post +</button>
       <div ref="walk" class="walk">
         <WallEnd side="before" />
         <p v-if="loaded && !posts.length && problem?.at !== 'page'" class="empty">no art on the walls yet this season.</p>
@@ -309,18 +309,6 @@ onMounted(async () => {
   .art-button::after {
     transition: none;
   }
-}
-/* Posting: an accent-coloured button. */
-.post-button {
-  margin: 0;
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--paper);
-  text-transform: uppercase;
-}
-.post-button:hover:not(:disabled) {
-  background: var(--paper);
-  color: var(--accent);
 }
 /* The post window: the form over the dimmed gallery. */
 .post-overlay {

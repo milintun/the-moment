@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import ErrorNote from "../components/ErrorNote.vue";
 import { FUTURE_GALLERIES, client, dayAndHour, me, normalizeName, span, useNow } from "../api.ts";
 import { explain, type Problem } from "../errors.ts";
@@ -56,6 +56,7 @@ async function nominate() {
   }
   newName.value = "";
   message.value = "nominated.";
+  formOpen.value = false;
   await load();
 }
 
@@ -85,6 +86,29 @@ async function withdraw(nomination: string) {
 /** A date and time, short: "10/26/2026, 1:00 AM". */
 const when = (iso: string) => new Date(iso).toLocaleString([], { dateStyle: "short", timeStyle: "short" });
 
+// NOMINATE + opens a small form just below it; Esc or a click elsewhere closes it.
+const formOpen = ref(false);
+const nominating = ref<HTMLElement>();
+const ideaInput = ref<HTMLInputElement>();
+watch(formOpen, async (open) => {
+  if (!open) return;
+  message.value = "";
+  await nextTick();
+  ideaInput.value?.focus();
+});
+const outside = (e: PointerEvent) => !nominating.value?.contains(e.target as Node) && (formOpen.value = false);
+onMounted(() => document.addEventListener("pointerdown", outside));
+onBeforeUnmount(() => document.removeEventListener("pointerdown", outside));
+
+/** Someone else's idea, which a signed-in visitor votes on by clicking its row. */
+const canVote = (n: Nomination) => !!me.value && me.value !== n.nominator;
+/** Your own idea, not yet chosen, which you withdraw by clicking its row (then confirming). */
+const canWithdraw = (n: Nomination) => me.value === n.nominator && !n.chosen;
+function rowClick(n: Nomination) {
+  if (canVote(n)) toggle(n.nomination);
+  else if (canWithdraw(n) && confirming.value !== n.nomination) confirming.value = n.nomination;
+}
+
 onMounted(async () => {
   await load();
   loaded.value = true;
@@ -98,23 +122,26 @@ onMounted(async () => {
     Monday at 12 AM EST. The most upvoted ideas will decide the next galleries.
   </p>
   <template v-if="loaded">
-  <template v-if="roundEnd">
-    <form v-if="me" @submit.prevent="nominate">
-      <label>Your idea <input v-model="newName" required maxlength="40" /></label>
-      <button type="submit">Nominate</button> (once a day)
-      <ErrorNote :problem="problem" at="form" />
-    </form>
-    <p v-else><RouterLink to="/auth">log in to nominate and vote</RouterLink></p>
-  </template>
+  <p v-if="roundEnd && !me"><RouterLink to="/auth">log in to nominate and vote</RouterLink></p>
   <p v-if="message">{{ message }}</p>
   <p v-if="problem?.at === 'page'"><ErrorNote :problem="problem" at="page" /></p>
 
-  <!-- The round's heading is its countdown. -->
-  <h2 v-if="!roundEnd" class="round">nominations are closed right now.</h2>
-  <h2 v-else class="round">
-    {{ new Date(roundEnd).getTime() > now ? `current round closes in ${span(new Date(roundEnd).getTime() - now)}` : "this round just closed" }}
-    <template v-if="roundStart">({{ dayAndHour(roundStart) }} – {{ dayAndHour(roundEnd) }})</template>
-  </h2>
+  <!-- The round's heading is its countdown; signed in, NOMINATE + sits across from it. -->
+  <div class="round-bar">
+    <h2 v-if="!roundEnd" class="round">nominations are closed right now.</h2>
+    <h2 v-else class="round">
+      {{ new Date(roundEnd).getTime() > now ? `current round closes in ${span(new Date(roundEnd).getTime() - now)}` : "this round just closed" }}
+      <template v-if="roundStart">({{ dayAndHour(roundStart) }} – {{ dayAndHour(roundEnd) }})</template>
+    </h2>
+    <div v-if="roundEnd && me" ref="nominating" class="nominate" @keydown.esc="formOpen = false">
+      <button type="button" class="accent-button" :aria-expanded="formOpen" @click="formOpen = !formOpen">nominate +</button>
+      <form v-if="formOpen" class="nominate-form" @submit.prevent="nominate">
+        <label>Your idea <input ref="ideaInput" v-model="newName" required maxlength="40" /></label>
+        <button type="submit">submit</button> (one per day)
+        <ErrorNote :problem="problem" at="form" />
+      </form>
+    </div>
+  </div>
   <p v-if="!ranking.length">No nominations yet.</p>
   <table v-if="ranking.length" class="ranking">
     <thead>
@@ -127,24 +154,45 @@ onMounted(async () => {
       </tr>
     </thead>
     <tbody>
-      <tr v-for="n in ranking" :key="n.nomination">
+      <!-- Signed in, someone else's idea is voted on by clicking its row (or its UPVOTE, from the keyboard). -->
+      <tr
+        v-for="n in ranking"
+        :key="n.nomination"
+        :class="{ votable: canVote(n) || (canWithdraw(n) && confirming !== n.nomination), own: me === n.nominator }"
+        @click="rowClick(n)"
+      >
         <td>
           <span :class="{ chosen: n.chosen }">{{ n.name }}</span>
           <template v-if="n.chosen"> · chosen to become a gallery</template>
         </td>
-        <td>{{ n.votes }}</td>
+        <td :class="{ mine: voted.has(n.nomination) }">{{ n.votes }}</td>
         <td>{{ n.nominator }}</td>
         <td>{{ when(n.createdAt) }}</td>
-        <td>
-          <button v-if="me && me !== n.nominator" :class="{ voted: voted.has(n.nomination) }" @click="toggle(n.nomination)">
-            {{ voted.has(n.nomination) ? "Unvote" : "Upvote" }}
+        <td class="actions">
+          <button
+            v-if="canVote(n)"
+            type="button"
+            class="vote-label"
+            :aria-pressed="voted.has(n.nomination)"
+            :aria-label="`${voted.has(n.nomination) ? 'take back your vote for' : 'upvote'} ${n.name}`"
+            @click.stop="toggle(n.nomination)"
+          >
+            {{ voted.has(n.nomination) ? "unvote" : "upvote" }}
           </button>
-          <template v-if="me === n.nominator && !n.chosen">
-            <button v-if="confirming !== n.nomination" @click="confirming = n.nomination">Withdraw</button>
+          <template v-if="canWithdraw(n)">
+            <button
+              v-if="confirming !== n.nomination"
+              type="button"
+              class="vote-label withdraw-label"
+              :aria-label="`withdraw ${n.name}`"
+              @click.stop="confirming = n.nomination"
+            >
+              withdraw
+            </button>
             <template v-else>
               Withdraw this nomination?
-              <button @click="withdraw(n.nomination)">Yes, withdraw</button>
-              <button @click="confirming = null">No</button>
+              <button @click.stop="withdraw(n.nomination)">Yes, withdraw</button>
+              <button @click.stop="confirming = null">No</button>
             </template>
           </template>
           <ErrorNote :problem="problem" :at="n.nomination" />
@@ -156,11 +204,45 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-/* The round's countdown: plain text, with room above and below, and no rule under it. */
-.round {
+/* The round's countdown (plain text, no rule under it) and NOMINATE + across from it. */
+.round-bar {
+  clear: right; /* below the mini map, so NOMINATE + lines up with the table's right edge */
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   margin: 3em 0 1.2em;
+}
+.round {
+  margin: 0;
   padding: 0;
   border: 0;
+}
+/* The small nominating form, just below NOMINATE +, over the table. */
+.nominate {
+  position: relative;
+  top: 0.5rem; /* a little below the countdown's line */
+  margin-left: auto;
+}
+.nominate-form {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 6px);
+  right: 0;
+  width: max-content;
+  max-width: calc(100vw - 2 * var(--gutter));
+  padding: 0.8rem;
+  border: var(--line);
+  background: var(--paper);
+}
+.nominate-form input {
+  margin-left: 0.6em;
+}
+.nominate-form input:focus,
+.nominate-form input:focus-visible {
+  outline: none; /* no ring while typing */
+}
+.nominate-form button {
+  margin: 0 0.3em 0 0;
 }
 .ranking {
   width: 100%;
@@ -177,8 +259,58 @@ onMounted(async () => {
   font-weight: 400;
   text-transform: uppercase;
 }
+.ranking th:first-child,
+.ranking td:first-child {
+  padding-left: 0.6rem; /* so a filled row's text doesn't touch its edge */
+}
 .ranking td:last-child {
-  padding-right: 0;
+  padding-right: 0.8rem;
+  text-align: right;
+}
+/* Someone else's idea, signed in: pointing at its row washes it in the accent colour and shows
+   UPVOTE (or UNVOTE) at its right end; your votes show as their count in the accent colour. */
+.ranking tr.votable {
+  cursor: pointer;
+}
+.ranking tr.votable:hover td,
+.ranking tr.votable:focus-within td {
+  background: color-mix(in srgb, var(--accent) 18%, var(--paper));
+}
+.ranking .mine {
+  color: var(--accent);
+}
+.vote-label {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0;
+}
+.vote-label:hover:not(:disabled) {
+  background: none;
+  color: var(--accent);
+}
+/* Your own ideas: black rows with white text. Pointing at one washes it in the accent colour
+   too, and says WITHDRAW instead. */
+.ranking tr.own td {
+  background: var(--ink);
+  color: var(--paper);
+}
+.ranking tr.own.votable:hover td,
+.ranking tr.own.votable:focus-within td {
+  background: color-mix(in srgb, var(--accent) 35%, var(--ink));
+}
+.withdraw-label,
+.withdraw-label:hover:not(:disabled) {
+  color: var(--paper);
+}
+.ranking tr.votable:hover .vote-label,
+.vote-label:focus-visible {
+  opacity: 1;
 }
 /* Named for screen readers, but nothing to show sighted readers above the buttons. */
 .hidden {

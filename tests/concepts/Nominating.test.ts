@@ -22,7 +22,7 @@ beforeEach(async () => {
 const names = async (cat = category) => (await nominating._nominations({ category: cat })).map((n) => n.name);
 
 describe("principle", () => {
-  test("ideas are named once a day, matched by meaning, listed newest first, withdrawn, and chosen", async () => {
+  test("ideas are named once a day, matched by meaning, listed newest first, withdrawn (freeing the day), and chosen", async () => {
     const { nomination: hands } = await nominating.nominate({ nominator: "gigi", category, name: "Hands", createdAt: T0 });
     expect(await nominating._nominations({ category })).toEqual([
       { nomination: hands, nominator: "gigi", name: "Hands", createdAt: T0, chosen: false },
@@ -35,8 +35,11 @@ describe("principle", () => {
     expect(await names()).toEqual(["Rainy days", "Hands"]);
     await nominating.withdraw({ nominator: "gigi", nomination: hands });
     expect(await names()).toEqual(["Rainy days"]);
+    // Withdrawing gave the day back: Gigi nominates something else straight away.
+    await nominating.nominate({ nominator: "gigi", category, name: "Feet", createdAt: at(3 * HOUR) });
+    expect(await names()).toEqual(["Feet", "Rainy days"]);
     await nominating.choose({ nominations: [rain], chosenAt: at(DAY) });
-    expect((await nominating._nominations({ category }))[0]?.chosen).toBe(true);
+    expect((await nominating._nominations({ category })).find((n) => n.nomination === rain)?.chosen).toBe(true);
     await expect(nominating.withdraw({ nominator: "sid", nomination: rain })).rejects.toBeInstanceOf(Chosen);
     await expect(nominating.choose({ nominations: [rain], chosenAt: at(DAY) })).rejects.toBeInstanceOf(Chosen);
   });
@@ -111,11 +114,29 @@ describe("withdraw", () => {
     expect(await names()).toEqual(["Hands"]);
   });
 
-  test("withdrawing does not reset the daily limit", async () => {
+  test("withdrawing gives back the day it used, so another idea can follow straight away", async () => {
     const { nomination } = await nominating.nominate({ nominator: "gigi", category, name: "Hands", createdAt: T0 });
     expect(await nominating.withdraw({ nominator: "gigi", nomination })).toEqual({});
+    const { nomination: feet } = await nominating.nominate({ nominator: "gigi", category, name: "Feet", createdAt: at(HOUR) });
+    // That one used the day again.
     await expect(
-      nominating.nominate({ nominator: "gigi", category, name: "Hands", createdAt: at(HOUR) }),
+      nominating.nominate({ nominator: "gigi", category, name: "Toes", createdAt: at(2 * HOUR) }),
+    ).rejects.toBeInstanceOf(TooSoon);
+    expect((await nominating._nominations({ category })).map((n) => n.nomination)).toEqual([feet]);
+  });
+
+  test("withdrawing goes back to the nomination before it, not further", async () => {
+    await nominating.nominate({ nominator: "gigi", category, name: "Hands", createdAt: T0 });
+    const { nomination: feet } = await nominating.nominate({ nominator: "gigi", category, name: "Feet", createdAt: at(DAY + HOUR) });
+    await nominating.withdraw({ nominator: "gigi", nomination: feet });
+    // Hands, a day and an hour before, is the last one now: the day is free.
+    await nominating.nominate({ nominator: "gigi", category, name: "Toes", createdAt: at(DAY + 2 * HOUR) });
+    const { nomination: rain } = await nominating.nominate({ nominator: "sid", category, name: "Rain", createdAt: at(DAY + HOUR) });
+    await nominating.nominate({ nominator: "sid", category, name: "Mud", createdAt: at(2 * DAY + 2 * HOUR) });
+    await nominating.withdraw({ nominator: "sid", nomination: rain });
+    // Mud, an hour ago, is Sid's last one: still too soon.
+    await expect(
+      nominating.nominate({ nominator: "sid", category, name: "Snow", createdAt: at(2 * DAY + 3 * HOUR) }),
     ).rejects.toBeInstanceOf(TooSoon);
   });
 });

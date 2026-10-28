@@ -289,7 +289,11 @@ describe("future galleries", () => {
       "/nominations/my-votes": () => ({ votes: { nominations: [] } }),
       ...handlers,
     });
+  const openForm = async (wrapper: any) => {
+    await wrapper.findAll("button").find((b: any) => b.text() === "nominate +")!.trigger("click");
+  };
   const nominate = async (wrapper: any, name: string) => {
+    if (!wrapper.find("form.nominate-form").exists()) await openForm(wrapper);
     await wrapper.find("form input").setValue(name);
     await wrapper.find("form").trigger("submit");
     await flushPromises();
@@ -314,10 +318,75 @@ describe("future galleries", () => {
     expect(wrapper.find(".round").text()).toContain("(Monday 10/26 at 1am – Sunday 11/1 at 11:30pm)");
   });
 
+  test("signed in, NOMINATE + opens the small form below it, which Esc or a click elsewhere closes", async () => {
+    signedInAs("sasha");
+    page({});
+    const { wrapper } = await mountAt("/nominations");
+    expect(wrapper.find("form.nominate-form").exists()).toBe(false);
+    await openForm(wrapper);
+    expect(wrapper.find("form.nominate-form").exists()).toBe(true);
+    await wrapper.find(".nominate").trigger("keydown", { key: "Escape" });
+    expect(wrapper.find("form.nominate-form").exists()).toBe(false);
+    await openForm(wrapper);
+    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    await flushPromises();
+    expect(wrapper.find("form.nominate-form").exists()).toBe(false);
+  });
+
+  test("a nomination that goes through closes the form and says so", async () => {
+    signedInAs("sasha");
+    page({ "/nominations/create": () => ({ nomination: "n2" }) });
+    const { wrapper } = await mountAt("/nominations");
+    await nominate(wrapper, "Zines");
+    expect(wrapper.find("form.nominate-form").exists()).toBe(false);
+    expect(wrapper.text()).toContain("nominated.");
+  });
+
+  test("clicking someone else's idea's row upvotes it, and again takes the vote back; your votes are marked", async () => {
+    signedInAs("sasha");
+    let mine: string[] = [];
+    const api = page({
+      "/nominations/my-votes": () => ({ votes: { nominations: mine.map((n) => ({ nomination: n })) } }),
+      "/nominations/vote": ({ nomination }) => ((mine = [nomination]), {}),
+      "/nominations/unvote": () => ((mine = []), {}),
+    });
+    const { wrapper } = await mountAt("/nominations");
+    const row = () => wrapper.find(".ranking tbody tr");
+    expect(row().classes()).toContain("votable");
+    expect(row().find(".vote-label").text()).toBe("upvote");
+    await row().trigger("click");
+    await flushPromises();
+    expect(api.called("/nominations/vote")).toEqual([{ nomination: "n1" }]);
+    expect(row().find(".mine").exists()).toBe(true);
+    expect([row().find(".vote-label").text(), row().find(".vote-label").attributes("aria-pressed")]).toEqual(["unvote", "true"]);
+    await row().find(".vote-label").trigger("click"); // from the keyboard, the label is the button
+    await flushPromises();
+    expect(api.called("/nominations/unvote")).toEqual([{ nomination: "n1" }]);
+    expect(api.called("/nominations/vote")).toHaveLength(1); // the label's click didn't also count as the row's
+  });
+
+  test("your own idea's row says WITHDRAW instead; clicking it asks first, then withdraws", async () => {
+    signedInAs("gigi");
+    const api = page({ "/nominations/withdraw": () => ({}) });
+    const { wrapper } = await mountAt("/nominations");
+    const row = () => wrapper.find(".ranking tbody tr");
+    expect(row().classes()).toContain("own"); // a black row
+    expect(row().find(".vote-label").text()).toBe("withdraw");
+    expect(row().find(".vote-label").classes()).toContain("withdraw-label");
+    await row().trigger("click");
+    expect(api.called("/nominations/vote")).toEqual([]);
+    expect(row().text()).toContain("Withdraw this nomination?");
+    expect(row().classes()).not.toContain("votable"); // asking: no wash, no more clicks on the row
+    await row().findAll("button").find((b) => b.text() === "Yes, withdraw")!.trigger("click");
+    await flushPromises();
+    expect(api.called("/nominations/withdraw")).toEqual([{ nomination: "n1" }]);
+  });
+
   test("an idea can be at most 40 characters", async () => {
     signedInAs("sasha");
     page({});
     const { wrapper } = await mountAt("/nominations");
+    await openForm(wrapper);
     expect(wrapper.find("form input").attributes("maxlength")).toBe("40");
   });
 
@@ -355,7 +424,7 @@ describe("future galleries", () => {
     const categories = () => ({ list: { categories: [{ category: "k", name: "Future galleries", run: end ? 0 : null, runStart: null, runEnd: end }] } });
     page({ "/nominations/categories": categories, "/nominations/vote": () => ((end = null), { error: "CONFLICT" }) });
     const { wrapper } = await mountAt("/nominations");
-    await wrapper.findAll(".ranking button").find((b) => b.text() === "Upvote")!.trigger("click");
+    await wrapper.find(".ranking tr.votable").trigger("click");
     await flushPromises();
     expect(wrapper.find(".ranking [role=alert]").text()).toBe("this round is over, so its votes are final.");
   });
@@ -382,8 +451,8 @@ describe("chosen ideas", () => {
     const [hands, feet] = wrapper.findAll(".ranking tbody tr");
     expect(hands!.find(".chosen").text()).toBe("Hands");
     expect(hands!.text()).toContain("chosen to become a gallery");
-    expect(hands!.text()).not.toContain("Withdraw");
-    expect(feet!.text()).toContain("Withdraw");
+    expect(hands!.find(".withdraw-label").exists()).toBe(false);
+    expect(feet!.find(".withdraw-label").exists()).toBe(true);
   });
 
   test("my nominations says which were chosen instead of offering to withdraw them", async () => {

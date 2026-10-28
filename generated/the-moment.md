@@ -568,7 +568,7 @@ Former "every schedule" — inputs (); bindings (cycle, start, period, runs, gro
 ### the active nominations in (category) upvoted by (user) at (now)
 
 Authored path: `User.MyNominationVotes`.
-- Covered by [User](../design/compositions/User.md), line 156.
+- Covered by [User](../design/compositions/User.md), line 157.
 
 ```former
 Former "the active nominations in (category) upvoted by (user) at (now)" — inputs (category, user, now); bindings (nomination, createdAt, start, end); promises exactly one record — forms:
@@ -618,7 +618,7 @@ Former "the groups from (offset), at most (limit)" — inputs (offset, limit); b
 ### whether (nomination) is active at (now)
 
 Authored path: `User.NominationCurrent`.
-- Covered by [User](../design/compositions/User.md), line 143.
+- Covered by [User](../design/compositions/User.md), line 144.
 
 ```former
 Former "whether (nomination) is active at (now)" — inputs (nomination, now); bindings (); promises at most one record — forms:
@@ -630,7 +630,7 @@ Former "whether (nomination) is active at (now)" — inputs (nomination, now); b
 ### the nominations of (user) at (now)
 
 Authored path: `User.MyNominations`.
-- Covered by [User](../design/compositions/User.md), line 141.
+- Covered by [User](../design/compositions/User.md), line 142.
 
 ```former
 Former "the nominations of (user) at (now)" — inputs (user, now); bindings (nomination, name, createdAt, votes, chosen); promises exactly one record — forms:
@@ -2121,8 +2121,8 @@ then
 ### User.ListMyNominationVotes
 
 Authored path: `User.ListMyNominationVotes`.
-- Covered by [User](../design/compositions/User.md), line 155.
-- Covered by [User](../design/compositions/User.md), line 161.
+- Covered by [User](../design/compositions/User.md), line 156.
+- Covered by [User](../design/compositions/User.md), line 162.
 
 ```reaction
 when RequestBoundary.request (category, path: "/nominations/my-votes", requestId, session)
@@ -2133,8 +2133,8 @@ then
 ### User.ListMyNominationVotes#2
 
 Authored path: `User.ListMyNominationVotes`.
-- Covered by [User](../design/compositions/User.md), line 155.
-- Covered by [User](../design/compositions/User.md), line 161.
+- Covered by [User](../design/compositions/User.md), line 156.
+- Covered by [User](../design/compositions/User.md), line 162.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.ListMyNominationVotes
@@ -2148,8 +2148,8 @@ then
 ### User.ListMyNominations
 
 Authored path: `User.ListMyNominations`.
-- Covered by [User](../design/compositions/User.md), line 140.
-- Covered by [User](../design/compositions/User.md), line 146.
+- Covered by [User](../design/compositions/User.md), line 141.
+- Covered by [User](../design/compositions/User.md), line 147.
 
 ```reaction
 when RequestBoundary.request (path: "/nominations/mine", requestId, session)
@@ -2160,8 +2160,8 @@ then
 ### User.ListMyNominations#2
 
 Authored path: `User.ListMyNominations`.
-- Covered by [User](../design/compositions/User.md), line 140.
-- Covered by [User](../design/compositions/User.md), line 146.
+- Covered by [User](../design/compositions/User.md), line 141.
+- Covered by [User](../design/compositions/User.md), line 147.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.ListMyNominations
@@ -2477,8 +2477,8 @@ then
 ### User.UnvoteNomination
 
 Authored path: `User.UnvoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 152.
-- Covered by [User](../design/compositions/User.md), line 160.
+- Covered by [User](../design/compositions/User.md), line 153.
+- Covered by [User](../design/compositions/User.md), line 161.
 
 ```reaction
 when RequestBoundary.request (nomination, path: "/nominations/unvote", requestId, session)
@@ -2489,8 +2489,8 @@ then
 ### User.UnvoteNomination:allowed#2
 
 Authored path: `User.UnvoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 152.
-- Covered by [User](../design/compositions/User.md), line 160.
+- Covered by [User](../design/compositions/User.md), line 153.
+- Covered by [User](../design/compositions/User.md), line 161.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.UnvoteNomination
@@ -2506,8 +2506,8 @@ then
 ### User.UnvoteNomination:allowed#3
 
 Authored path: `User.UnvoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 152.
-- Covered by [User](../design/compositions/User.md), line 160.
+- Covered by [User](../design/compositions/User.md), line 153.
+- Covered by [User](../design/compositions/User.md), line 161.
 
 ```reaction
 when NominationVotes.unvote (target: nomination, voter: user), asked by User.UnvoteNomination:allowed#2
@@ -2520,8 +2520,8 @@ then
 ### User.UnvoteNomination:inactive#2
 
 Authored path: `User.UnvoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 152.
-- Covered by [User](../design/compositions/User.md), line 160.
+- Covered by [User](../design/compositions/User.md), line 153.
+- Covered by [User](../design/compositions/User.md), line 161.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.UnvoteNomination
@@ -2537,8 +2537,8 @@ then
 ### User.UnvoteNomination:missing#2
 
 Authored path: `User.UnvoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 152.
-- Covered by [User](../design/compositions/User.md), line 160.
+- Covered by [User](../design/compositions/User.md), line 153.
+- Covered by [User](../design/compositions/User.md), line 161.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.UnvoteNomination
@@ -2552,8 +2552,8 @@ then
 ### User.UnvoteNomination:own-nomination#2
 
 Authored path: `User.UnvoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 152.
-- Covered by [User](../design/compositions/User.md), line 160.
+- Covered by [User](../design/compositions/User.md), line 153.
+- Covered by [User](../design/compositions/User.md), line 161.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.UnvoteNomination
@@ -2657,8 +2657,8 @@ then
 ### User.VoteNomination
 
 Authored path: `User.VoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 151.
-- Covered by [User](../design/compositions/User.md), line 159.
+- Covered by [User](../design/compositions/User.md), line 152.
+- Covered by [User](../design/compositions/User.md), line 160.
 
 ```reaction
 when RequestBoundary.request (nomination, path: "/nominations/vote", requestId, session)
@@ -2669,8 +2669,8 @@ then
 ### User.VoteNomination:allowed#2
 
 Authored path: `User.VoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 151.
-- Covered by [User](../design/compositions/User.md), line 159.
+- Covered by [User](../design/compositions/User.md), line 152.
+- Covered by [User](../design/compositions/User.md), line 160.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.VoteNomination
@@ -2686,8 +2686,8 @@ then
 ### User.VoteNomination:allowed#3
 
 Authored path: `User.VoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 151.
-- Covered by [User](../design/compositions/User.md), line 159.
+- Covered by [User](../design/compositions/User.md), line 152.
+- Covered by [User](../design/compositions/User.md), line 160.
 
 ```reaction
 when NominationVotes.upvote (target: nomination, voter: user), asked by User.VoteNomination:allowed#2
@@ -2700,8 +2700,8 @@ then
 ### User.VoteNomination:inactive#2
 
 Authored path: `User.VoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 151.
-- Covered by [User](../design/compositions/User.md), line 159.
+- Covered by [User](../design/compositions/User.md), line 152.
+- Covered by [User](../design/compositions/User.md), line 160.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.VoteNomination
@@ -2717,8 +2717,8 @@ then
 ### User.VoteNomination:missing#2
 
 Authored path: `User.VoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 151.
-- Covered by [User](../design/compositions/User.md), line 159.
+- Covered by [User](../design/compositions/User.md), line 152.
+- Covered by [User](../design/compositions/User.md), line 160.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.VoteNomination
@@ -2732,8 +2732,8 @@ then
 ### User.VoteNomination:own-nomination#2
 
 Authored path: `User.VoteNomination`.
-- Covered by [User](../design/compositions/User.md), line 151.
-- Covered by [User](../design/compositions/User.md), line 159.
+- Covered by [User](../design/compositions/User.md), line 152.
+- Covered by [User](../design/compositions/User.md), line 160.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.VoteNomination
@@ -2748,7 +2748,7 @@ then
 
 Authored path: `User.WithdrawNomination`.
 - Covered by [User](../design/compositions/User.md), line 130.
-- Covered by [User](../design/compositions/User.md), line 135.
+- Covered by [User](../design/compositions/User.md), line 136.
 
 ```reaction
 when RequestBoundary.request (nomination, path: "/nominations/withdraw", requestId, session)
@@ -2760,7 +2760,7 @@ then
 
 Authored path: `User.WithdrawNomination`.
 - Covered by [User](../design/compositions/User.md), line 130.
-- Covered by [User](../design/compositions/User.md), line 135.
+- Covered by [User](../design/compositions/User.md), line 136.
 
 ```reaction
 when Sessioning.current (session, subject: user), asked by User.WithdrawNomination
@@ -2774,7 +2774,7 @@ then
 
 Authored path: `User.WithdrawNomination`.
 - Covered by [User](../design/compositions/User.md), line 130.
-- Covered by [User](../design/compositions/User.md), line 135.
+- Covered by [User](../design/compositions/User.md), line 136.
 
 ```reaction
 when Nominating.withdraw (nomination, nominator: user), asked by User.WithdrawNomination#2
@@ -2787,7 +2787,7 @@ then
 ### User.WithdrawnNominationLosesVotes
 
 Authored path: `User.WithdrawnNominationLosesVotes`.
-- Covered by [User](../design/compositions/User.md), line 132.
+- Covered by [User](../design/compositions/User.md), line 133.
 
 ```reaction
 when Nominating.withdraw (nomination)

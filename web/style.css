@@ -142,6 +142,19 @@ button.voted:hover:not(:disabled) {
   border-color: var(--accent);
   color: var(--accent);
 }
+/* The page's main action (POST +, NOMINATE +): filled in the accent colour, in capitals. */
+.accent-button {
+  margin: 0;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--paper);
+  text-transform: uppercase;
+}
+.accent-button:hover:not(:disabled) {
+  background: var(--paper);
+  border-color: var(--accent);
+  color: var(--accent);
+}
 .link-button {
   border: 0;
   padding: 0;

@@ -13,7 +13,7 @@ nomination, because names that differ only in spacing or case name the same idea
 Gigi's second nomination later that day is refused because Gigi nominated less than a
 day ago. Sid nominates "Rainy days", and the category lists Sid's nomination before
 Gigi's because it is newer. Gigi withdraws "Hands", and the category no longer lists
-it. Later Sid's "Rainy days" is chosen to become a gallery; it stays listed, marked
+it; withdrawing gives back the day it used, so Gigi may nominate "Feet" straight away. Later Sid's "Rainy days" is chosen to become a gallery; it stays listed, marked
 chosen, and can no longer be withdrawn or chosen again.
 
 ## Types
@@ -41,7 +41,7 @@ a set of Nominations with
   Rule: names are equivalent when they match after trimming outer spaces, collapsing inner spaces, and ignoring case
 
 a set of Users with
-  a lastNominatedAt DateTime
+  an optional lastNominatedAt DateTime
 ```
 
 ## Actions
@@ -84,7 +84,9 @@ withdraw (nominator: User, nomination: Nomination) : returns ()
     refuses CHOSEN "A chosen nomination can't be withdrawn."
   where nomination exists, nominator is its nominator, and it is not chosen
   then
-    delete nomination, leaving nominator's lastNominatedAt unchanged
+    delete nomination
+    set nominator's lastNominatedAt to the latest createdAt among nominator's remaining
+    nominations, or remove it when none remain, so the day the withdrawn one used is free again
     returns
 
 choose (nominations: List<Nomination>, chosenAt: DateTime) : returns ()

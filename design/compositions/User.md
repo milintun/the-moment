@@ -128,7 +128,8 @@ User.CreateNomination at /nominations/create
 ```
 
 A nominator may [withdraw their nomination](reaction:User.WithdrawNomination); anyone
-else is refused by Nominating. A withdrawn nomination
+else is refused by Nominating. Withdrawing gives back the day the nomination used, so
+its nominator may nominate something else straight away. A withdrawn nomination
 [loses its votes](reaction:User.WithdrawnNominationLosesVotes).
 
 ```endpoints

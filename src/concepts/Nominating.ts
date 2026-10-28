@@ -103,8 +103,12 @@ export class NominatingConcept {
     if (found === null) throw new NoSuchNomination("There is no such nomination.");
     if (found.nominator !== nominator) throw new NotNominator("Only the nominator can withdraw a nomination.");
     if (found.chosenAt) throw new Chosen("A chosen nomination can't be withdrawn.");
-    // lastNominatedAt is left alone, so withdrawing never frees today's nomination.
     await this.nominations.deleteOne({ _id: nomination });
+    // Give back the day it used: the last nomination is now the latest one left. With none left,
+    // the record goes (rather than losing its time, which the daily claim in nominate relies on).
+    const [latest] = await this.nominations.find({ nominator }).sort({ createdAt: -1 }).limit(1).toArray();
+    if (latest) await this.nominators.updateOne({ _id: nominator }, { $set: { lastNominatedAt: latest.createdAt } });
+    else await this.nominators.deleteOne({ _id: nominator });
     return {};
   }
 

@@ -166,7 +166,7 @@ Times are fixed dates, never the real clock.
   - `_all` ordered by start
 
 ### Nominating.test.ts
-- **principle**: create "Future galleries" → Gigi nominates "Hands" → `_equivalent(" hands ")` finds it → Gigi's second nomination that day refuses `TOO_SOON` → Sid nominates "Rainy days", listed before Gigi's → Gigi withdraws "Hands", which is no longer listed → Sid's "Rainy days" is chosen, stays listed marked chosen, and can't be withdrawn or chosen again.
+- **principle**: create "Future galleries" → Gigi nominates "Hands" → `_equivalent(" hands ")` finds it → Gigi's second nomination that day refuses `TOO_SOON` → Sid nominates "Rainy days", listed before Gigi's → Gigi withdraws "Hands", which is no longer listed, and nominates "Feet" straight away → Sid's "Rainy days" is chosen, stays listed marked chosen, and can't be withdrawn or chosen again.
 - **createCategory**
   - refuses `NAME_TAKEN`; still one category with that name
 - **nominate**
@@ -179,7 +179,8 @@ Times are fixed dates, never the real clock.
 - **withdraw**
   - refuses `NO_SUCH_NOMINATION`, including withdrawing twice
   - refuses `NOT_NOMINATOR`; still listed
-  - withdrawing does not reset the daily limit
+  - withdrawing gives back the day it used, so another idea can follow straight away (which uses the day again)
+  - withdrawing goes back to the nomination before it, not further
 - **choose**
   - marks every listed nomination chosen; a chosen one can't be withdrawn (`CHOSEN`)
   - refuses `NO_SUCH_NOMINATION`, and `CHOSEN` for one already chosen or listed twice; none chosen
@@ -391,7 +392,7 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 - **gallery view**: artwork with caption, owner, votes, image; signed out has no buttons and a "log in to post and vote" link; signed in, POST + inside the wall's top left opens the post form in a window over the gallery (× closes it), and posting closes it and reloads the wall in place; closed gallery offers no posting; empty wall; clicking someone's art upvotes it (washed in the accent colour with "upvote" in the middle on hover, its count in the accent colour) and again takes it back; a vote doesn't reorder the wall until it's loaded again; no voting on your own post, delete after confirming; admin removes someone's post after confirming; non-admins never see removal; a refusal shows next to its post; a post already gone leaves with the message above; an ended session links to log in
 - **wall order**: sorted by votes as it comes; the "sorted by" menu re-sorts newest or oldest first, and back, closing on choosing; from the keyboard an arrow opens it, arrows move, Enter chooses, Esc closes
 - **gallery season notices**: a "new" or filled-in "ending soon" badge beside the name, then "season n of m", then when it started and ends; no badge mid-season and the last season is marked final; a season ending with the page open points to the archive, hides posting, and a vote then says votes are final without reloading the wall
-- **future galleries**: counts down to the close; an idea already nominated is caught before the server; a refusal in an open round means once a day; voting after the round closed says votes are final
+- **future galleries**: counts down to the close; signed in, NOMINATE + opens a small form below it (Esc or a click elsewhere closes it, and so does a nomination that goes through); clicking someone else's idea's row upvotes it and again takes the vote back (its UPVOTE label is the keyboard's button), your votes marked; your own idea's row is black and says WITHDRAW instead, and clicking it asks first, then withdraws; an idea already nominated is caught before the server; a refusal in an open round means once a day; voting after the round closed says votes are final
 - **chosen ideas**: Future galleries strikes a chosen idea and its nominator can't withdraw it; my nominations says "chosen" instead of withdraw
 
 - **archive**: each room with finished seasons by name and the dates its seasons span, opening into "season n" links to each season's wall; the search narrows by name as you type (ignoring case and spacing), says when nothing matches, and first loads the pages not loaded yet
