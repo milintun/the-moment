@@ -43,17 +43,21 @@ const clickOutside = (e: MouseEvent) => e.target === dialog.value && closeMap();
       <RouterLink to="/" class="brand" aria-label="the moment: back to the entrance">The Moment</RouterLink>
     </header>
     <main :class="['page', { 'in-room': current }]">
-      <button
+      <!-- Focusable as a whole, so the keyboard can open the map too (the mouse clicks its floor). -->
+      <div
         v-if="current"
         :key="current.id"
-        type="button"
         class="minimap"
+        role="button"
+        tabindex="0"
         aria-haspopup="dialog"
         :aria-label="`you are in ${current.label}. open the map`"
-        @click="mapOpen = true"
+        @keydown.enter.self.prevent="mapOpen = true"
+        @keydown.space.self.prevent="mapOpen = true"
       >
-        <FloorPlan :rooms="all" :here="current.id" mini />
-      </button>
+        <FloorPlan :rooms="all" :here="current.id" mini @expand="mapOpen = true" />
+        <span class="minimap-label" aria-hidden="true">Map</span>
+      </div>
       <RouterView :key="route.fullPath" />
       <nav v-if="current" class="neighbours" aria-label="rooms before and after">
         <span class="before">
@@ -111,14 +115,20 @@ const clickOutside = (e: MouseEvent) => e.target === dialog.value && closeMap();
   width: 230px;
   height: 200px;
   margin: 0 0 1rem 1.5rem;
-  padding: 0;
   border: var(--line);
   background: var(--paper);
-  cursor: pointer;
 }
-.minimap:hover:not(:disabled) {
-  background: var(--paper); /* not the buttons' accent fill */
-  border-color: var(--accent);
+/* MAP, a label just inside the mini map's corner; clicks pass through it to the map. */
+.minimap-label {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 0.1em 0.45em;
+  background: var(--paper);
+  font-family: var(--title-font);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  pointer-events: none;
 }
 .in-room :deep(h2),
 .in-room :deep(.walk),

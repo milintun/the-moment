@@ -7,10 +7,15 @@ import type { Room } from "../museum.ts";
 // The museum drawn from above as a floor plan: outlines, doorways, and text labels. Every
 // room is a link, so clicking, tabbing, and screen readers all reach it. Drag (or swipe) to
 // look around; scroll, pinch, or the buttons to zoom; arrow keys and +/− do the same.
-// `here` pins the room you're in, "you are here", and opens the view on it. `mini` is the small,
-// still version in a room page's corner, with no links of its own.
+// `here` pins the room you're in, "you are here", and opens the view on it. `mini` is the small
+// version in a room page's corner: drag to look around, click a room to go there, or click
+// anywhere else to expand it into the full map (`expand`). It doesn't zoom, and its rooms stay
+// out of the tab order (the page's own MAP button opens the full map from the keyboard).
 const props = defineProps<{ rooms: Room[]; here?: string; mini?: boolean }>();
-const emit = defineEmits<{ enter: [] }>(); // a room was chosen (so an overlay holding the map can close)
+const emit = defineEmits<{
+  enter: []; // a room was chosen (so an overlay holding the map can close)
+  expand: []; // the mini map was clicked outside its rooms
+}>();
 
 const LINE = 16; // label line height
 const hatch = `hatch-${useId()}`; // the pattern's id, unique per map (a page can show two)
@@ -98,7 +103,6 @@ const local = (e: { clientX: number; clientY: number }) => {
 };
 
 function down(e: PointerEvent) {
-  if (props.mini) return;
   if (e.pointerType === "mouse" && e.button !== 0) return;
   pointers.set(e.pointerId, local(e));
   if (pointers.size === 1) [travelled, dragging.value] = [0, false];
@@ -133,6 +137,10 @@ function click(e: MouseEvent) {
   e.preventDefault();
   e.stopPropagation();
   dragging.value = false;
+}
+/** On the mini map, a click outside the rooms expands it (a drag's click never gets here). */
+function expand(e: MouseEvent) {
+  if (props.mini && !(e.target as Element).closest?.("[data-room]")) emit("expand");
 }
 function wheel(e: WheelEvent) {
   if (props.mini) return; // the page scrolls past it instead
@@ -199,6 +207,7 @@ function park() {
   if (!landing.value) person.value = null;
 }
 function enter(e: MouseEvent, room: Room, navigate: (e?: MouseEvent) => unknown) {
+  if (props.mini) return navigate(e); // no person to drop on the mini map
   const quick = e.detail === 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0;
   if (quick || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
     emit("enter");
@@ -244,6 +253,7 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
       @pointerup="up"
       @pointercancel="up"
       @click.capture="click"
+      @click="expand"
       @wheel="wheel"
       @keydown="key"
       @focusin="focus"
@@ -265,10 +275,11 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
       </g>
 
       <RouterLink v-for="r in p.rooms" :key="r.room.id" v-slot="{ href, navigate }" :to="r.room.to" custom>
-        <!-- The mini version sits inside a link to the map, so its rooms aren't links. -->
-        <component
-          :is="mini ? 'g' : 'a'"
-          v-bind="mini ? {} : { href, 'aria-label': describe(r.room), onClick: (e: MouseEvent) => enter(e, r.room, navigate) }"
+        <a
+          :href="href"
+          :aria-label="describe(r.room)"
+          :tabindex="mini ? -1 : undefined"
+          @click="(e: MouseEvent) => enter(e, r.room, navigate)"
           :class="['plan-room', `kind-${r.room.kind}`, { here: isHere(r), target: r.room.id === landing }]"
           :data-room="r.room.id"
         >
@@ -298,7 +309,7 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
             </g>
             <text :x="center(r).x" :y="labelTop(r) + (r.label.length + (r.room.notice ? 1 : 0)) * LINE">you are here</text>
           </g>
-        </component>
+        </a>
       </RouterLink>
 
       <line v-for="([a, b], i) in p.doors" :key="`door${i}`" :x1="a[0]" :y1="a[1]" :x2="b[0]" :y2="b[1]" class="door" />
@@ -349,8 +360,17 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
   border: 0;
   height: 100%;
 }
+/* The mini map: a magnifying glass over everything but the rooms, which are links. On touch
+   screens, sideways swipes pan it and up-and-down ones still scroll the page. */
 .plan.mini {
   height: 100%;
+  cursor: zoom-in;
+  touch-action: pan-y;
+}
+.plan.mini.dragging {
+  cursor: grabbing;
+}
+.plan.mini .plan-room {
   cursor: pointer;
 }
 /* The person: waiting in the corner, hanging from the pointer over the map, dropping into a room. */

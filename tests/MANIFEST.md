@@ -399,7 +399,7 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 - **ringPath**: a full circle, or one arc per gap
 - **the map** (an overlay over the page, opened from its mini map): every room a link in walking order, named with its kind and notice; pins the room you're in "you are here" and opens on it; choosing a room goes there and closes the map; × and a click on the dimmed page close it, the mini map opens it again; dragging moves the view (only past a few pixels) and the click ending a drag enters nothing; scrolling zooms, capped at 3×, and the buttons zoom and recenter; arrow keys pan and +/− zoom
 - **the little person**: waits in the corner, follows a hovering pointer over the map, and goes back when it leaves; a touch doesn't summon them; clicking a room drops them in, then enters; a keyboard press enters at once
-- **where you are, on every room's page**: a gallery's still mini map marks it "you are here" with a pin, has no links of its own, and opens the map; home, future galleries, the archive, and galleries each have the mini map and the rooms before and after; non-room pages have neither; the top bar's name goes to the entrance
+- **where you are, on every room's page**: a gallery's mini map marks it "you are here" with a pin under a MAP label, and Enter on it opens the map; the mini map pans when dragged, a click outside its rooms expands it, a click on a room goes there, and its rooms stay out of the tab order; home, future galleries, the archive, and galleries each have the mini map and the rooms before and after; non-room pages have neither; the top bar's name goes to the entrance
 
 ### web/tests/admin.spec.ts
 - **home**: an admin gets a red admin button apart from sign out; others get none

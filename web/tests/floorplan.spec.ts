@@ -139,7 +139,7 @@ const groupsApi = () =>
 async function openMap(path = "/galleries/g1") {
   groupsApi();
   const opened = await mountAppAt(path);
-  await opened.wrapper.find("button.minimap").trigger("click");
+  await opened.wrapper.find(".minimap svg.plan").trigger("click"); // its floor, outside the rooms
   await flushPromises();
   return opened;
 }
@@ -185,7 +185,7 @@ describe("the map", () => {
     const { wrapper, router } = await openMap();
     await overlay(wrapper).find('button[aria-label="close the map"]').trigger("click");
     expect(isOpen(wrapper)).toBe(false);
-    await wrapper.find("button.minimap").trigger("click");
+    await wrapper.find(".minimap svg.plan").trigger("click");
     await flushPromises();
     expect(isOpen(wrapper)).toBe(true);
     await overlay(wrapper).trigger("click"); // the dialog itself, outside the panel
@@ -283,21 +283,49 @@ describe("the little person", () => {
 });
 
 describe("where you are, on every room's page", () => {
-  test("a gallery's still mini map marks it \"you are here\" and opens the map", async () => {
+  test("a gallery's mini map marks it \"you are here\" under a MAP label; from the keyboard, Enter opens the map", async () => {
     groupsApi();
     const { wrapper } = await mountAppAt("/galleries/g1");
-    const mini = wrapper.find("button.minimap");
-    expect(mini.attributes("aria-label")).toBe("you are in Doodles. open the map");
+    const mini = wrapper.find(".minimap");
     expect(mini.find('[data-room="g1"]').classes()).toContain("here");
     expect(mini.find('[data-room="g1"] .you-are-here').text()).toBe("you are here");
     expect(mini.find('[data-room="g1"] .pin').exists()).toBe(true);
     expect(mini.find("svg").attributes("aria-hidden")).toBe("true");
-    expect(mini.findAll("svg a")).toHaveLength(0); // no links inside the button
+    expect(mini.findAll("svg a").every((a) => a.attributes("tabindex") === "-1")).toBe(true); // the mini map itself is the one stop
     expect(mini.find(".pegman").exists()).toBe(false);
+    expect(mini.find(".minimap-label").text()).toBe("Map");
+    expect(mini.find(".minimap-label").element.tagName).toBe("SPAN"); // a label, not a control
+    expect([mini.attributes("role"), mini.attributes("tabindex"), mini.attributes("aria-label")]).toEqual([
+      "button",
+      "0",
+      "you are in Doodles. open the map",
+    ]);
     expect(isOpen(wrapper)).toBe(false);
-    await mini.trigger("click");
+    await mini.trigger("keydown", { key: "Enter" });
     await flushPromises();
     expect(isOpen(wrapper)).toBe(true);
+  });
+
+  test("the mini map pans when dragged; a click outside its rooms expands it, a click on a room goes there", async () => {
+    groupsApi();
+    const { wrapper, router } = await mountAppAt("/galleries/g1");
+    const svg = wrapper.find(".minimap svg.plan");
+    const view = () => svg.attributes("viewBox");
+    const before = view();
+    const at = (x: number, y: number) => ({ pointerId: 1, pointerType: "mouse", button: 0, clientX: x, clientY: y });
+    await svg.trigger("pointerdown", at(100, 100));
+    await svg.trigger("pointermove", at(60, 80));
+    await svg.trigger("pointerup", at(60, 80));
+    expect(view()).not.toBe(before);
+    await svg.trigger("click"); // the click ending the drag: nothing
+    expect(isOpen(wrapper)).toBe(false);
+    await svg.trigger("click"); // a plain click on the hatching
+    await flushPromises();
+    expect(isOpen(wrapper)).toBe(true);
+    await overlay(wrapper).find('button[aria-label="close the map"]').trigger("click");
+    await wrapper.find('.minimap a[data-room="g2"]').trigger("click", { detail: 1 });
+    await flushPromises();
+    expect([router.currentRoute.value.path, isOpen(wrapper)]).toEqual(["/galleries/g2", false]);
   });
 
   test.each([
@@ -309,7 +337,7 @@ describe("where you are, on every room's page", () => {
     signedInAs(null);
     groupsApi();
     const { wrapper } = await mountAppAt(path);
-    expect(wrapper.find(`button.minimap [data-room="${room}"]`).classes()).toContain("here");
+    expect(wrapper.find(`.minimap [data-room="${room}"]`).classes()).toContain("here");
     expect(wrapper.find(".neighbours .before").text()).toBe(`← ${before}`);
     expect(wrapper.find(".neighbours .after").text()).toBe(after ? `${after} →` : "");
   });

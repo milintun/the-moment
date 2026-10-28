@@ -58,7 +58,7 @@ export async function logInAs(page: Page, username: string, password = PASSWORD)
 /** Opens the map over the page at `path` from its mini map, zoomed out so every room is on screen. */
 export async function openMap(page: Page, path = "/home") {
   await page.goto(path);
-  await page.locator("button.minimap").click();
+  await page.getByRole("button", { name: /open the map/ }).press("Enter");
   const map = page.locator("dialog.map-overlay");
   for (let i = 0; i < 8; i++) await map.getByRole("button", { name: "zoom out" }).click();
   return map;

@@ -169,7 +169,7 @@ test("the map opens over the page; the little person drops into the room clicked
   await expect(page).toHaveURL(new RegExp(`/galleries/${group}$`));
   await expect(map).toBeHidden();
 
-  await page.getByRole("button", { name: /open the map/ }).click();
+  await page.getByRole("button", { name: /open the map/ }).press("Enter");
   await expect(room).toContainText("you are here");
   await page.keyboard.press("Escape");
   await expect(map).toBeHidden();
