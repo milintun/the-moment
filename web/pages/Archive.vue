@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import ErrorNote from "../components/ErrorNote.vue";
-import { WING_MIN_PERIOD, client, finishedSeasons } from "../api.ts";
+import { client, finishedSeasons, normalizeName } from "../api.ts";
 import { explain } from "../errors.ts";
 
 type Group = Extract<Awaited<ReturnType<typeof client.archive.galleries>>, { page: unknown }>["page"]["groups"][number];
@@ -28,25 +28,58 @@ onMounted(async () => {
   loaded.value = true;
 });
 
-// One room per gallery or wing that has at least one finished season.
+// One room per gallery or wing that has at least one finished season, with the dates its
+// archived seasons span: the first one's start to the last one's end.
+const day = (d: Date) => d.toLocaleDateString();
 const rooms = computed(() =>
-  groups.value
-    .map((g) => ({ ...g, seasons: finishedSeasons(g).length, wing: g.period != null && g.period >= WING_MIN_PERIOD }))
-    .filter((g) => g.seasons),
+  groups.value.flatMap((g) => {
+    const seasons = finishedSeasons(g);
+    if (!seasons.length) return [];
+    return [{ ...g, span: `${day(seasons[0]!.start)} – ${day(seasons.at(-1)!.end)}` }];
+  }),
 );
+
+// Searching narrows the list as you type, by name, ignoring case and spacing. It has to see
+// every gallery, so the first search loads the pages not loaded yet.
+// ponytail: loads the whole archive into the page; a server-side name search if it grows to thousands.
+const query = ref("");
+const searching = computed(() => normalizeName(query.value) !== "");
+const shown = computed(() => rooms.value.filter((g) => normalizeName(g.name).includes(normalizeName(query.value))));
+watch(searching, async (on) => {
+  while (on && more.value && !error.value) await loadMore();
+});
 </script>
 
 <template>
   <h1>Archive</h1>
-  <p class="lede">every gallery's past seasons, as they ended. archived art can be viewed but not voted on.</p>
+  <p class="lede">past galleries</p>
   <p v-if="error"><ErrorNote :problem="error" /></p>
   <p v-if="loaded && !rooms.length && !more && !error">nothing has been archived yet.</p>
+  <p v-else-if="loaded">
+    <input v-model="query" type="search" class="search" placeholder="search galleries" aria-label="search the archive by name" />
+  </p>
+  <p v-if="searching && !shown.length && !more">no galleries match "{{ query.trim() }}".</p>
   <ol class="rooms">
-    <li v-for="g in rooms" :key="g.group" class="room">
+    <li v-for="g in shown" :key="g.group" class="room">
       <RouterLink class="room-name" :to="`/archive/${g.group}`">
-        {{ g.name }} <span class="kind">{{ g.wing ? "wing" : "gallery" }} · {{ g.seasons }} season(s)</span>
+        {{ g.name }} ({{ g.span }})
       </RouterLink>
     </li>
   </ol>
-  <p v-if="loaded && more && !error"><button @click="loadMore">load more galleries</button></p>
+  <p v-if="loaded && more && !error && !searching"><button @click="loadMore">load more galleries</button></p>
 </template>
+
+<style scoped>
+.search {
+  width: min(100%, 320px);
+  margin: 1rem 0 0.5rem 0;
+}
+/* No focus ring while typing in it. */
+.search:focus,
+.search:focus-visible {
+  outline: none;
+}
+.room-name {
+  text-decoration: none;
+}
+</style>

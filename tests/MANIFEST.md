@@ -393,6 +393,8 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 - **future galleries**: counts down to the close; an idea already nominated is caught before the server; a refusal in an open round means once a day; voting after the round closed says votes are final
 - **chosen ideas**: Future galleries strikes a chosen idea and its nominator can't withdraw it; my nominations says "chosen" instead of withdraw
 
+- **archive**: each room with finished seasons by name and the dates its seasons span; the search narrows by name as you type (ignoring case and spacing), says when nothing matches, and first loads the pages not loaded yet
+
 ### web/tests/floorplan.spec.ts
 - **plan**, for 0–30 galleries and 0–5 wings: every room placed once, nothing overlapping, all inside the bounds; every room has a doorway; the entrance is lowest under a home that never moves; future galleries sit at the last row's end with the archive above; rows of four slots wind back and forth with a turning rotunda between; a wing is two slots by a whole row and galleries pair across the corridor; the same rooms give the same plan and more galleries leave earlier ones in place
 - **wrap**: fits words to two lines, cut short with …
@@ -407,7 +409,6 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 - **new schedule**: starts at the next 12 AM by default; 30+ day seasons say they make wings; last week's round first, older rounds by arrow, chosen ideas struck and unpickable; creates with typed and picked galleries and lands on schedules; no galleries, duplicate names, and a past start caught before the server; overlap explained; nothing to pick before any round finishes
 - **schedules**: read only until edited (edit / done); an upcoming one gains typed and picked galleries; a name already in it is caught before the server; a running one can't gain galleries; a running schedule's season, and removing says it stays this season; no removing in the final season, of a gallery already leaving, or of the last one staying; cancelling an upcoming one after confirming; a running one can't be cancelled or end before the season underway; finished schedules tucked away; a new one announced
 - **people**: adding an unregistered name is explained
-- **archive**: pages through `/archive/galleries` 20 at a time with "load more", showing only galleries with finished seasons; empty message
 
 ### e2e/museum.spec.ts
 - the entrance's doorway goes home, and the site's address opens at the entrance every time

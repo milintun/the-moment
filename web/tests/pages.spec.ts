@@ -298,3 +298,55 @@ describe("chosen ideas", () => {
     expect(rows[1]!.text()).toContain("withdraw");
   });
 });
+
+describe("archive", () => {
+  test("each room with finished seasons, by name and the dates its seasons span, without underlines", async () => {
+    const DAY = 24 * 60 * 60 * 1000;
+    const start = new Date(Date.now() - 10 * DAY);
+    const row = (group: string, name: string, runs: number) => ({ group, name, cycle: "c", start: start.toISOString(), period: 3 * DAY, runs });
+    fakeApi({
+      "/groups/list": () => ({ list: { groups: [] } }),
+      "/archive/galleries": () => ({ page: { groups: [row("g1", "Doodles", 2), row("g2", "Future", 9), { ...row("g3", "Never", 1), start: null }] } }),
+    });
+    const { wrapper } = await mountAt("/archive");
+    const day = (ms: number) => new Date(ms).toLocaleDateString();
+    const t0 = start.getTime();
+    expect(wrapper.findAll(".room-name").map((a) => a.text())).toEqual([
+      `Doodles (${day(t0)} – ${day(t0 + 6 * DAY)})`, // both seasons over
+      `Future (${day(t0)} – ${day(t0 + 9 * DAY)})`, // three of nine over; never-run Never left out
+    ]);
+  });
+});
+
+describe("archive search", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const start = new Date(Date.now() - 10 * DAY).toISOString();
+  const row = (i: number, name: string) => ({ group: `g${i}`, name, cycle: "c", start, period: DAY, runs: 2 });
+
+  test("narrows the list as you type, by name, ignoring case and spacing; nothing matching says so", async () => {
+    fakeApi({ "/archive/galleries": () => ({ page: { groups: [row(1, "Night Walks"), row(2, "Doodles"), row(3, "Night  Owls")] } }) });
+    const { wrapper } = await mountAt("/archive");
+    const names = () => wrapper.findAll(".room-name").map((a) => a.text().split(" (")[0]);
+    await wrapper.find("input.search").setValue("NIGHT ");
+    expect(names()).toEqual(["Night Walks", "Night  Owls"]);
+    await wrapper.find("input.search").setValue("night owls");
+    expect(names()).toEqual(["Night  Owls"]);
+    await wrapper.find("input.search").setValue("zines");
+    expect(wrapper.text()).toContain('no galleries match "zines".');
+    await wrapper.find("input.search").setValue("");
+    expect(names()).toHaveLength(3);
+  });
+
+  test("searching loads the galleries not loaded yet, so older ones are found too", async () => {
+    const all = Array.from({ length: 25 }, (_, i) => row(i, i === 24 ? "Oldest Doodles" : `Room ${i}`));
+    const api = fakeApi({ "/archive/galleries": ({ offset, limit }) => ({ page: { groups: all.slice(offset, offset + limit) } }) });
+    const { wrapper } = await mountAt("/archive");
+    expect(wrapper.findAll(".room-name")).toHaveLength(20);
+    await wrapper.find("input.search").setValue("doodles");
+    await flushPromises();
+    expect(api.called("/archive/galleries").map((c) => c.offset)).toEqual([0, 20]);
+    expect(wrapper.findAll(".room-name").map((a) => a.text().split(" (")[0])).toEqual(["Oldest Doodles"]);
+    expect(wrapper.text()).not.toContain("load more galleries");
+  });
+});
+
