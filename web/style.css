@@ -1,4 +1,4 @@
-/* The Moment: black and white, Ubuntu Mono. Titles are ALL CAPS and everything else is
+/* The Moment: black and white, Inter Tight, with titles in Gloria Hallelujah. Titles are ALL CAPS and everything else is
    lowercase, including what people write; fields show text exactly as it is typed.
    Artwork keeps its colour. */
 
@@ -10,7 +10,8 @@
   --wash: #e6e6e6; /* a light grey fill, for a room about to be entered */
   --line: 1px solid var(--ink);
   --gutter: 16px;
-  --font: "Ubuntu Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --font: "Inter Tight", system-ui, sans-serif;
+  --title-font: "Gloria Hallelujah", cursive;
   color-scheme: light;
 }
 
@@ -29,15 +30,18 @@ body {
 
 body {
   font-family: var(--font);
-  font-size: 17px;
+  font-size: 15px;
+  letter-spacing: 0.05em;
   line-height: 1.5;
   text-transform: lowercase;
   -webkit-font-smoothing: antialiased;
 }
 
-h1,
-h2,
-h3 {
+/* Two kinds of text: body, and the h1 title. Lower headings keep their place in the page's
+   outline (for screen readers) but read as body text, set apart only by space and a rule. */
+h1 {
+  font-family: var(--title-font);
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-weight: 700;
@@ -45,18 +49,16 @@ h3 {
   margin: 0 0 0.6em;
   text-wrap: balance;
 }
-h1 {
-  font-size: clamp(1.8rem, 5vw, 2.6rem);
+h2,
+h3,
+h4 {
+  font: inherit;
+  margin: 1.6em 0 0.6em;
 }
 h2 {
-  font-size: 1.25rem;
   margin-top: 2.4em;
   padding-bottom: 0.3em;
   border-bottom: var(--line);
-}
-h3 {
-  font-size: 1rem;
-  margin-top: 1.6em;
 }
 
 p {
@@ -677,7 +679,7 @@ section + section {
 
 @media (max-width: 720px) {
   body {
-    font-size: 16px;
+    font-size: 14px;
   }
   .minimap {
     float: none;
