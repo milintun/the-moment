@@ -90,6 +90,3 @@ export function useNow() {
   onUnmounted(() => clearInterval(timer));
   return now;
 }
-
-/** Browser storage key set once a visitor clicks through the entrance. */
-export const ENTERED_KEY = "the-moment.entered";

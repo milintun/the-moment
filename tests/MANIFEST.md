@@ -385,7 +385,8 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 - **RoomList**: links and kind labels; clicking enters
 - **AuthForm**: log in sends what was typed, learns who you are, goes home; refusals (wrong password, taken, bad username vs bad password told apart by what was typed) show their message and stay put
 - **ErrorNote**: a message, or a problem only at its own spot; an ended session links to log in
-- **routes**: entrance on first visit, skipped to the map after entering; entrance reachable by link; old addresses redirect
+- **routes**: the site's address always opens at the entrance; old addresses redirect
+- **entrance**: wide screens enter through the doorway only (page clicks do nothing); narrow screens have no doorway and an enter button; pointing at either half of the figure lights that side and its blurb, and the last side holds
 
 ### web/tests/pages.spec.ts
 - **gallery view**: artwork with caption, owner, votes, image; signed out has no buttons and posting goes to log in; closed gallery offers no posting; empty wall; upvote → "unvote" filled in → back; no voting on your own post, delete after confirming; admin removes someone's post after confirming; non-admins never see removal; a refusal shows next to its post; a post already gone leaves with the message above; an ended session links to log in
@@ -410,7 +411,7 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 - **archive**: pages through `/archive/galleries` 20 at a time with "load more", showing only galleries with finished seasons; empty message
 
 ### e2e/museum.spec.ts
-- entrance → map, and later visits skip the entrance
+- the entrance's doorway opens the map, and the site's address opens at the entrance every time
 - register, post an image with a caption, land on it, and the image loads from storage
 - another visitor upvotes, then unvotes
 - an artist deletes their own post after confirming

@@ -1,13 +1,16 @@
 import { expect, test } from "@playwright/test";
 import { ART, OWNER, PASSWORD, logInAs, openGallery, postArt, register, unique } from "./helpers.ts";
 
-test("a first visit opens at the entrance; clicking enters the map, and later visits skip the entrance", async ({ page }) => {
+test("the site opens at the entrance, every time; the doorway opens the map", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "The Moment" })).toBeVisible();
-  await page.getByText("click anywhere to enter").click();
+  // Click in the doorway itself, at (134.7, 22) of the drawing's 138.37 × 70.44 (its middle runs under the text).
+  await expect(page.getByRole("link", { name: "enter the museum" })).toBeVisible();
+  const box = (await page.locator("svg.doorway").boundingBox())!;
+  await page.mouse.click(box.x + (box.width * 134.7) / 138.37, box.y + (box.height * 22) / 70.44);
   await expect(page).toHaveURL(/\/map$/);
   await page.goto("/");
-  await expect(page).toHaveURL(/\/map$/);
+  await expect(page.getByRole("heading", { name: "The Moment" })).toBeVisible();
 });
 
 test("register, post an image with a caption, and land on it in the gallery", async ({ page, playwright, baseURL }) => {

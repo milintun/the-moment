@@ -1,7 +1,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createMemoryHistory, createRouter } from "vue-router";
-import { ENTERED_KEY, me } from "../api.ts";
+import { me } from "../api.ts";
 import AuthForm from "../components/AuthForm.vue";
 import ErrorNote from "../components/ErrorNote.vue";
 import { SESSION_ENDED } from "../errors.ts";
@@ -97,22 +97,13 @@ describe("ErrorNote", () => {
 });
 
 describe("routes", () => {
-  test("the first visit opens at the entrance; after entering once, visits skip to the map", async () => {
+  test("the site's address always opens at the entrance, even after entering before", async () => {
     const first = newRouter();
     await first.push("/");
-    expect(first.currentRoute.value.path).toBe("/");
-    localStorage.setItem(ENTERED_KEY, "yes");
+    await first.push("/map");
     const later = newRouter();
     await later.push("/");
-    expect(later.currentRoute.value.path).toBe("/map");
-  });
-
-  test("the entrance stays reachable by link after entering", async () => {
-    localStorage.setItem(ENTERED_KEY, "yes");
-    const router = newRouter();
-    await router.push("/archive");
-    await router.push("/");
-    expect(router.currentRoute.value.path).toBe("/");
+    expect(later.currentRoute.value.path).toBe("/");
   });
 
   test.each([
@@ -129,18 +120,53 @@ describe("routes", () => {
 });
 
 describe("entrance", () => {
-  test("the half of the page the pointer is on lights up that side of the figure, and its column", async () => {
+  /** Pretends the screen is wide (the doorway shows) or narrow (the enter button instead). */
+  const screen = (wide: boolean) =>
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      (query: string) => ({ matches: !wide, media: query, addEventListener() {}, removeEventListener() {} }) as unknown as MediaQueryList,
+    );
+  afterEach(() => vi.restoreAllMocks());
+
+  test("on a wide screen, clicking the page does nothing; the doorway goes to the map", async () => {
+    screen(true);
+    const { wrapper, router } = await mountAt("/");
+    expect(wrapper.find(".enter").exists()).toBe(false);
+    await wrapper.find(".entrance").trigger("click");
+    await wrapper.find(".entrance-columns p").trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.path).toBe("/");
+    const doorway = wrapper.find('a.doorway-link[aria-label="enter the museum"]');
+    expect(doorway.attributes("href")).toBe("/map");
+    await doorway.trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.path).toBe("/map");
+  });
+
+  test("on a narrow screen, there's no doorway; the enter button goes to the map", async () => {
+    screen(false);
+    const { wrapper, router } = await mountAt("/");
+    expect(wrapper.find(".doorway").exists()).toBe(false);
+    await wrapper.find(".enter button").trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.path).toBe("/map");
+  });
+
+  test("pointing at either half of the figure and blurbs lights up that side, and its blurb", async () => {
     const { wrapper } = await mountAt("/");
-    const page = wrapper.find(".entrance");
+    const page = wrapper.find(".entrance-columns"); // happy-dom has no layout, so its box is 0 wide at x 0
+    await wrapper.find(".entrance").trigger("pointermove", { clientX: 10, pointerType: "mouse" });
+    expect(wrapper.find(".entrance-columns p").classes("active")).toBe(false); // the rest of the page does nothing
     const [visitor, artist] = [wrapper.findAll(".entrance-columns p")[0]!, wrapper.findAll(".entrance-columns p")[1]!];
     const shown = () => wrapper.findAll(".entrance-figure img").map((img) => img.classes().includes("shown"));
     expect([visitor.classes("active"), artist.classes("active")]).toEqual([false, false]);
-    await page.trigger("pointermove", { clientX: 10, pointerType: "mouse" });
+    expect([visitor.classes("dim"), artist.classes("dim")]).toEqual([false, true]); // the visitor drawing shows first
+    await page.trigger("pointermove", { clientX: -10, pointerType: "mouse" });
     expect([visitor.classes("active"), artist.classes("active"), shown()]).toEqual([true, false, [true, false]]);
-    await page.trigger("pointermove", { clientX: window.innerWidth - 10, pointerType: "mouse" });
+    await page.trigger("pointermove", { clientX: 10, pointerType: "mouse" });
     expect([visitor.classes("active"), artist.classes("active"), shown()]).toEqual([false, true, [false, true]]);
-    await page.trigger("pointerleave");
-    expect(artist.classes("active")).toBe(false);
+    expect([visitor.classes("dim"), artist.classes("dim")]).toEqual([true, false]);
+    await page.trigger("pointerleave"); // the artist side holds, without the accent
+    expect([visitor.classes("dim"), artist.classes("dim"), artist.classes("active"), shown()]).toEqual([true, false, false, [false, true]]);
   });
 });
 
