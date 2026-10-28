@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
+import { setTitle } from "../router.ts";
 import ErrorNote from "../components/ErrorNote.vue";
 import WallOrder from "../components/WallOrder.vue";
 import { client, dayAndHour, finishedSeasons, wallOrder, type WallSort } from "../api.ts";
@@ -27,6 +28,7 @@ onMounted(async () => {
   const [list, archive] = await Promise.all([client.groups.list({}), client.groups.archive({ group, season })]);
   const found = "error" in list ? undefined : list.list.groups.find((g) => g.group === group);
   name.value = found?.name ?? "unknown gallery";
+  setTitle(`${name.value}, season ${season + 1}`);
   runs.value = found?.runs ?? null;
   dates.value = (found && finishedSeasons(found).find((s) => s.season === season)) || null;
   if ("error" in archive) error.value = explain("/groups/archive", archive.error);

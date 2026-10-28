@@ -9,7 +9,13 @@ const around = inject<Ref<{ before: Room[]; after: Room[] }>>("around");
 </script>
 
 <template>
-  <RouterLink v-for="r in around?.[side] ?? []" :key="r.id" :to="r.to" :class="['wall-end', side]">
+  <RouterLink
+    v-for="r in around?.[side] ?? []"
+    :key="r.id"
+    :to="r.to"
+    :class="['wall-end', side]"
+    :aria-label="`${side === 'before' ? 'previous' : 'next'} room: ${r.label}`"
+  >
     <span>{{ r.label }}</span>
     <span class="arrow" aria-hidden="true">{{ side === "before" ? "←" : "→" }}</span>
   </RouterLink>

@@ -127,7 +127,7 @@ onUnmounted(() => {
     </label>
     <p class="caption"><label>caption (optional)<textarea v-model="caption" rows="3"></textarea></label></p>
     <p class="actions"><button type="submit" :disabled="busy">post</button></p>
-    <p v-if="status">{{ status }}</p>
+    <p v-if="status" role="status">{{ status }}</p>
     <p v-if="error"><ErrorNote :problem="error" /></p>
   </form>
 </template>

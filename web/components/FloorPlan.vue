@@ -257,7 +257,7 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
       :class="['plan', { dragging, mini }]"
       :viewBox="viewBox"
       :role="mini ? undefined : 'group'"
-      :tabindex="mini ? undefined : 0"
+      :tabindex="mini ? -1 : 0"
       :aria-hidden="mini ? 'true' : undefined"
       :aria-label="mini ? undefined : 'floor plan of the museum. arrow keys move around, plus and minus zoom.'"
       @pointerdown="down"
@@ -389,10 +389,10 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
 .plan.dragging {
   cursor: grabbing;
 }
-/* No outline when the map has focus (it takes focus whenever it's dragged or clicked). */
-.plan:focus,
+/* The map takes focus whenever it's dragged or clicked; only the keyboard's focus shows. */
 .plan:focus-visible {
-  outline: none;
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 .plan-frame.mini {
   border: 0;
@@ -547,13 +547,14 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
 .room-label.lit > text {
   fill: var(--accent);
 }
-/* Rooms take focus when pressed (to drag or click); only the keyboard's focus shows, as a
-   heavier wall, never the browser's ring. */
+/* Rooms take focus when pressed (to drag or click); only the keyboard's focus shows, as heavy
+   accent walls (and its label lit), rather than a ring around the room's box. */
 .plan-room:focus,
 .plan-room:focus-visible {
   outline: none;
 }
 .plan:not(.mini) .plan-room:focus-visible .wall {
+  stroke: var(--accent);
   stroke-width: 3px;
 }
 .plan-room.here .floor {

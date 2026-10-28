@@ -53,7 +53,7 @@ const enter = () => router.push("/home");
 </script>
 
 <template>
-  <div :class="['entrance', { stacked }]">
+  <main :class="['entrance', { stacked }]">
     <div class="entrance-body">
       <h1>The Moment</h1>
       <p>a publicly-curated contemporary digital museum</p>
@@ -85,7 +85,7 @@ const enter = () => router.push("/home");
         <text class="enter-label" :font-size="labelSize" aria-hidden="true">enter</text>
       </a>
     </svg>
-  </div>
+  </main>
 </template>
 
 <style scoped>

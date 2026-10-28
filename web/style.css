@@ -103,9 +103,35 @@ a:hover {
   text-decoration-thickness: 2px;
 }
 
+/* Keyboard focus: an accent outline on whatever has it. A mouse click never shows one. Fields,
+   which show focus however they got it, get an accent border instead of the ring. */
 :focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* Shown only when reached by the keyboard: the skip link at the top of every page. */
+.skip-link {
+  position: absolute;
+  left: var(--gutter);
+  top: -100px;
+  z-index: 30;
+  padding: 0.3em 0.6em;
+  background: var(--paper);
+  border: var(--line);
+}
+.skip-link:focus {
+  top: var(--gutter);
 }
 
 img {
@@ -343,8 +369,12 @@ section + section {
 .ranking tr.votable:focus-within td {
   background: color-mix(in srgb, var(--accent) 18%, var(--paper));
 }
+/* Your vote: the count in the accent colour, with a check so it doesn't rest on colour alone. */
 .ranking .mine {
   color: var(--accent);
+}
+.ranking .mine::before {
+  content: "✓ ";
 }
 .vote-label {
   margin: 0;

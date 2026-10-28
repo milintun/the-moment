@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, provide, ref, watch } from "vue";
+import { computed, nextTick, provide, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import FloorPlan from "./components/FloorPlan.vue";
+import { setTitle } from "./router.ts";
 import { theme, toggleTheme } from "./theme.ts";
 import { neighbours, roomAt, rooms, type Room } from "./museum.ts";
 
@@ -37,6 +38,19 @@ watch(mapOpen, (open) => {
   if (!open && dialog.value?.open) dialog.value.close();
 });
 watch(() => route.fullPath, closeMap);
+
+// Moving to another page: the tab is named for it, and focus goes to its content, so a keyboard
+// or screen reader carries on from the top of the new page rather than from a link that's gone.
+const main = ref<HTMLElement>();
+watch(() => route.path, () => setTitle(route.meta.title as string | undefined), { immediate: true });
+watch(
+  () => route.path,
+  async () => {
+    await nextTick();
+    main.value?.focus({ preventScroll: true });
+  },
+);
+const skipToContent = () => main.value?.focus();
 /** A click on the dimmed page around the map (the dialog itself, outside its content) closes it. */
 const clickOutside = (e: MouseEvent) => e.target === dialog.value && closeMap();
 </script>
@@ -44,32 +58,31 @@ const clickOutside = (e: MouseEvent) => e.target === dialog.value && closeMap();
 <template>
   <RouterView v-if="atEntrance" />
   <template v-else>
+    <a class="skip-link" href="#content" @click.prevent="skipToContent">skip to content</a>
     <header class="topbar">
       <RouterLink to="/" class="brand" aria-label="the moment: back to the entrance">The Moment</RouterLink>
     </header>
-    <main :class="['page', { 'in-room': current }]">
-      <!-- Focusable as a whole, so the keyboard can open the map too (the mouse clicks its floor). -->
-      <div
-        v-if="current"
-        :key="current.id"
-        class="minimap"
-        role="button"
-        tabindex="0"
-        aria-haspopup="dialog"
-        :aria-label="`you are in ${current.label}. open the map`"
-        @keydown.enter.self.prevent="mapOpen = true"
-        @keydown.space.self.prevent="mapOpen = true"
-      >
+    <main id="content" ref="main" tabindex="-1" :class="['page', { 'in-room': current }]">
+      <!-- The mouse clicks its floor to open the map; the keyboard and screen readers get the
+           button laid over it (clicks pass through it), whose focus rings the whole mini map. -->
+      <div v-if="current" :key="current.id" class="minimap">
         <FloorPlan :rooms="all" :here="current.id" mini @expand="mapOpen = true" />
         <span class="minimap-label" aria-hidden="true">Map</span>
+        <button type="button" class="minimap-open" aria-haspopup="dialog" @click="mapOpen = true">
+          <span class="hidden">you are in {{ current.label }}. open the map</span>
+        </button>
       </div>
       <RouterView :key="route.fullPath" />
       <nav v-if="current && !onWall" class="neighbours" aria-label="rooms before and after">
         <span class="before">
-          <RouterLink v-for="r in around.before" :key="r.id" :to="r.to">← {{ r.label }}</RouterLink>
+          <RouterLink v-for="r in around.before" :key="r.id" :to="r.to" :aria-label="`previous room: ${r.label}`">
+            <span aria-hidden="true">←</span> {{ r.label }}
+          </RouterLink>
         </span>
         <span class="after">
-          <RouterLink v-for="r in around.after" :key="r.id" :to="r.to">{{ r.label }} →</RouterLink>
+          <RouterLink v-for="r in around.after" :key="r.id" :to="r.to" :aria-label="`next room: ${r.label}`">
+            {{ r.label }} <span aria-hidden="true">→</span>
+          </RouterLink>
         </span>
       </nav>
     </main>
@@ -91,7 +104,6 @@ const clickOutside = (e: MouseEvent) => e.target === dialog.value && closeMap();
     type="button"
     class="theme-switch"
     :aria-label="theme === 'dark' ? 'switch to light mode' : 'switch to dark mode'"
-    :aria-pressed="theme === 'dark'"
     @click="toggleTheme"
   >
     <!-- a moon in light mode (to go dark), a sun in dark mode (to go light) -->
@@ -140,6 +152,10 @@ const clickOutside = (e: MouseEvent) => e.target === dialog.value && closeMap();
   }
 }
 
+/* Focused when a page opens (for the keyboard and screen readers), never ringed. */
+main:focus {
+  outline: none;
+}
 .page {
   max-width: 1100px;
   margin: 0 auto;
@@ -160,6 +176,19 @@ const clickOutside = (e: MouseEvent) => e.target === dialog.value && closeMap();
   background: var(--paper);
 }
 /* MAP, a label just inside the mini map's corner; clicks pass through it to the map. */
+/* The keyboard's way into the map: laid over the mini map, invisible but for its focus ring. */
+.minimap-open {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  pointer-events: none;
+}
+.minimap-open:hover:not(:disabled) {
+  background: none;
+}
 .minimap-label {
   position: absolute;
   top: 6px;

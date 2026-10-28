@@ -83,10 +83,6 @@ async function submit() {
 .nominate-form input {
   margin-left: 0.6em;
 }
-.nominate-form input:focus,
-.nominate-form input:focus-visible {
-  outline: none; /* no ring while typing */
-}
 .nominate-form button {
   margin: 0 0.3em 0 0;
 }

@@ -112,7 +112,7 @@ const cancel = (s: Schedule) => act(s.cycle, "/admin/schedules/cancel", client.a
 
 <template>
   <h2>Schedules</h2>
-  <p v-if="made" class="season-notice">scheduled {{ made }} {{ made === "1" ? "gallery" : "galleries" }}.</p>
+  <p v-if="made" class="season-notice" role="status">scheduled {{ made }} {{ made === "1" ? "gallery" : "galleries" }}.</p>
   <p v-if="problem?.at === 'page'"><ErrorNote :problem="problem" at="page" /></p>
   <p v-if="loaded && !schedules.length && problem?.at !== 'page'">
     nothing is scheduled yet. <RouterLink to="/home/admin/new">make a new schedule</RouterLink>.

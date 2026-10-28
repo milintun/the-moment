@@ -80,11 +80,6 @@ watch(searching, async (on) => {
   width: min(100%, 320px);
   margin: 1rem 0 0.5rem 0;
 }
-/* No focus ring while typing in it. */
-.search:focus,
-.search:focus-visible {
-  outline: none;
-}
 .room-name {
   cursor: pointer;
   list-style: none; /* no disclosure triangle */

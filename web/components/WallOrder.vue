@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import type { WallSort } from "../api.ts";
 
 // "sorted by [votes ⌄]": the art wall's order, as a small menu of its own rather than the
 // browser's select. It works like one: click or Enter/Space opens it, ↑/↓ pick, Enter chooses,
-// Esc or a click elsewhere closes it.
+// Esc, Tab, or a click elsewhere closes it. While open, focus is on the option the keyboard is
+// on, so screen readers announce each one.
 const order = defineModel<WallSort>({ required: true });
 const OPTIONS: WallSort[] = ["votes", "newest", "oldest"];
 
@@ -12,6 +13,12 @@ const open = ref(false);
 const active = ref(0); // the option the keyboard is on while open
 const root = ref<HTMLElement>();
 const button = ref<HTMLButtonElement>();
+const items = ref<HTMLElement[]>([]);
+watch([open, active], async () => {
+  if (!open.value) return;
+  await nextTick();
+  items.value[active.value]?.focus();
+});
 
 function toggle() {
   open.value = !open.value;
@@ -27,18 +34,23 @@ function key(e: KeyboardEvent) {
   if (!keys.includes(e.key) || (!open.value && (e.key === "Escape" || e.key === "Enter" || e.key === " "))) return;
   e.preventDefault();
   if (!open.value) return toggle(); // an arrow opens it
-  if (e.key === "Escape") open.value = false;
+  if (e.key === "Escape") {
+    open.value = false;
+    button.value?.focus();
+  }
   else if (e.key === "ArrowDown") active.value = Math.min(active.value + 1, OPTIONS.length - 1);
   else if (e.key === "ArrowUp") active.value = Math.max(active.value - 1, 0);
   else choose(OPTIONS[active.value]!);
 }
 const outside = (e: PointerEvent) => !root.value?.contains(e.target as Node) && (open.value = false);
+/** Focus leaving the menu (Tab, say) closes it. */
+const left = (e: FocusEvent) => !root.value?.contains(e.relatedTarget as Node) && (open.value = false);
 onMounted(() => document.addEventListener("pointerdown", outside));
 onBeforeUnmount(() => document.removeEventListener("pointerdown", outside));
 </script>
 
 <template>
-  <span ref="root" class="wall-order" @keydown="key">
+  <span ref="root" class="wall-order" @keydown="key" @focusout="left">
     sorted by
     <button
       ref="button"
@@ -46,7 +58,7 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", outside));
       class="current"
       aria-haspopup="listbox"
       :aria-expanded="open"
-      aria-label="sort the wall by"
+      :aria-label="`sorted by ${order}`"
       @click="toggle"
     >
       {{ order }}
@@ -56,6 +68,8 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", outside));
       <li
         v-for="(o, i) in OPTIONS"
         :key="o"
+        ref="items"
+        tabindex="-1"
         role="option"
         :aria-selected="o === order"
         :class="{ active: i === active, chosen: o === order }"
@@ -112,6 +126,9 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", outside));
 .options li {
   padding: 0.2em 0.6em;
   cursor: pointer;
+}
+.options li:focus {
+  outline: none; /* the accent colour shows which one */
 }
 .options li.active {
   color: var(--accent);

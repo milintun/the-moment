@@ -89,7 +89,7 @@ onMounted(async () => {
   </p>
   <template v-if="loaded">
   <p v-if="roundEnd && !me"><RouterLink to="/auth">log in to nominate and vote</RouterLink></p>
-  <p v-if="message">{{ message }}</p>
+  <p v-if="message" role="status">{{ message }}</p>
   <p v-if="problem?.at === 'page'"><ErrorNote :problem="problem" at="page" /></p>
 
   <!-- The round's heading is its countdown; signed in, NOMINATE + sits across from it. -->

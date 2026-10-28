@@ -588,8 +588,11 @@ describe("wall order", () => {
     });
     const { wrapper } = await mountAt("/galleries/g1");
     const menu = wrapper.find(".wall-order");
+    expect(menu.find("button.current").attributes("aria-label")).toBe("sorted by votes"); // says what it's set to
     await menu.trigger("keydown", { key: "ArrowDown" });
     expect(menu.find("button.current").attributes("aria-expanded")).toBe("true");
+    await flushPromises();
+    expect(document.activeElement?.textContent?.trim()).toBe("votes"); // focus is on the option, so it's announced
     await menu.trigger("keydown", { key: "ArrowDown" });
     await menu.trigger("keydown", { key: "Enter" });
     expect(menu.find("button.current").text()).toContain("newest");

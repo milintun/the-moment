@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
+import { setTitle } from "../router.ts";
 import ErrorNote from "../components/ErrorNote.vue";
 import { client, finishedSeasons } from "../api.ts";
 import { explain } from "../errors.ts";
@@ -16,6 +17,7 @@ onMounted(async () => {
   if ("error" in result) return void (error.value = explain("/groups/list", result.error));
   const found = result.list.groups.find((g) => g.group === group);
   name.value = found?.name ?? "unknown gallery";
+  setTitle(`${name.value}, archive`);
   seasons.value = found ? finishedSeasons(found) : [];
   loaded.value = true;
 });

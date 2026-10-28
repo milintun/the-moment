@@ -283,7 +283,7 @@ describe("the little person", () => {
 });
 
 describe("where you are, on every room's page", () => {
-  test("a gallery's mini map marks it \"you are here\" under a MAP label; from the keyboard, Enter opens the map", async () => {
+  test("a gallery's mini map marks it \"you are here\" under a MAP label; its button opens the map from the keyboard", async () => {
     groupsApi();
     const { wrapper } = await mountAppAt("/galleries/g1");
     const mini = wrapper.find(".minimap");
@@ -291,17 +291,16 @@ describe("where you are, on every room's page", () => {
     expect(mini.find('[data-room="g1"] .you-are-here').text()).toBe("you are here");
     expect(mini.find('[data-room="g1"] .pin').exists()).toBe(true);
     expect(mini.find("svg").attributes("aria-hidden")).toBe("true");
-    expect(mini.findAll("svg a").every((a) => a.attributes("tabindex") === "-1")).toBe(true); // the mini map itself is the one stop
+    expect(mini.findAll("svg a").every((a) => a.attributes("tabindex") === "-1")).toBe(true); // the button below is the one stop
     expect(mini.find(".pegman").exists()).toBe(false);
     expect(mini.find(".minimap-label").text()).toBe("Map");
     expect(mini.find(".minimap-label").element.tagName).toBe("SPAN"); // a label, not a control
-    expect([mini.attributes("role"), mini.attributes("tabindex"), mini.attributes("aria-label")]).toEqual([
-      "button",
-      "0",
-      "you are in Doodles. open the map",
-    ]);
+    // The keyboard's and screen readers' way in: a button over the mini map, named for where you are.
+    const open = mini.find("button.minimap-open");
+    expect(open.text()).toBe("you are in Doodles. open the map");
+    expect(mini.attributes("role")).toBeUndefined(); // the mini map itself isn't a control (its rooms are links)
     expect(isOpen(wrapper)).toBe(false);
-    await mini.trigger("keydown", { key: "Enter" });
+    await open.trigger("click");
     await flushPromises();
     expect(isOpen(wrapper)).toBe(true);
   });
@@ -364,3 +363,36 @@ describe("where you are, on every room's page", () => {
     expect(wrapper.find("a.brand").attributes("href")).toBe("/");
   });
 });
+
+describe("finding your way without a mouse", () => {
+  test("each page names the tab: a fixed name, or the gallery's own once it's known", async () => {
+    groupsApi();
+    const { router } = await mountAppAt("/nominations");
+    expect(document.title).toBe("future galleries · The Moment");
+    await router.push("/galleries/g1");
+    await flushPromises();
+    expect(document.title).toBe("Doodles · The Moment");
+  });
+
+  test("a skip link goes straight to the content, and moving to another page puts focus on its content", async () => {
+    groupsApi();
+    const { wrapper, router } = await mountAppAt("/nominations");
+    const skip = wrapper.find("a.skip-link");
+    expect([skip.text(), skip.attributes("href")]).toEqual(["skip to content", "#content"]);
+    await skip.trigger("click");
+    expect(document.activeElement?.id).toBe("content");
+    (document.activeElement as HTMLElement).blur();
+    await router.push("/archive");
+    await flushPromises();
+    expect(document.activeElement?.id).toBe("content");
+  });
+
+  test("the rooms before and after are named as such, the arrows left out", async () => {
+    signedInAs(null);
+    groupsApi();
+    const { wrapper } = await mountAppAt("/home");
+    expect(wrapper.find(".neighbours .before a").attributes("aria-label")).toBe("previous room: entrance");
+    expect(wrapper.find(".neighbours .after a").attributes("aria-label")).toBe("next room: Doodles");
+  });
+});
+

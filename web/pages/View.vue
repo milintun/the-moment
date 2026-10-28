@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
+import { setTitle } from "../router.ts";
 import ErrorNote from "../components/ErrorNote.vue";
 import PostWindow from "../components/PostWindow.vue";
 import WallEnd from "../components/WallEnd.vue";
@@ -48,6 +49,7 @@ async function load() {
   if ("error" in feed) return void (problem.value = { at: "page", message: explain("/groups/feed", feed.error) });
   const found = list.list.groups.find((g) => g.group === group);
   name.value = found?.name ?? "unknown gallery";
+  setTitle(name.value);
   season.value =
     found?.run != null ? { run: found.run, runs: found.runs!, runStart: found.runStart!, runEnd: found.runEnd! } : null;
   posts.value = feed.feed.posts;
@@ -278,8 +280,12 @@ onMounted(async () => {
 .art-button:focus-visible::after {
   opacity: 1;
 }
+/* Your vote: the count in the accent colour, with a check so it doesn't rest on colour alone. */
 .votes.mine {
   color: var(--accent);
+}
+.votes.mine::before {
+  content: "✓ ";
 }
 @media (prefers-reduced-motion: reduce) {
   .art-button::after {
