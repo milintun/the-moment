@@ -16,7 +16,29 @@
   --gutter: 16px;
   --font: "Inter Tight", system-ui, sans-serif;
   --title-font: "Gloria Hallelujah", cursive;
+  --veil: rgb(0 0 0 / 0.4); /* dims the page behind a window (the map, posting) */
+  --on-alert: #fff; /* text on the red */
   color-scheme: light;
+}
+
+/* Dark: the same black and white, flipped, with a lime accent. It follows the device unless the
+   corner switch has picked one (data-theme on <html>, set by theme.ts). Everything coloured uses
+   these variables, so this is all it takes. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #fff;
+    --paper: #000;
+    --accent: #c4f318;
+    --veil: rgb(0 0 0 / 0.7);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ink: #fff;
+  --paper: #000;
+  --accent: #c4f318;
+  --veil: rgb(0 0 0 / 0.7);
+  color-scheme: dark;
 }
 
 *,

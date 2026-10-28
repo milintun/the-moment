@@ -51,7 +51,7 @@ const clickOutside = (e: MouseEvent) => e.target === dialog.value && close();
   color: var(--ink);
 }
 .post-overlay::backdrop {
-  background: rgb(0 0 0 / 0.4);
+  background: var(--veil);
 }
 .post-panel {
   padding: var(--gutter);

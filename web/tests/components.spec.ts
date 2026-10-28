@@ -6,7 +6,7 @@ import AuthForm from "../components/AuthForm.vue";
 import ErrorNote from "../components/ErrorNote.vue";
 import { SESSION_ENDED } from "../errors.ts";
 import { routes } from "../router.ts";
-import { fakeApi, mountAt, signedInAs } from "./fake.ts";
+import { fakeApi, mountAppAt, mountAt, signedInAs } from "./fake.ts";
 
 const newRouter = () => createRouter({ history: createMemoryHistory(), routes });
 
@@ -141,6 +141,24 @@ describe("entrance", () => {
     expect([visitor.classes("dim"), artist.classes("dim")]).toEqual([true, false]);
     await page.trigger("pointerleave"); // the artist side holds, without the accent
     expect([visitor.classes("dim"), artist.classes("dim"), artist.classes("active"), shown()]).toEqual([true, false, false, [false, true]]);
+  });
+});
+
+describe("light and dark", () => {
+  test("the corner switch flips the theme, remembers it, and the entrance draws the figure to match", async () => {
+    const { wrapper } = await mountAppAt("/");
+    const flip = wrapper.find("button.theme-switch");
+    const start = document.documentElement.dataset.theme ?? "light";
+    const images = () => wrapper.findAll(".entrance-figure img").map((i) => i.attributes("src"));
+    expect(images()[0]).toContain(start === "dark" ? "dark_viewer" : "light_viewer");
+    await flip.trigger("click");
+    const other = start === "dark" ? "light" : "dark";
+    expect(document.documentElement.dataset.theme).toBe(other);
+    expect(localStorage.getItem("the-moment.theme")).toBe(other);
+    expect(flip.attributes("aria-label")).toBe(`switch to ${start} mode`);
+    expect(images()[0]).toContain(`${other}_viewer`);
+    await flip.trigger("click"); // back as it was
+    expect(document.documentElement.dataset.theme).toBe(start);
   });
 });
 

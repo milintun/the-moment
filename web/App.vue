@@ -2,6 +2,7 @@
 import { computed, provide, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import FloorPlan from "./components/FloorPlan.vue";
+import { theme, toggleTheme } from "./theme.ts";
 import { neighbours, roomAt, rooms, type Room } from "./museum.ts";
 
 const route = useRoute();
@@ -84,6 +85,22 @@ const clickOutside = (e: MouseEvent) => e.target === dialog.value && closeMap();
       </div>
     </dialog>
   </template>
+
+  <!-- Light or dark, from every page's bottom-left corner. -->
+  <button
+    type="button"
+    class="theme-switch"
+    :aria-label="theme === 'dark' ? 'switch to light mode' : 'switch to dark mode'"
+    :aria-pressed="theme === 'dark'"
+    @click="toggleTheme"
+  >
+    <!-- a moon in light mode (to go dark), a sun in dark mode (to go light) -->
+    <svg v-if="theme === 'light'" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z" /></svg>
+    <svg v-else viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    </svg>
+  </button>
 </template>
 
 <style scoped>
@@ -172,7 +189,7 @@ const clickOutside = (e: MouseEvent) => e.target === dialog.value && closeMap();
   color: var(--ink);
 }
 .map-overlay::backdrop {
-  background: rgb(0 0 0 / 0.4);
+  background: var(--veil);
 }
 .map-panel {
   height: 100%;
@@ -208,6 +225,32 @@ const clickOutside = (e: MouseEvent) => e.target === dialog.value && closeMap();
 }
 .map-panel :deep(.plan) {
   height: 100%;
+}
+
+/* The light/dark switch, pinned to the bottom-left corner of every page. */
+.theme-switch {
+  position: fixed;
+  left: var(--gutter);
+  bottom: var(--gutter);
+  z-index: 20;
+  margin: 0;
+  padding: 0.35rem;
+  line-height: 0;
+  background: var(--paper);
+}
+.theme-switch svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.theme-switch:hover:not(:disabled) {
+  background: var(--paper);
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .neighbours {

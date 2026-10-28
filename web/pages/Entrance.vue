@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useRouter } from "vue-router";
-import artist from "../static/entrance/light_artist.png";
-import viewer from "../static/entrance/light_viewer.png";
+import darkArtist from "../static/entrance/dark_artist.png";
+import darkViewer from "../static/entrance/dark_viewer.png";
+import lightArtist from "../static/entrance/light_artist.png";
+import lightViewer from "../static/entrance/light_viewer.png";
+import { theme } from "../theme.ts";
 
 /** Pixels: on screens narrower than this, there's no doorway: the text sits alone in the middle, with an enter button. */
 const ALONE_BELOW = 1200;
@@ -59,8 +62,9 @@ const enter = () => router.push("/home");
           as a visitor,<br />browse through fresh artwork and upvote it if you resonate with it
         </p>
         <div class="entrance-figure" aria-hidden="true">
-          <img :src="viewer" :class="{ shown: shown === 'visitor' }" alt="" />
-          <img :src="artist" :class="{ shown: shown === 'artist' }" alt="" />
+          <!-- the drawings for the theme showing: black lines in light, white lines in dark -->
+          <img :src="theme === 'dark' ? darkViewer : lightViewer" :class="{ shown: shown === 'visitor' }" alt="" />
+          <img :src="theme === 'dark' ? darkArtist : lightArtist" :class="{ shown: shown === 'artist' }" alt="" />
         </div>
         <p :class="{ active: pointing && side === 'artist', dim: shown !== 'artist' }">as an artist,<br />post your artwork to galleries and look for inspo</p>
       </div>

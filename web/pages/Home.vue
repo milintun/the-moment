@@ -104,7 +104,7 @@ async function signOut() {
 .admin-button {
   border-color: var(--alert);
   background: var(--alert);
-  color: var(--paper);
+  color: var(--on-alert);
 }
 .button.admin-button:hover {
   background: var(--paper);
