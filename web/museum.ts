@@ -10,7 +10,6 @@ export interface Room {
   kind: RoomKind;
   label: string;
   to: string; // where entering the room goes
-  postTo?: string; // where posting to the room goes, for galleries and wings
   notice?: "new" | "ending soon"; // a gallery or wing whose season just started or ends soon
 }
 
@@ -24,7 +23,7 @@ export async function rooms(now = Date.now()): Promise<Room[]> {
   const room = (g: (typeof open)[number], kind: "wing" | "gallery"): Room => {
     const phase = seasonPhase(g, now);
     const notice = phase === "new" ? "new" : phase === "ending" ? "ending soon" : undefined;
-    return { id: g.group, kind, label: g.name, to: `/galleries/${g.group}`, postTo: `/galleries/${g.group}/post`, notice };
+    return { id: g.group, kind, label: g.name, to: `/galleries/${g.group}`, notice };
   };
   return [
     { id: "entrance", kind: "entrance", label: "entrance", to: "/" },

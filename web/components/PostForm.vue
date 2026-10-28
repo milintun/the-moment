@@ -26,7 +26,7 @@ const busy = ref(false);
 const dragging = ref(false);
 
 onMounted(async () => {
-  if (!props.group) choices.value = (await rooms()).filter((r) => r.postTo);
+  if (!props.group) choices.value = (await rooms()).filter((r) => r.kind === "gallery" || r.kind === "wing");
 });
 
 const isHeic = (file: File) => /image\/hei[cf]/.test(file.type) || /\.hei[cf]$/i.test(file.name);

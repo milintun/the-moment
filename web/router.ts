@@ -7,7 +7,6 @@ import Auth from "./pages/Auth.vue";
 import Entrance from "./pages/Entrance.vue";
 import FutureGalleries from "./pages/FutureGalleries.vue";
 import Home from "./pages/Home.vue";
-import PostPage from "./pages/PostPage.vue";
 import View from "./pages/View.vue";
 
 // Exported so tests can mount pages on their own in-memory router.
@@ -19,14 +18,15 @@ export const routes: RouteRecordRaw[] = [
   { path: "/home", component: Home, meta: { title: "home" } },
   { path: "/home/admin/:section?", component: Admin, meta: { title: "admin" } }, // section: new (default), schedules, or people
   { path: "/galleries/:id", component: View },
-  { path: "/galleries/:id/post", component: PostPage, meta: { title: "post" } },
+  // Posting is a window over the gallery now (POST +); the old address goes to the gallery.
+  { path: "/galleries/:id/post", redirect: (to) => `/galleries/${to.params.id}` },
   { path: "/nominations", component: FutureGalleries, meta: { title: "future galleries" } },
   { path: "/archive", component: Archive, meta: { title: "archive" } },
   { path: "/archive/:group", component: ArchiveGallery, meta: { title: "archive" } },
   { path: "/archive/:group/:season", component: ArchiveSeason, meta: { title: "archive" } },
   // Older addresses.
   { path: "/groups/:id", redirect: (to) => ({ path: `/galleries/${to.params.id}`, hash: to.hash }) },
-  { path: "/groups/:id/post", redirect: (to) => `/galleries/${to.params.id}/post` },
+  { path: "/groups/:id/post", redirect: (to) => `/galleries/${to.params.id}` },
   { path: "/login", redirect: "/auth" },
   { path: "/me", redirect: "/home" },
   { path: "/admin", redirect: "/home/admin" },

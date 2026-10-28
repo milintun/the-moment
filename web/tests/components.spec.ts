@@ -82,7 +82,8 @@ describe("routes", () => {
 
   test.each([
     ["/groups/g1#post-p1", "/galleries/g1#post-p1"],
-    ["/groups/g1/post", "/galleries/g1/post"],
+    ["/groups/g1/post", "/galleries/g1"],
+    ["/galleries/g1/post", "/galleries/g1"],
     ["/login", "/auth"],
     ["/me", "/home"],
     ["/admin", "/home/admin"],

@@ -385,7 +385,7 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 ### web/tests/components.spec.ts
 - **AuthForm**: log in sends what was typed, learns who you are, goes home; refusals (wrong password, taken, bad username vs bad password told apart by what was typed) show their message and stay put
 - **ErrorNote**: a message, or a problem only at its own spot; an ended session links to log in
-- **routes**: the site's address always opens at the entrance; old addresses redirect
+- **routes**: the site's address always opens at the entrance; old addresses redirect (old post addresses go to the gallery, where POST + posts)
 - **entrance**: wide screens enter through the doorway only (page clicks do nothing); narrow screens have no doorway and an enter button; either way you land home; pointing at either half of the figure lights that side and its blurb, and the last side holds
 
 - **light and dark**: the corner switch flips the theme on <html>, remembers it in the browser, names what it switches to, and the entrance figure is drawn to match
