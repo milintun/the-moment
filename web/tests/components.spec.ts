@@ -2,7 +2,6 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { me } from "../api.ts";
-import { mapOpen } from "../museum.ts";
 import AuthForm from "../components/AuthForm.vue";
 import ErrorNote from "../components/ErrorNote.vue";
 import { SESSION_ENDED } from "../errors.ts";
@@ -100,12 +99,9 @@ describe("entrance", () => {
     vi.spyOn(window, "matchMedia").mockImplementation(
       (query: string) => ({ matches: !wide, media: query, addEventListener() {}, removeEventListener() {} }) as unknown as MediaQueryList,
     );
-  afterEach(() => {
-    vi.restoreAllMocks();
-    mapOpen.value = false;
-  });
+  afterEach(() => vi.restoreAllMocks());
 
-  test("on a wide screen, clicking the page does nothing; the doorway goes home, with the map open", async () => {
+  test("on a wide screen, clicking the page does nothing; the doorway goes home", async () => {
     screen(true);
     const { wrapper, router } = await mountAt("/");
     expect(wrapper.find(".enter").exists()).toBe(false);
@@ -117,16 +113,16 @@ describe("entrance", () => {
     expect(doorway.attributes("href")).toBe("/home");
     await doorway.trigger("click");
     await flushPromises();
-    expect([router.currentRoute.value.path, mapOpen.value]).toEqual(["/home", true]);
+    expect(router.currentRoute.value.path).toBe("/home");
   });
 
-  test("on a narrow screen, there's no doorway; the enter button goes home, with the map open", async () => {
+  test("on a narrow screen, there's no doorway; the enter button goes home", async () => {
     screen(false);
     const { wrapper, router } = await mountAt("/");
     expect(wrapper.find(".doorway").exists()).toBe(false);
     await wrapper.find(".enter button").trigger("click");
     await flushPromises();
-    expect([router.currentRoute.value.path, mapOpen.value]).toEqual(["/home", true]);
+    expect(router.currentRoute.value.path).toBe("/home");
   });
 
   test("pointing at either half of the figure and blurbs lights up that side, and its blurb", async () => {

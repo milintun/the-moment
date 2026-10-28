@@ -39,7 +39,23 @@ async function submit(action: "register" | "sign-in") {
 </template>
 
 <style scoped>
+/* As wide as its fields: each label a gap away from its field, the fields lined up, and the
+   buttons ending where the fields do. */
 .auth {
-  max-width: 560px;
+  width: max-content;
+  max-width: 100%;
+}
+.auth label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.2em;
+  margin-right: 0;
+}
+.buttons {
+  text-align: right;
+}
+.buttons button:last-child {
+  margin-right: 0;
 }
 </style>

@@ -18,13 +18,5 @@ const message = computed(() =>
 </template>
 
 <style scoped>
-.error {
-  border: var(--line);
-  padding: 0.4em 0.7em;
-  display: inline-block;
-}
-.error::before {
-  content: "! ";
-  font-weight: 700;
-}
+/* Plain text, like everything else on the page; its place beside what failed says what it's about. */
 </style>

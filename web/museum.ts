@@ -1,7 +1,6 @@
 // The museum's layout: every place a visitor can go, and what lies before and after each.
 // The order is the walk; floorplan.ts lays the same rooms out as a building, and pages only use
 // rooms() and neighbours(), so the drawing can change without them.
-import { ref } from "vue";
 import { WING_MIN_PERIOD, client, seasonPhase } from "./api.ts";
 
 export type RoomKind = "entrance" | "home" | "wing" | "gallery" | "nominations" | "archive";
@@ -44,9 +43,6 @@ export function roomAt(path: string): string | null {
   if (path === "/archive" || path.startsWith("/archive/")) return "archive";
   return path.match(/^\/galleries\/([^/]+)$/)?.[1] ?? null;
 }
-
-/** Whether the map overlay is open. Shared, so the entrance can open it on the way in. */
-export const mapOpen = ref(false);
 
 /** The rooms directly before and after a room. Lists allow forks, which a map may add later. */
 export function neighbours(all: Room[], id: string): { before: Room[]; after: Room[] } {

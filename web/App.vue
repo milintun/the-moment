@@ -2,7 +2,7 @@
 import { computed, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import FloorPlan from "./components/FloorPlan.vue";
-import { mapOpen, neighbours, roomAt, rooms, type Room } from "./museum.ts";
+import { neighbours, roomAt, rooms, type Room } from "./museum.ts";
 
 const route = useRoute();
 // The entrance is a full-screen landing page with its own account link.
@@ -25,12 +25,12 @@ const around = computed(() => (current.value ? neighbours(all.value, current.val
 // pinned "you are here". It's the browser's own modal dialog, so Esc closes it, focus stays inside
 // while it's open, and goes back to the mini map after. Going anywhere closes it.
 const dialog = ref<HTMLDialogElement>();
+const mapOpen = ref(false);
 const closeMap = () => (mapOpen.value = false);
 watch(mapOpen, (open) => {
   if (open && !dialog.value?.open) dialog.value?.showModal?.();
   if (!open && dialog.value?.open) dialog.value.close();
 });
-watch(dialog, (d) => d && mapOpen.value && !d.open && d.showModal?.()); // opened before the page had one (from the entrance)
 watch(() => route.fullPath, closeMap);
 /** A click on the dimmed page around the map (the dialog itself, outside its content) closes it. */
 const clickOutside = (e: MouseEvent) => e.target === dialog.value && closeMap();

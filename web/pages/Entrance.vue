@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useRouter } from "vue-router";
-import { mapOpen } from "../museum.ts";
 import artist from "../static/entrance/light_artist.png";
 import viewer from "../static/entrance/light_viewer.png";
 
 /** Pixels: on screens narrower than this, there's no doorway: the text sits alone in the middle, with an enter button. */
 const ALONE_BELOW = 1200;
 
-// The doorway (or, on narrow screens, the enter button) goes into the museum: home, with the map open.
+// The doorway (or, on narrow screens, the enter button) goes into the museum, at home.
 const router = useRouter();
 
 const narrow = window.matchMedia?.(`(max-width: ${ALONE_BELOW}px)`);
@@ -47,10 +46,7 @@ const point = (e: PointerEvent) => {
   pointing.value = true;
 };
 
-async function enter() {
-  await router.push("/home");
-  mapOpen.value = true; // after arriving: arriving anywhere closes the map
-}
+const enter = () => router.push("/home");
 </script>
 
 <template>

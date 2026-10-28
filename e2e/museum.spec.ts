@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { ART, OWNER, PASSWORD, logInAs, openGallery, openMap, postArt, register, unique } from "./helpers.ts";
 
-test("the site opens at the entrance, every time; the doorway goes home with the map open", async ({ page }) => {
+test("the site opens at the entrance, every time; the doorway goes home", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "The Moment" })).toBeVisible();
   // Click in the doorway itself, at (134.7, 22) of the drawing's 138.37 × 70.44 (its middle runs under the text).
@@ -9,7 +9,7 @@ test("the site opens at the entrance, every time; the doorway goes home with the
   const box = (await page.locator("svg.doorway").boundingBox())!;
   await page.mouse.click(box.x + (box.width * 134.7) / 138.37, box.y + (box.height * 22) / 70.44);
   await expect(page).toHaveURL(/\/home$/);
-  await expect(page.getByRole("dialog", { name: "map" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "map" })).toBeHidden();
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "The Moment" })).toBeVisible();
 });

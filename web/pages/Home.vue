@@ -15,7 +15,7 @@ async function signOut() {
 <template>
   <template v-if="!me">
     <h1>Home</h1>
-    <p class="lede">log in or register to post, vote, and nominate.</p>
+    <p class="lede">log in or register to post, vote, and nominate. this is <span class="highlight">optional</span>. you don't need to be logged in to visit.</p>
     <AuthForm next="" />
   </template>
   <template v-else>
@@ -41,6 +41,9 @@ async function signOut() {
 </template>
 
 <style scoped>
+.highlight {
+  color: var(--accent);
+}
 /* The way into admin: red, so it never passes for an ordinary link. */
 .admin-button {
   border-color: var(--alert);
