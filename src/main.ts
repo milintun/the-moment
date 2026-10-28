@@ -35,8 +35,13 @@ const server = Bun.serve({
   },
 });
 
-// The one nomination category always exists.
-await ensureFutureGalleries(db);
+// The one nomination category always exists. A database that can't be reached is logged
+// here (the health check then fails) rather than stopping the server.
+try {
+  await ensureFutureGalleries(db);
+} catch (error) {
+  console.error("Startup couldn't reach MongoDB. Check MONGODB_URL and the database's network access.", error);
+}
 
 console.log(`Backend ready on ${server.url}`);
 
