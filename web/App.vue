@@ -2,7 +2,7 @@
 import { computed, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import FloorPlan from "./components/FloorPlan.vue";
-import { neighbours, roomAt, rooms, type Room } from "./museum.ts";
+import { mapOpen, neighbours, roomAt, rooms, type Room } from "./museum.ts";
 
 const route = useRoute();
 // The entrance is a full-screen landing page with its own account link.
@@ -20,18 +20,40 @@ watch(
 );
 const current = computed(() => all.value.find((r) => r.id === here.value));
 const around = computed(() => (current.value ? neighbours(all.value, current.value.id) : { before: [], after: [] }));
+
+// The map: an overlay over the page you're on, opened from its mini map, with the room you're in
+// pinned "you are here". It's the browser's own modal dialog, so Esc closes it, focus stays inside
+// while it's open, and goes back to the mini map after. Going anywhere closes it.
+const dialog = ref<HTMLDialogElement>();
+const closeMap = () => (mapOpen.value = false);
+watch(mapOpen, (open) => {
+  if (open && !dialog.value?.open) dialog.value?.showModal?.();
+  if (!open && dialog.value?.open) dialog.value.close();
+});
+watch(dialog, (d) => d && mapOpen.value && !d.open && d.showModal?.()); // opened before the page had one (from the entrance)
+watch(() => route.fullPath, closeMap);
+/** A click on the dimmed page around the map (the dialog itself, outside its content) closes it. */
+const clickOutside = (e: MouseEvent) => e.target === dialog.value && closeMap();
 </script>
 
 <template>
   <RouterView v-if="atEntrance" />
   <template v-else>
     <header class="topbar">
-      <RouterLink to="/map" class="brand" aria-label="the moment: back to the map">The Moment</RouterLink>
+      <RouterLink to="/" class="brand" aria-label="the moment: back to the entrance">The Moment</RouterLink>
     </header>
     <main :class="['page', { 'in-room': current }]">
-      <RouterLink v-if="current" :key="current.id" class="minimap" :to="`/map?at=${current.id}`" :aria-label="`you are in ${current.label}. open the map`">
+      <button
+        v-if="current"
+        :key="current.id"
+        type="button"
+        class="minimap"
+        aria-haspopup="dialog"
+        :aria-label="`you are in ${current.label}. open the map`"
+        @click="mapOpen = true"
+      >
         <FloorPlan :rooms="all" :here="current.id" mini />
-      </RouterLink>
+      </button>
       <RouterView :key="route.fullPath" />
       <nav v-if="current" class="neighbours" aria-label="rooms before and after">
         <span class="before">
@@ -42,11 +64,22 @@ const around = computed(() => (current.value ? neighbours(all.value, current.val
         </span>
       </nav>
     </main>
+
+    <dialog ref="dialog" class="map-overlay" aria-label="map" @close="closeMap" @click="clickOutside">
+      <div class="map-panel">
+        <header class="map-head">
+          <h1>Map</h1>
+          <p>drag to look around and scroll or pinch to zoom. click a room to drop yourself in.</p>
+          <button type="button" class="map-close" aria-label="close the map" @click="closeMap">×</button>
+        </header>
+        <FloorPlan v-if="mapOpen && all.length" :rooms="all" :here="current?.id" @enter="closeMap" />
+      </div>
+    </dialog>
   </template>
 </template>
 
 <style scoped>
-/* The top bar: just the name, in the title font, as the way back to the map. */
+/* The top bar: just the name, in the title font, as the way back to the entrance. */
 .topbar {
   position: sticky;
   top: 0;
@@ -78,15 +111,72 @@ const around = computed(() => (current.value ? neighbours(all.value, current.val
   width: 230px;
   height: 200px;
   margin: 0 0 1rem 1.5rem;
+  padding: 0;
   border: var(--line);
   background: var(--paper);
-  text-decoration: none;
+  cursor: pointer;
+}
+.minimap:hover:not(:disabled) {
+  background: var(--paper); /* not the buttons' accent fill */
+  border-color: var(--accent);
 }
 .in-room :deep(h2),
 .in-room :deep(.walk),
 .in-room .neighbours {
   clear: right;
-}.neighbours {
+}
+
+/* The map overlay: nearly the whole screen, the page dimmed around it. */
+.map-overlay {
+  width: min(1100px, calc(100vw - 2 * var(--gutter)));
+  max-width: none;
+  height: calc(100dvh - 4 * var(--gutter));
+  max-height: none;
+  padding: 0;
+  border: var(--line);
+  background: var(--paper);
+  color: var(--ink);
+}
+.map-overlay::backdrop {
+  background: rgb(0 0 0 / 0.4);
+}
+.map-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: var(--gutter);
+  gap: 0.6rem;
+}
+/* The title, the hint beside it, and × at the far end, all on one centred line. */
+.map-head {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 0.2rem 0.2rem 0.4rem;
+}
+.map-head h1 {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1;
+}
+.map-head p {
+  margin: 0;
+  max-width: none;
+  flex: 1;
+}
+.map-close {
+  margin: 0;
+}
+/* The floor plan fills the rest of the panel. */
+.map-panel :deep(.plan-frame) {
+  flex: 1;
+  min-height: 0;
+}
+.map-panel :deep(.plan) {
+  height: 100%;
+}
+
+.neighbours {
   display: flex;
   justify-content: space-between;
   gap: 1em;
@@ -98,6 +188,11 @@ const around = computed(() => (current.value ? neighbours(all.value, current.val
 }
 
 @media (max-width: 720px) {
+  .map-overlay {
+    width: 100vw;
+    height: 100dvh;
+    border: 0;
+  }
   .minimap {
     float: none;
     width: auto;

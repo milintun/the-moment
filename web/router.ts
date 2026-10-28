@@ -7,7 +7,6 @@ import Auth from "./pages/Auth.vue";
 import Entrance from "./pages/Entrance.vue";
 import FutureGalleries from "./pages/FutureGalleries.vue";
 import Home from "./pages/Home.vue";
-import Map from "./pages/Map.vue";
 import PostPage from "./pages/PostPage.vue";
 import View from "./pages/View.vue";
 
@@ -15,7 +14,6 @@ import View from "./pages/View.vue";
 export const routes: RouteRecordRaw[] = [
   { path: "/", component: Entrance },
   { path: "/auth", component: Auth },
-  { path: "/map", component: Map },
   { path: "/home", component: Home },
   { path: "/home/admin/:section?", component: Admin }, // section: new (default), schedules, or people
   { path: "/galleries/:id", component: View },

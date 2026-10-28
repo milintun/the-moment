@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useRouter } from "vue-router";
-import { me } from "../api.ts";
+import { mapOpen } from "../museum.ts";
 import artist from "../static/entrance/light_artist.png";
 import viewer from "../static/entrance/light_viewer.png";
 
 /** Pixels: on screens narrower than this, there's no doorway: the text sits alone in the middle, with an enter button. */
 const ALONE_BELOW = 1200;
 
-// The doorway (or, on narrow screens, the enter button) goes into the museum.
+// The doorway (or, on narrow screens, the enter button) goes into the museum: home, with the map open.
 const router = useRouter();
 
 const narrow = window.matchMedia?.(`(max-width: ${ALONE_BELOW}px)`);
@@ -47,7 +47,10 @@ const point = (e: PointerEvent) => {
   pointing.value = true;
 };
 
-const enter = () => router.push("/map");
+async function enter() {
+  await router.push("/home");
+  mapOpen.value = true; // after arriving: arriving anywhere closes the map
+}
 </script>
 
 <template>
@@ -76,7 +79,7 @@ const enter = () => router.push("/map");
          toward the text. Pointing at it lights it in the accent colour, with "enter" in the doorway.
          Beside the text it's drawn large and anchored to the bottom right, so the screen crops it. -->
     <svg v-if="!stacked" ref="doorway" class="doorway" viewBox="0 0 138.37 70.44">
-      <a class="doorway-link" href="/map" aria-label="enter the museum" @click.prevent="enter">
+      <a class="doorway-link" href="/home" aria-label="enter the museum" @click.prevent="enter">
         <polyline points=".5 65.43 .5 69.94 111.77 69.57 137.87 39.52 137.87 .5 117.96 .5 131.53 3.55 131.53 35.94 .5 65.43" />
         <circle class="knob" cx="131.93" cy="19.77" r=".4" />
         <text class="enter-label" :font-size="labelSize" aria-hidden="true">enter</text>

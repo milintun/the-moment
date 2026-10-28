@@ -29,8 +29,10 @@ export interface Plan {
   rows: Rect[];
   /** Round rooms where the corridor turns; they hold nothing. */
   turns: Array<{ shape: Circle; openings: number[] }>;
-  /** Open wall lines of the halls joining the parts. */
+  /** Open wall lines of the halls joining the parts, in pairs: one wall, then the one across from it. */
   halls: Point[][];
+  /** The floor of each hall: the outline between a pair of its walls. */
+  corridors: Point[][];
   /** Doorways in straight walls, painted over the wall to leave a gap. */
   doors: Segment[];
   bounds: { x: number; y: number; w: number; h: number };
@@ -175,9 +177,13 @@ export function plan(all: Room[]): Plan {
   const [minX, minY] = [Math.min(...xs) - PAD, Math.min(...ys) - PAD];
   const bounds = { x: minX, y: minY, w: Math.max(...xs) + PAD - minX, h: Math.max(...ys) + PAD - minY };
 
+  // Each hall's floor: along one wall and back along the other.
+  const corridors: Point[][] = [];
+  for (let i = 0; i < halls.length; i += 2) corridors.push([...halls[i]!, ...[...halls[i + 1]!].reverse()]);
+
   // In walking order, so tabbing through the plan walks the museum.
   placed.sort((a, b) => all.indexOf(a.room) - all.indexOf(b.room));
-  return { rooms: placed, rows, turns, halls, doors, bounds };
+  return { rooms: placed, rows, turns, halls, corridors, doors, bounds };
 }
 
 /** An SVG path for a circle's wall, leaving a corridor-wide gap at each opening. */

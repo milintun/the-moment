@@ -1,14 +1,15 @@
 import { expect, test } from "@playwright/test";
-import { ART, OWNER, PASSWORD, logInAs, openGallery, postArt, register, unique } from "./helpers.ts";
+import { ART, OWNER, PASSWORD, logInAs, openGallery, openMap, postArt, register, unique } from "./helpers.ts";
 
-test("the site opens at the entrance, every time; the doorway opens the map", async ({ page }) => {
+test("the site opens at the entrance, every time; the doorway goes home with the map open", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "The Moment" })).toBeVisible();
   // Click in the doorway itself, at (134.7, 22) of the drawing's 138.37 × 70.44 (its middle runs under the text).
   await expect(page.getByRole("link", { name: "enter the museum" })).toBeVisible();
   const box = (await page.locator("svg.doorway").boundingBox())!;
   await page.mouse.click(box.x + (box.width * 134.7) / 138.37, box.y + (box.height * 22) / 70.44);
-  await expect(page).toHaveURL(/\/map$/);
+  await expect(page).toHaveURL(/\/home$/);
+  await expect(page.getByRole("dialog", { name: "map" })).toBeVisible();
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "The Moment" })).toBeVisible();
 });
@@ -109,8 +110,8 @@ test("the owner schedules galleries from the admin page, and they open on the ma
   await expect(page.getByText("scheduled 1 gallery.")).toBeVisible();
   await expect(page.locator(".schedule").filter({ hasText: name })).toContainText("running");
 
-  await page.goto("/map");
-  const room = page.getByRole("link", { name: new RegExp(name, "i") });
+  const map = await openMap(page);
+  const room = map.getByRole("link", { name: new RegExp(name, "i") });
   await expect(room.locator(".plan-badge")).toHaveText("new");
   await room.click();
   await expect(page.getByRole("heading", { name })).toBeVisible();
@@ -140,36 +141,38 @@ test("an upcoming schedule is read only until edited, then gains a gallery", asy
 test("on the map, dragging from a room looks around without entering it; a click enters", async ({ page, playwright, baseURL }) => {
   const owner = await playwright.request.newContext({ baseURL, extraHTTPHeaders: { Origin: baseURL! } });
   const { group } = await openGallery(owner);
-  await page.goto("/map");
-  const room = page.locator(`a.plan-room[data-room="${group}"]`);
+  const map = await openMap(page);
+  const room = map.locator(`a.plan-room[data-room="${group}"]`);
   const before = (await room.boundingBox())!;
   await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2);
   await page.mouse.down();
   await page.mouse.move(before.x + before.width / 2 + 120, before.y + before.height / 2 + 60, { steps: 6 });
   await page.mouse.up();
-  await expect(page).toHaveURL(/\/map$/);
+  await expect(page).toHaveURL(/\/home$/);
   const after = (await room.boundingBox())!;
-  expect(Math.round(after.x - before.x)).toBe(120);
+  expect(after.x - before.x).toBeGreaterThan(40); // the view moved (as far as the building's edge allows)
   await room.click();
   await expect(page).toHaveURL(new RegExp(`/galleries/${group}$`));
 });
 
-test("the little person follows the pointer and drops into the room clicked; every room page marks where you are", async ({ page, playwright, baseURL }) => {
+test("the map opens over the page; the little person drops into the room clicked; every room page marks where you are", async ({ page, playwright, baseURL }) => {
   const owner = await playwright.request.newContext({ baseURL, extraHTTPHeaders: { Origin: baseURL! } });
   const { group } = await openGallery(owner);
-  await page.goto(`/map?at=${group}`);
-  const room = page.locator(`a.plan-room[data-room="${group}"]`);
-  await expect(room).toHaveClass(/here/);
-  await expect(room).toContainText("you are here");
+  const map = await openMap(page, "/home");
+  await expect(map.locator('a.plan-room[data-room="home"]')).toContainText("you are here");
+  const room = map.locator(`a.plan-room[data-room="${group}"]`);
   const box = (await room.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 4 });
   await expect(page.locator(".pegman")).toHaveClass(/roaming/);
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await expect(page.locator(".pegman")).toHaveClass(/landing/);
   await expect(page).toHaveURL(new RegExp(`/galleries/${group}$`));
+  await expect(map).toBeHidden();
 
-  await page.getByRole("link", { name: /open the map/ }).click();
-  await expect(page).toHaveURL(new RegExp(`/map\\?at=${group}$`));
+  await page.getByRole("button", { name: /open the map/ }).click();
+  await expect(room).toContainText("you are here");
+  await page.keyboard.press("Escape");
+  await expect(map).toBeHidden();
   await page.goto("/nominations");
   await expect(page.locator('.minimap [data-room="nominations"]')).toContainText("you are here");
   await expect(page.locator(".neighbours")).toContainText("archive →");

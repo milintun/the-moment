@@ -1,17 +1,14 @@
 <script setup lang="ts">
-import { useRouter } from "vue-router";
 import AuthForm from "../components/AuthForm.vue";
 import MyNominations from "../components/MyNominations.vue";
 import MyPostsList from "../components/MyPostsList.vue";
 import PostForm from "../components/PostForm.vue";
 import { client, isAdmin, me, refreshMe } from "../api.ts";
 
-const router = useRouter();
-
+// Signing out stays here, where the page turns into the log-in form.
 async function signOut() {
   await client.auth["sign-out"]({});
   await refreshMe();
-  router.push("/map");
 }
 </script>
 

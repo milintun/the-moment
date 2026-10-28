@@ -9,7 +9,6 @@
 :root {
   --ink: #000;
   --paper: #fff;
-  --faint: #6b6b6b; /* secondary text, still black-and-white */
   --alert: #c4001a; /* the one colour outside artwork: the way into admin, and the "you are here" pin */
   --accent: #ff4400; /* hovered things: links, buttons, rooms on the map; the entrance figure's highlight */
   --wash: color-mix(in srgb, var(--accent) 14%, var(--paper)); /* a light accent fill, for a room hovered or about to be entered */
@@ -101,10 +100,7 @@ strong {
   font-weight: 700;
 }
 
-.meta,
-.lede {
-  color: var(--faint);
-}
+/* All text is black: notes and intros differ only by their place on the page. */
 .lede {
   margin-bottom: 1.6em;
 }
@@ -188,7 +184,7 @@ section + section {
   margin-top: 1rem;
 }
 
-/* ---------- lists of rooms (the map's list view, the archive) ---------- */
+/* ---------- lists of rooms (the archive) ---------- */
 
 .rooms {
   list-style: none;
@@ -221,7 +217,6 @@ section + section {
   text-align: left;
 }
 .kind {
-  color: var(--faint);
   font-size: 0.85em;
   margin-left: 0.4em;
 }
@@ -282,7 +277,6 @@ section + section {
 /* An idea already chosen to become a gallery (future galleries, my nominations, admin). */
 .chosen {
   text-decoration: line-through;
-  color: var(--faint);
 }
 
 /* ---------- small screens ---------- */

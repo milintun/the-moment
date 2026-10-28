@@ -12,4 +12,5 @@ globalThis.fetch = ((url: RequestInfo | URL, init?: RequestInit) => {
 
 afterEach(() => {
   backend.fetch = null;
+  sessionStorage.clear(); // e.g. the last room visited, which the map pins
 });

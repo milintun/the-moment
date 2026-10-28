@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, useId, watch } from "vue";
 import { useRouter } from "vue-router";
 import { plan, ringPath, type PlacedRoom } from "../floorplan.ts";
 import type { Room } from "../museum.ts";
@@ -7,11 +7,13 @@ import type { Room } from "../museum.ts";
 // The museum drawn from above as a floor plan: outlines, doorways, and text labels. Every
 // room is a link, so clicking, tabbing, and screen readers all reach it. Drag (or swipe) to
 // look around; scroll, pinch, or the buttons to zoom; arrow keys and +/− do the same.
-// `here` marks a room "you are here" and opens the view on it; `mini` is the small, still "you are here"
-// version a gallery page shows, with no links of its own.
+// `here` pins the room you're in, "you are here", and opens the view on it. `mini` is the small,
+// still version in a room page's corner, with no links of its own.
 const props = defineProps<{ rooms: Room[]; here?: string; mini?: boolean }>();
+const emit = defineEmits<{ enter: [] }>(); // a room was chosen (so an overlay holding the map can close)
 
 const LINE = 16; // label line height
+const hatch = `hatch-${useId()}`; // the pattern's id, unique per map (a page can show two)
 const MAX_ZOOM = 3;
 const DRAG = 5; // pixels a pointer moves before it counts as dragging rather than clicking
 const STEP = 80; // pixels an arrow key moves the view
@@ -39,18 +41,17 @@ const viewBox = computed(() => {
 });
 
 /**
- * Where the map opens: on the `here` room if there is one; else the whole building when it
- * fits legibly, or full size at the entrance (bottom left).
+ * Where the map opens (and recenter goes back to): the whole building, centred, as large as fits
+ * (never past full size). The mini map instead shows a close-up around the `here` room.
  */
 function recenter() {
   const here = p.value.rooms.find((r) => r.room.id === props.here);
-  if (here) {
+  if (props.mini && here) {
     const { x, y } = center(here);
-    return void (view.value = clamp({ cx: x, cy: y, k: props.mini ? MINI_ZOOM : 1 }));
+    return void (view.value = clamp({ cx: x, cy: y, k: MINI_ZOOM }));
   }
   const { x, y, w, h } = p.value.bounds;
-  if (fit() >= 0.6) return void (view.value = clamp({ cx: x + w / 2, cy: y + h / 2, k: Math.min(fit(), 1) }));
-  view.value = clamp({ cx: x + size.value.w / 2, cy: y + h - size.value.h / 2, k: 1 });
+  view.value = clamp({ cx: x + w / 2, cy: y + h / 2, k: Math.min(fit(), 1) });
 }
 function pan(dx: number, dy: number) {
   const { cx, cy, k } = view.value;
@@ -199,11 +200,17 @@ function park() {
 }
 function enter(e: MouseEvent, room: Room, navigate: (e?: MouseEvent) => unknown) {
   const quick = e.detail === 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0;
-  if (quick || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return navigate(e);
+  if (quick || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+    emit("enter");
+    return navigate(e);
+  }
   e.preventDefault();
   follow(e); // where a tap landed, on screens without a pointer to follow
   landing.value = room.id;
-  dropping = setTimeout(() => router.push(room.to), DROP_MS);
+  dropping = setTimeout(() => {
+    emit("enter");
+    router.push(room.to);
+  }, DROP_MS);
 }
 
 // ---------- labels ----------
@@ -211,7 +218,7 @@ function enter(e: MouseEvent, room: Room, navigate: (e?: MouseEvent) => unknown)
 const center = ({ shape }: PlacedRoom) =>
   shape.kind === "rect" ? { x: shape.x + shape.w / 2, y: shape.y + shape.h / 2 } : { x: shape.cx, y: shape.cy };
 const isHere = (r: PlacedRoom) => r.room.id === props.here;
-/** Where the first label line goes, so the label, badge, and "you are here" (with its pin above) sit centred in the room. */
+/** Where the first label line goes, so the label, badge, and the pin's note (with the pin above) sit centred in the room. */
 function labelTop(r: PlacedRoom) {
   const lines = r.label.length + (r.room.notice ? 1 : 0) + (isHere(r) ? 1 : 0);
   return center(r).y - ((lines - 1) * LINE) / 2 + 4 + (isHere(r) ? 9 : 0);
@@ -242,7 +249,15 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
       @focusin="focus"
       @dragstart.prevent
     >
-      <rect v-for="(row, i) in p.rows" :key="`row${i}`" :x="row.x" :y="row.y" :width="row.w" :height="row.h" class="wall" />
+      <!-- Outside the building: diagonal hatching, the way plans shade what isn't floor. -->
+      <defs>
+        <pattern :id="hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <line x1="0" y1="0" x2="0" y2="10" class="hatch-line" />
+        </pattern>
+      </defs>
+      <rect :x="p.bounds.x - 5000" :y="p.bounds.y - 5000" :width="p.bounds.w + 10000" :height="p.bounds.h + 10000" :fill="`url(#${hatch})`" />
+      <polygon v-for="(points, i) in p.corridors" :key="`corridor${i}`" :points="points.join(' ')" class="floor" />
+      <rect v-for="(row, i) in p.rows" :key="`row${i}`" :x="row.x" :y="row.y" :width="row.w" :height="row.h" class="floor wall" />
       <polyline v-for="(points, i) in p.halls" :key="`hall${i}`" :points="points.join(' ')" class="wall" />
       <g v-for="(turn, i) in p.turns" :key="`turn${i}`">
         <circle :cx="turn.shape.cx" :cy="turn.shape.cy" :r="turn.shape.r" class="floor" />
@@ -311,7 +326,6 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
 <style scoped>
 .plan-frame {
   position: relative;
-  border: var(--line);
 }
 .plan {
   display: block;
@@ -326,9 +340,10 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
 .plan.dragging {
   cursor: grabbing;
 }
+/* No outline when the map has focus (it takes focus whenever it's dragged or clicked). */
+.plan:focus,
 .plan:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: -2px;
+  outline: none;
 }
 .plan-frame.mini {
   border: 0;
@@ -359,9 +374,10 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
   stroke-linecap: round;
 }
 .pegman.roaming {
+  --pegman-below: 0px; /* how far below the pointer the person hangs, clear of the cursor */
   right: auto;
   bottom: auto;
-  margin: -6px 0 0 -20px; /* the raised hands at the pointer */
+  margin: var(--pegman-below) 0 0 -20px;
   border-color: transparent;
   background: none;
   transform-origin: 50% 0;
@@ -394,7 +410,7 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
   fill: var(--ink);
 }
 .you-are-here .pin {
-  fill: var(--alert);
+  fill: var(--accent);
 }
 .you-are-here .pin-dot {
   fill: var(--paper);
@@ -423,6 +439,10 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
 .plan .floor {
   fill: var(--paper);
 }
+.plan .hatch-line {
+  stroke: var(--ink);
+  stroke-width: 0.8;
+}
 /* A doorway: paper painted over the wall, leaving a gap. */
 .plan .door {
   stroke: var(--paper);
@@ -432,6 +452,9 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
 }
 .plan-room {
   text-decoration: none;
+  /* The map's own cursor over rooms too, not the link hand: each cursor sits differently around
+     the pointer, so switching would move the hanging person relative to it. */
+  cursor: inherit;
 }
 .plan-room text {
   font-size: 13px;
@@ -448,7 +471,6 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
 .plan-room:hover > text,
 .plan-room:focus-visible > text {
   fill: var(--accent);
-  text-decoration: underline;
 }
 .plan-room:focus-visible {
   outline: none;

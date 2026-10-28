@@ -2,7 +2,8 @@ import { flushPromises } from "@vue/test-utils";
 import { describe, expect, test } from "vitest";
 import { SLOT, SLOTS_PER_ROW, plan, ringPath, wrap, type Shape } from "../floorplan.ts";
 import type { Room } from "../museum.ts";
-import { fakeApi, groupRow, mountAppAt, mountAt, signedInAs } from "./fake.ts";
+import { rooms } from "../museum.ts";
+import { fakeApi, groupRow, mountAppAt, signedInAs } from "./fake.ts";
 
 /** Rooms as rooms() lists them, with `wings` wings and `galleries` galleries. */
 function museum(wings: number, galleries: number): Room[] {
@@ -89,6 +90,12 @@ describe("plan", () => {
     expect(box(a!).y0).toBeGreaterThan(box(b!).y1);
   });
 
+  test("every hall has a floor: the outline along one of its walls and back along the other", () => {
+    const p = plan(museum(0, 20)); // two turns, plus the halls to home and the entrance
+    expect(p.corridors).toHaveLength(p.halls.length / 2);
+    p.corridors.forEach((floor, i) => expect(floor).toEqual([...p.halls[2 * i]!, ...[...p.halls[2 * i + 1]!].reverse()]));
+  });
+
   test("the same rooms always give the same plan; more galleries keep earlier rooms where they were", () => {
     expect(plan(museum(1, 9))).toEqual(plan(museum(1, 9)));
     const before = plan(museum(1, 9)).rooms.find((r) => r.room.id === "gallery4")!.shape;
@@ -113,24 +120,37 @@ describe("ringPath", () => {
   });
 });
 
-describe("the map page", () => {
-  const page = () =>
-    fakeApi({
-      "/groups/list": () => ({
-        list: {
-          groups: [
-            groupRow("g1", "Doodles", { runStart: new Date(Date.now() - 60_000).toISOString() }),
-            groupRow("g2", "Night Walks"),
-          ],
-        },
-      }),
-    });
+// The map is an overlay over the page you're on, opened from that page's mini map.
+const groupsApi = () =>
+  fakeApi({
+    "/groups/list": () => ({
+      list: {
+        groups: [
+          groupRow("g1", "Doodles", { runStart: new Date(Date.now() - 60_000).toISOString() }),
+          groupRow("g2", "Night Walks"),
+        ],
+      },
+    }),
+    "/groups/feed": () => ({ feed: { posts: [] } }),
+    "/nominations/categories": () => ({ list: { categories: [] } }),
+    "/archive/galleries": () => ({ page: { groups: [] } }),
+  });
+/** Opens the map from the mini map of the page at `path`. */
+async function openMap(path = "/galleries/g1") {
+  groupsApi();
+  const opened = await mountAppAt(path);
+  await opened.wrapper.find("button.minimap").trigger("click");
+  await flushPromises();
+  return opened;
+}
+const overlay = (wrapper: any) => wrapper.find("dialog.map-overlay");
+const isOpen = (wrapper: any) => (overlay(wrapper).element as HTMLDialogElement).open;
 
+describe("the map", () => {
   test("draws every room as a link in walking order, with its kind and notice in the name", async () => {
-    page();
-    const { wrapper } = await mountAt("/map");
-    const links = wrapper.findAll("svg.plan a.plan-room");
-    expect(links.map((a) => [a.attributes("aria-label"), a.attributes("href")])).toEqual([
+    const { wrapper } = await openMap();
+    const links = overlay(wrapper).findAll("svg.plan a.plan-room");
+    expect(links.map((a: any) => [a.attributes("aria-label"), a.attributes("href")])).toEqual([
       ["entrance", "/"],
       ["home", "/home"],
       ["Doodles, gallery, new", "/galleries/g1"],
@@ -138,35 +158,48 @@ describe("the map page", () => {
       ["future galleries", "/nominations"],
       ["archive", "/archive"],
     ]);
-    expect(wrapper.find(".plan-badge").text()).toBe("new");
+    expect(overlay(wrapper).find(".plan-badge").text()).toBe("new");
   });
 
-  test("clicking a room enters it", async () => {
-    page();
-    const { wrapper, router } = await mountAt("/map");
-    await wrapper.find('a.plan-room[href="/galleries/g2"]').trigger("click");
+  test("pins the room you're in, \"you are here\", and opens on the whole building, centred", async () => {
+    const { wrapper } = await openMap("/galleries/g2");
+    expect(isOpen(wrapper)).toBe(true);
+    const room = overlay(wrapper).find('[data-room="g2"]');
+    expect(room.classes()).toContain("here");
+    expect(room.find(".you-are-here").text()).toBe("you are here");
+    const [x, y, w, h] = box(wrapper);
+    const bounds = plan(await rooms()).bounds;
+    expect(x! + w! / 2).toBeCloseTo(bounds.x + bounds.w / 2);
+    expect(y! + h! / 2).toBeCloseTo(bounds.y + bounds.h / 2);
+  });
+
+  test("choosing a room goes there and closes the map", async () => {
+    const { wrapper, router } = await openMap();
+    await overlay(wrapper).find('a.plan-room[href="/galleries/g2"]').trigger("click");
     await flushPromises();
     expect(router.currentRoute.value.path).toBe("/galleries/g2");
+    expect(isOpen(wrapper)).toBe(false);
   });
 
-  test("list view shows the same rooms as a list, and back", async () => {
-    page();
-    const { wrapper } = await mountAt("/map");
-    await wrapper.find(".lede button").trigger("click");
-    expect(wrapper.find("svg.plan").exists()).toBe(false);
-    expect(wrapper.findAll(".rooms .room")).toHaveLength(6);
-    await wrapper.find(".lede button").trigger("click");
-    expect(wrapper.find("svg.plan").exists()).toBe(true);
+  test("the × button and a click on the dimmed page around it close it; the mini map opens it again", async () => {
+    const { wrapper, router } = await openMap();
+    await overlay(wrapper).find('button[aria-label="close the map"]').trigger("click");
+    expect(isOpen(wrapper)).toBe(false);
+    await wrapper.find("button.minimap").trigger("click");
+    await flushPromises();
+    expect(isOpen(wrapper)).toBe(true);
+    await overlay(wrapper).trigger("click"); // the dialog itself, outside the panel
+    expect(isOpen(wrapper)).toBe(false);
+    expect(router.currentRoute.value.path).toBe("/galleries/g1"); // still on the same page
   });
 
   // happy-dom has no layout, so the drawing keeps its default 800×600 size.
-  const box = (wrapper: any) => wrapper.find("svg.plan").attributes("viewBox").split(" ").map(Number);
+  const box = (wrapper: any) => overlay(wrapper).find("svg.plan").attributes("viewBox").split(" ").map(Number);
   const pointer = (x: number, y: number) => ({ pointerId: 1, pointerType: "mouse", button: 0, clientX: x, clientY: y });
 
   test("dragging moves the view, and the click that ends a drag doesn't enter a room", async () => {
-    page();
-    const { wrapper, router } = await mountAt("/map");
-    const svg = wrapper.find("svg.plan");
+    const { wrapper, router } = await openMap();
+    const svg = overlay(wrapper).find("svg.plan");
     const [x0, y0, w] = box(wrapper);
     const k = 800 / w;
     await svg.trigger("pointerdown", pointer(100, 100));
@@ -177,27 +210,25 @@ describe("the map page", () => {
     expect(box(wrapper)[0]).toBeCloseTo(x0 + 23 / k); // moved from where the last move left it
     expect(box(wrapper)[1]).toBeCloseTo(y0 + 10 / k);
     await svg.trigger("pointerup", pointer(80, 90));
-    await wrapper.find('a.plan-room[href="/galleries/g2"]').trigger("click");
+    await overlay(wrapper).find('a.plan-room[href="/galleries/g2"]').trigger("click");
     await flushPromises();
-    expect(router.currentRoute.value.path).toBe("/map");
+    expect(router.currentRoute.value.path).toBe("/galleries/g1");
   });
 
   test("scrolling zooms in and out, within limits; the buttons zoom and recenter", async () => {
-    page();
-    const { wrapper } = await mountAt("/map");
+    const { wrapper } = await openMap();
     const start = box(wrapper);
-    await wrapper.find("svg.plan").trigger("wheel", { deltaY: -200, clientX: 400, clientY: 300 });
+    await overlay(wrapper).find("svg.plan").trigger("wheel", { deltaY: -200, clientX: 400, clientY: 300 });
     expect(box(wrapper)[2]).toBeLessThan(start[2]!);
-    for (let i = 0; i < 20; i++) await wrapper.find('button[aria-label="zoom in"]').trigger("click");
+    for (let i = 0; i < 20; i++) await overlay(wrapper).find('button[aria-label="zoom in"]').trigger("click");
     expect(box(wrapper)[2]).toBeCloseTo(800 / 3); // at most 3×
-    await wrapper.findAll("button").find((b) => b.text() === "recenter")!.trigger("click");
+    await overlay(wrapper).findAll("button").find((b: any) => b.text() === "recenter")!.trigger("click");
     expect(box(wrapper)).toEqual(start);
   });
 
   test("arrow keys move the view, + and − zoom", async () => {
-    page();
-    const { wrapper } = await mountAt("/map");
-    const svg = wrapper.find("svg.plan");
+    const { wrapper } = await openMap();
+    const svg = overlay(wrapper).find("svg.plan");
     const [, , w0] = box(wrapper);
     await svg.trigger("keydown", { key: "+" });
     const [, , w1] = box(wrapper);
@@ -208,87 +239,65 @@ describe("the map page", () => {
     await svg.trigger("keydown", { key: "-" });
     expect(box(wrapper)[2]).toBeCloseTo(w0!);
   });
-
-  test("?at= opens the map on that room, marked", async () => {
-    page();
-    const { wrapper } = await mountAt("/map?at=g2");
-    expect(wrapper.find('[data-room="g2"]').classes()).toContain("here");
-    const [x, y, w, h] = box(wrapper);
-    const floor = wrapper.find('[data-room="g2"] rect');
-    expect(x! + w! / 2).toBeCloseTo(Number(floor.attributes("x")) + Number(floor.attributes("width")) / 2);
-    expect(y! + h! / 2).toBeCloseTo(Number(floor.attributes("y")) + Number(floor.attributes("height")) / 2);
-  });
 });
 
 describe("the little person", () => {
-  const page = () =>
-    fakeApi({ "/groups/list": () => ({ list: { groups: [groupRow("g1", "Doodles"), groupRow("g2", "Night Walks")] } }) });
   const at = (x: number, y: number, pointerType = "mouse") => ({ pointerId: 1, pointerType, button: 0, clientX: x, clientY: y });
-  const person = (wrapper: any) => wrapper.find(".pegman");
+  const person = (wrapper: any) => overlay(wrapper).find(".pegman");
+  const plan = (wrapper: any) => overlay(wrapper).find("svg.plan");
   const wait = (ms: number) => new Promise((done) => setTimeout(done, ms));
 
   test("waits in the corner, follows the pointer over the map, and goes back when it leaves", async () => {
-    page();
-    const { wrapper } = await mountAt("/map");
+    const { wrapper } = await openMap();
     expect(person(wrapper).classes()).not.toContain("roaming");
-    await wrapper.find("svg.plan").trigger("pointermove", at(300, 200));
+    await plan(wrapper).trigger("pointermove", at(300, 200));
     expect(person(wrapper).classes()).toContain("roaming");
     expect(person(wrapper).attributes("style")).toContain("left: 300px; top: 200px");
-    await wrapper.find("svg.plan").trigger("pointerleave");
+    await plan(wrapper).trigger("pointerleave");
     expect(person(wrapper).classes()).not.toContain("roaming");
   });
 
   test("a touch doesn't summon them; only a pointer that hovers does", async () => {
-    page();
-    const { wrapper } = await mountAt("/map");
-    await wrapper.find("svg.plan").trigger("pointermove", at(300, 200, "touch"));
+    const { wrapper } = await openMap();
+    await plan(wrapper).trigger("pointermove", at(300, 200, "touch"));
     expect(person(wrapper).classes()).not.toContain("roaming");
   });
 
   test("clicking a room drops them into it, then enters it", async () => {
-    page();
-    const { wrapper, router } = await mountAt("/map");
-    await wrapper.find('a[data-room="g2"]').trigger("click", { detail: 1, clientX: 300, clientY: 200 });
+    const { wrapper, router } = await openMap();
+    await overlay(wrapper).find('a[data-room="g2"]').trigger("click", { detail: 1, clientX: 300, clientY: 200 });
     expect(person(wrapper).classes()).toContain("landing");
-    expect(wrapper.find('[data-room="g2"]').classes()).toContain("target");
-    expect(router.currentRoute.value.path).toBe("/map"); // still falling
+    expect(overlay(wrapper).find('[data-room="g2"]').classes()).toContain("target");
+    expect(router.currentRoute.value.path).toBe("/galleries/g1"); // still falling
     await wait(400);
     await flushPromises();
     expect(router.currentRoute.value.path).toBe("/galleries/g2");
   });
 
   test("a keyboard press enters at once, like any link", async () => {
-    page();
-    const { wrapper, router } = await mountAt("/map");
-    await wrapper.find('a[data-room="g2"]').trigger("click", { detail: 0 });
+    const { wrapper, router } = await openMap();
+    await overlay(wrapper).find('a[data-room="g2"]').trigger("click", { detail: 0 });
     await flushPromises();
     expect(router.currentRoute.value.path).toBe("/galleries/g2");
   });
 });
 
 describe("where you are, on every room's page", () => {
-  const groups = () =>
-    fakeApi({
-      "/groups/list": () => ({ list: { groups: [groupRow("g1", "Doodles"), groupRow("g2", "Night Walks")] } }),
-      "/groups/feed": () => ({ feed: { posts: [] } }),
-      "/nominations/categories": () => ({ list: { categories: [] } }),
-      "/archive/galleries": () => ({ page: { groups: [] } }),
-    });
-
-  test("a gallery shows a still mini map marking it \"you are here\", which opens the map there", async () => {
-    groups();
-    const { wrapper, router } = await mountAppAt("/galleries/g1");
-    const mini = wrapper.find("a.minimap");
-    expect([mini.attributes("href"), mini.attributes("aria-label")]).toEqual(["/map?at=g1", "you are in Doodles. open the map"]);
+  test("a gallery's still mini map marks it \"you are here\" and opens the map", async () => {
+    groupsApi();
+    const { wrapper } = await mountAppAt("/galleries/g1");
+    const mini = wrapper.find("button.minimap");
+    expect(mini.attributes("aria-label")).toBe("you are in Doodles. open the map");
     expect(mini.find('[data-room="g1"]').classes()).toContain("here");
     expect(mini.find('[data-room="g1"] .you-are-here').text()).toBe("you are here");
     expect(mini.find('[data-room="g1"] .pin').exists()).toBe(true);
     expect(mini.find("svg").attributes("aria-hidden")).toBe("true");
-    expect(mini.findAll("svg a")).toHaveLength(0); // no links inside the link
+    expect(mini.findAll("svg a")).toHaveLength(0); // no links inside the button
     expect(mini.find(".pegman").exists()).toBe(false);
+    expect(isOpen(wrapper)).toBe(false);
     await mini.trigger("click");
     await flushPromises();
-    expect(router.currentRoute.value.fullPath).toBe("/map?at=g1");
+    expect(isOpen(wrapper)).toBe(true);
   });
 
   test.each([
@@ -298,18 +307,22 @@ describe("where you are, on every room's page", () => {
     ["/galleries/g2", "g2", "Doodles", "future galleries"],
   ])("%s has the mini map and the rooms before and after", async (path, room, before, after) => {
     signedInAs(null);
-    groups();
+    groupsApi();
     const { wrapper } = await mountAppAt(path);
-    expect(wrapper.find(`a.minimap [data-room="${room}"]`).classes()).toContain("here");
+    expect(wrapper.find(`button.minimap [data-room="${room}"]`).classes()).toContain("here");
     expect(wrapper.find(".neighbours .before").text()).toBe(`← ${before}`);
     expect(wrapper.find(".neighbours .after").text()).toBe(after ? `${after} →` : "");
   });
 
-  test("the map itself, and pages that aren't rooms, have neither", async () => {
-    groups();
-    for (const path of ["/map", "/auth"]) {
-      const { wrapper } = await mountAppAt(path);
-      expect([path, wrapper.find(".minimap").exists(), wrapper.find(".neighbours").exists()]).toEqual([path, false, false]);
-    }
+  test("pages that aren't rooms have neither", async () => {
+    groupsApi();
+    const { wrapper } = await mountAppAt("/auth");
+    expect([wrapper.find(".minimap").exists(), wrapper.find(".neighbours").exists()]).toEqual([false, false]);
+  });
+
+  test("the top bar's name goes back to the entrance", async () => {
+    groupsApi();
+    const { wrapper } = await mountAppAt("/galleries/g1");
+    expect(wrapper.find("a.brand").attributes("href")).toBe("/");
   });
 });

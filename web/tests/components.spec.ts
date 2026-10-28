@@ -2,11 +2,10 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { me } from "../api.ts";
+import { mapOpen } from "../museum.ts";
 import AuthForm from "../components/AuthForm.vue";
 import ErrorNote from "../components/ErrorNote.vue";
 import { SESSION_ENDED } from "../errors.ts";
-import RoomList from "../components/RoomList.vue";
-import type { Room } from "../museum.ts";
 import { routes } from "../router.ts";
 import { fakeApi, mountAt, signedInAs } from "./fake.ts";
 
@@ -15,30 +14,6 @@ const newRouter = () => createRouter({ history: createMemoryHistory(), routes })
 beforeEach(() => {
   signedInAs(null);
   localStorage.clear();
-});
-
-describe("RoomList", () => {
-  const all: Room[] = [
-    { id: "home", kind: "home", label: "home", to: "/home" },
-    { id: "g1", kind: "gallery", label: "doodles", to: "/galleries/g1" },
-    { id: "w1", kind: "wing", label: "still life", to: "/galleries/w1" },
-  ];
-  const list = (props: object) => mount(RoomList, { props: { rooms: all, ...props }, global: { plugins: [newRouter()] } });
-
-  test("each room links to where it goes, labelled with its kind", () => {
-    const rooms = list({}).findAll("li");
-    expect(rooms.map((r) => r.find("a").attributes("href"))).toEqual(["/home", "/galleries/g1", "/galleries/w1"]);
-    expect(rooms.map((r) => r.text())).toEqual(["home", "doodles gallery", "still life wing"]);
-  });
-
-  test("clicking a room enters it", async () => {
-    const router = newRouter();
-    fakeApi({ "/posts/mine": () => ({ error: "UNAUTHORIZED" }) });
-    const wrapper = mount(RoomList, { props: { rooms: all }, global: { plugins: [router] } });
-    await wrapper.findAll("a")[1]!.trigger("click");
-    await flushPromises();
-    expect(router.currentRoute.value.fullPath).toBe("/galleries/g1");
-  });
 });
 
 describe("AuthForm", () => {
@@ -125,9 +100,12 @@ describe("entrance", () => {
     vi.spyOn(window, "matchMedia").mockImplementation(
       (query: string) => ({ matches: !wide, media: query, addEventListener() {}, removeEventListener() {} }) as unknown as MediaQueryList,
     );
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    mapOpen.value = false;
+  });
 
-  test("on a wide screen, clicking the page does nothing; the doorway goes to the map", async () => {
+  test("on a wide screen, clicking the page does nothing; the doorway goes home, with the map open", async () => {
     screen(true);
     const { wrapper, router } = await mountAt("/");
     expect(wrapper.find(".enter").exists()).toBe(false);
@@ -136,19 +114,19 @@ describe("entrance", () => {
     await flushPromises();
     expect(router.currentRoute.value.path).toBe("/");
     const doorway = wrapper.find('a.doorway-link[aria-label="enter the museum"]');
-    expect(doorway.attributes("href")).toBe("/map");
+    expect(doorway.attributes("href")).toBe("/home");
     await doorway.trigger("click");
     await flushPromises();
-    expect(router.currentRoute.value.path).toBe("/map");
+    expect([router.currentRoute.value.path, mapOpen.value]).toEqual(["/home", true]);
   });
 
-  test("on a narrow screen, there's no doorway; the enter button goes to the map", async () => {
+  test("on a narrow screen, there's no doorway; the enter button goes home, with the map open", async () => {
     screen(false);
     const { wrapper, router } = await mountAt("/");
     expect(wrapper.find(".doorway").exists()).toBe(false);
     await wrapper.find(".enter button").trigger("click");
     await flushPromises();
-    expect(router.currentRoute.value.path).toBe("/map");
+    expect([router.currentRoute.value.path, mapOpen.value]).toEqual(["/home", true]);
   });
 
   test("pointing at either half of the figure and blurbs lights up that side, and its blurb", async () => {
