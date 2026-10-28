@@ -66,7 +66,7 @@ const enter = () => router.push("/home");
       </div>
       <p>
         Like physical museums, <span class="name">the moment</span> is divided into constantly rotating Wings and Galleries to organize the large
-        collection of pieces and celebrate artwork for a diversity of characteristics.
+        collection of pieces and celebrate a diversity of artwork.
       </p>
       <p v-if="stacked" class="enter"><button type="button" @click="enter">enter</button></p>
     </div>

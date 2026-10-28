@@ -18,6 +18,8 @@ const emit = defineEmits<{
 }>();
 
 const LINE = 16; // label line height
+const BADGE_GAP = 5; // extra space above a "new" / "ending soon" badge
+const KIND_STEP = 12; // from a gallery's name down to its smaller GALLERY / WING tag
 const hatch = `hatch-${useId()}`; // the pattern's id, unique per map (a page can show two)
 const MAX_ZOOM = 3;
 const DRAG = 5; // pixels a pointer moves before it counts as dragging rather than clicking
@@ -227,10 +229,21 @@ function enter(e: MouseEvent, room: Room, navigate: (e?: MouseEvent) => unknown)
 const center = ({ shape }: PlacedRoom) =>
   shape.kind === "rect" ? { x: shape.x + shape.w / 2, y: shape.y + shape.h / 2 } : { x: shape.cx, y: shape.cy };
 const isHere = (r: PlacedRoom) => r.room.id === props.here;
+// The room under the pointer or focused, whose label lights up (labels sit in a layer of their own).
+const hovered = ref<string | null>(null);
+const focused = ref<string | null>(null);
+/** Under a gallery's or wing's name, what it is. */
+const kindLine = (r: PlacedRoom) => (r.room.kind === "wing" || r.room.kind === "gallery" ? r.room.kind : null);
+/** How far below the name's first line its last line (or its kind tag) sits. */
+const nameDrop = (r: PlacedRoom) => (r.label.length - 1) * LINE + (kindLine(r) ? KIND_STEP : 0);
+/** Where the badge sits, under the name. */
+const badgeY = (r: PlacedRoom) => labelTop(r) + nameDrop(r) + LINE + BADGE_GAP;
+/** Where the pin's note sits, under the name and any badge. */
+const noteY = (r: PlacedRoom) => labelTop(r) + nameDrop(r) + LINE + (r.room.notice ? LINE + BADGE_GAP : 0);
 /** Where the first label line goes, so the label, badge, and the pin's note (with the pin above) sit centred in the room. */
 function labelTop(r: PlacedRoom) {
-  const lines = r.label.length + (r.room.notice ? 1 : 0) + (isHere(r) ? 1 : 0);
-  return center(r).y - ((lines - 1) * LINE) / 2 + 4 + (isHere(r) ? 9 : 0);
+  const below = (r.room.notice ? LINE + BADGE_GAP : 0) + (isHere(r) ? LINE : 0);
+  return center(r).y - (nameDrop(r) + below) / 2 + 4 + (isHere(r) ? 9 : 0);
 }
 const describe = (r: Room) =>
   [r.label, r.kind === "wing" || r.kind === "gallery" ? r.kind : null, r.notice].filter(Boolean).join(", ");
@@ -280,6 +293,10 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
           :aria-label="describe(r.room)"
           :tabindex="mini ? -1 : undefined"
           @click="(e: MouseEvent) => enter(e, r.room, navigate)"
+          @pointerenter="hovered = r.room.id"
+          @pointerleave="hovered = null"
+          @focus="focused = r.room.id"
+          @blur="focused = null"
           :class="['plan-room', `kind-${r.room.kind}`, { here: isHere(r), target: r.room.id === landing }]"
           :data-room="r.room.id"
         >
@@ -290,29 +307,48 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
             <circle :cx="r.shape.cx" :cy="r.shape.cy" :r="r.shape.r" class="floor" />
             <path :d="ringPath(r.shape, r.openings)" class="wall" />
           </template>
-          <text :x="center(r).x" :y="labelTop(r)" aria-hidden="true">
-            <tspan v-for="(line, i) in r.label" :key="i" :x="center(r).x" :dy="i ? LINE : 0">{{ line }}</tspan>
-          </text>
-          <g
-            v-if="r.room.notice"
-            :class="['plan-badge', { ending: r.room.notice === 'ending soon' }]"
-            :transform="`translate(${center(r).x} ${labelTop(r) + r.label.length * LINE})`"
-            aria-hidden="true"
-          >
-            <rect :x="-badgeWidth(r.room.notice) / 2" y="-11" :width="badgeWidth(r.room.notice)" height="15" />
-            <text y="0">{{ r.room.notice }}</text>
-          </g>
-          <g v-if="isHere(r)" class="you-are-here" aria-hidden="true">
-            <g :transform="`translate(${center(r).x} ${labelTop(r) - 14})`">
-              <path d="M0 0 C -4 -6 -6 -9 -6 -12 A 6 6 0 1 1 6 -12 C 6 -9 4 -6 0 0 Z" class="pin" />
-              <circle cx="0" cy="-12" r="2.2" class="pin-dot" />
-            </g>
-            <text :x="center(r).x" :y="labelTop(r) + (r.label.length + (r.room.notice ? 1 : 0)) * LINE">you are here</text>
-          </g>
         </a>
       </RouterLink>
 
       <line v-for="([a, b], i) in p.doors" :key="`door${i}`" :x1="a[0]" :y1="a[1]" :x2="b[0]" :y2="b[1]" class="door" />
+
+      <!-- Above the doorways (which are paper painted over the walls): the black of the room you're
+           in again, so no doorway cuts into it, then every room's words, badge, and pin. Clicks go
+           through them to the rooms beneath. -->
+      <template v-for="r in p.rooms" :key="`here-${r.room.id}`">
+        <template v-if="isHere(r)">
+          <rect v-if="r.shape.kind === 'rect'" :x="r.shape.x" :y="r.shape.y" :width="r.shape.w" :height="r.shape.h" class="here-floor" />
+          <circle v-else :cx="r.shape.cx" :cy="r.shape.cy" :r="r.shape.r" class="here-floor" />
+        </template>
+      </template>
+      <g
+        v-for="r in p.rooms"
+        :key="`label-${r.room.id}`"
+        :class="['room-label', `kind-${r.room.kind}`, { here: isHere(r), lit: r.room.id === (hovered ?? focused) }]"
+        :data-room="r.room.id"
+        aria-hidden="true"
+      >
+        <text :x="center(r).x" :y="labelTop(r)" aria-hidden="true">
+          <tspan v-for="(line, i) in r.label" :key="i" :x="center(r).x" :dy="i ? LINE : 0">{{ line }}</tspan>
+          <tspan v-if="kindLine(r)" class="kind-line" :x="center(r).x" :dy="KIND_STEP">{{ kindLine(r) }}</tspan>
+        </text>
+        <g
+          v-if="r.room.notice"
+          :class="['plan-badge', { ending: r.room.notice === 'ending soon' }]"
+          :transform="`translate(${center(r).x} ${badgeY(r)})`"
+          aria-hidden="true"
+        >
+          <rect :x="-badgeWidth(r.room.notice) / 2" y="-11" :width="badgeWidth(r.room.notice)" height="15" />
+          <text y="0">{{ r.room.notice }}</text>
+        </g>
+        <g v-if="isHere(r)" class="you-are-here" aria-hidden="true">
+          <g :transform="`translate(${center(r).x} ${labelTop(r) - 14})`">
+            <path d="M0 0 C -4 -6 -6 -9 -6 -12 A 6 6 0 1 1 6 -12 C 6 -9 4 -6 0 0 Z" class="pin" />
+            <circle cx="0" cy="-12" r="2.2" class="pin-dot" />
+          </g>
+          <text :x="center(r).x" :y="noteY(r)">you are here</text>
+        </g>
+      </g>
     </svg>
     <template v-if="!mini">
       <p class="plan-controls">
@@ -327,6 +363,8 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
       >
         <svg viewBox="0 0 24 40" width="24" height="40">
           <circle cx="12" cy="8" r="5" />
+          <!-- a thin white edge under the black lines, so the person shows on a black room -->
+          <path class="halo" d="M12 13 V27 M12 27 L7 38 M12 27 L17 38 M12 17 L4 9 M12 17 L20 9" />
           <path d="M12 13 V27 M12 27 L7 38 M12 27 L17 38 M12 17 L4 9 M12 17 L20 9" />
         </svg>
       </div>
@@ -386,6 +424,12 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
 }
 .pegman svg circle {
   fill: var(--ink);
+  stroke: var(--paper);
+  stroke-width: 1.2;
+}
+.pegman svg path.halo {
+  stroke: var(--paper);
+  stroke-width: 4.5;
 }
 .pegman svg path {
   fill: none;
@@ -435,8 +479,7 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
 .you-are-here .pin-dot {
   fill: var(--paper);
 }
-.plan-room .you-are-here text {
-  font-size: 11px;
+.room-label .you-are-here text {
   font-weight: 400;
 }
 .plan-controls {
@@ -476,20 +519,32 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
      the pointer, so switching would move the hanging person relative to it. */
   cursor: inherit;
 }
-.plan-room text {
+.room-label {
+  pointer-events: none;
+}
+.here-floor {
+  fill: var(--ink);
+  pointer-events: none;
+}
+.room-label text {
   font-size: 13px;
   text-anchor: middle;
   fill: var(--ink);
 }
-.plan-room.kind-gallery text,
-.plan-room.kind-wing text {
-  font-weight: 700;
+/* All the map's words are one size, but for the badges and the gallery/wing tags. The rooms every museum has (home, the
+   entrance, future galleries, the archive) are named in capitals; galleries and wings keep their
+   names as written, with what they are, in capitals, under them. */
+.room-label.kind-home > text,
+.room-label.kind-entrance > text,
+.room-label.kind-nominations > text,
+.room-label.kind-archive > text {
+  text-transform: uppercase;
 }
-.plan-room.kind-wing > text {
-  font-size: 16px;
+.room-label .kind-line {
+  text-transform: uppercase;
+  font-size: 10px; /* smaller than the name: what it is, not what it's called */
 }
-.plan-room:hover > text,
-.plan-room:focus-visible > text {
+.room-label.lit > text {
   fill: var(--accent);
 }
 .plan-room:focus-visible {
@@ -501,26 +556,32 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
 .plan-room.here .floor {
   fill: var(--ink);
 }
-.plan-room.here text {
+.room-label.here > text,
+.room-label.here .you-are-here text {
   fill: var(--paper);
 }
 .plan-room.target .floor {
   fill: var(--wash);
 }
 .plan-badge rect {
+  margin-top: 0.5rem;
   fill: var(--paper);
   stroke: var(--ink);
   stroke-width: 1px;
   vector-effect: non-scaling-stroke;
 }
-.plan-room .plan-badge text {
+.room-label .plan-badge text {
   font-size: 11px;
   font-weight: 400;
+}
+/* On the black of the room you're in, a badge keeps a white edge. */
+.room-label.here .plan-badge rect {
+  stroke: var(--paper);
 }
 .plan-badge.ending rect {
   fill: var(--ink);
 }
-.plan-room .plan-badge.ending text {
+.room-label .plan-badge.ending text {
   fill: var(--paper);
 }
 </style>

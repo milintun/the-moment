@@ -112,7 +112,8 @@ test("the owner schedules galleries from the admin page, and they open on the ma
 
   const map = await openMap(page);
   const room = map.getByRole("link", { name: new RegExp(name, "i") });
-  await expect(room.locator(".plan-badge")).toHaveText("new");
+  const id = await room.getAttribute("data-room");
+  await expect(map.locator(`.room-label[data-room="${id}"] .plan-badge`)).toHaveText("new");
   await room.click();
   await expect(page.getByRole("heading", { name })).toBeVisible();
 });
@@ -159,7 +160,7 @@ test("the map opens over the page; the little person drops into the room clicked
   const owner = await playwright.request.newContext({ baseURL, extraHTTPHeaders: { Origin: baseURL! } });
   const { group } = await openGallery(owner);
   const map = await openMap(page, "/home");
-  await expect(map.locator('a.plan-room[data-room="home"]')).toContainText("you are here");
+  await expect(map.locator('.room-label[data-room="home"]')).toContainText("you are here");
   const room = map.locator(`a.plan-room[data-room="${group}"]`);
   const box = (await room.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 4 });
@@ -170,11 +171,11 @@ test("the map opens over the page; the little person drops into the room clicked
   await expect(map).toBeHidden();
 
   await page.getByRole("button", { name: /open the map/ }).press("Enter");
-  await expect(room).toContainText("you are here");
+  await expect(map.locator(`.room-label[data-room="${group}"]`)).toContainText("you are here");
   await page.keyboard.press("Escape");
   await expect(map).toBeHidden();
   await page.goto("/nominations");
-  await expect(page.locator('.minimap [data-room="nominations"]')).toContainText("you are here");
+  await expect(page.locator('.minimap .room-label[data-room="nominations"]')).toContainText("you are here");
   await expect(page.locator(".neighbours")).toContainText("archive →");
 });
 

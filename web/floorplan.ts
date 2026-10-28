@@ -162,7 +162,7 @@ export function plan(all: Room[]): Plan {
   const [x0, x1] = extent(lastRow);
   const endX = rightward(lastRow) ? x1 : x0 - COLUMN;
   const y = corridorY(lastRow);
-  put(find("nominations"), { kind: "rect", x: endX, y: y - 60, w: COLUMN, h: 120 }, 16);
+  put(find("nominations"), { kind: "rect", x: endX, y: y - 60, w: COLUMN, h: 120 }, 12); // in capitals, so it wraps sooner
   put(find("archive"), { kind: "rect", x: endX, y: y - 150, w: COLUMN, h: 90 }, 16);
   doors.push([[endX + COLUMN / 2 - h, y - 60], [endX + COLUMN / 2 + h, y - 60]]);
 

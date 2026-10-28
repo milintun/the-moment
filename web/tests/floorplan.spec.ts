@@ -166,7 +166,7 @@ describe("the map", () => {
     expect(isOpen(wrapper)).toBe(true);
     const room = overlay(wrapper).find('[data-room="g2"]');
     expect(room.classes()).toContain("here");
-    expect(room.find(".you-are-here").text()).toBe("you are here");
+    expect(overlay(wrapper).find(`.room-label[data-room="g2"] .you-are-here`).text()).toBe("you are here");
     const [x, y, w, h] = box(wrapper);
     const bounds = plan(await rooms()).bounds;
     expect(x! + w! / 2).toBeCloseTo(bounds.x + bounds.w / 2);
