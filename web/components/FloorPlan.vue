@@ -295,7 +295,7 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
           @click="(e: MouseEvent) => enter(e, r.room, navigate)"
           @pointerenter="hovered = r.room.id"
           @pointerleave="hovered = null"
-          @focus="focused = r.room.id"
+          @focus="focused = mini ? null : r.room.id"
           @blur="focused = null"
           :class="['plan-room', `kind-${r.room.kind}`, { here: isHere(r), target: r.room.id === landing }]"
           :data-room="r.room.id"
@@ -547,10 +547,13 @@ const badgeWidth = (notice: string) => notice.length * 6.6 + 10;
 .room-label.lit > text {
   fill: var(--accent);
 }
+/* Rooms take focus when pressed (to drag or click); only the keyboard's focus shows, as a
+   heavier wall, never the browser's ring. */
+.plan-room:focus,
 .plan-room:focus-visible {
   outline: none;
 }
-.plan-room:focus-visible .wall {
+.plan:not(.mini) .plan-room:focus-visible .wall {
   stroke-width: 3px;
 }
 .plan-room.here .floor {

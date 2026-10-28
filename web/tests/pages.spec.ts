@@ -28,8 +28,14 @@ describe("gallery view", () => {
       "/posts/my-votes": () => ({ votes: { posts: votes.map((p) => ({ post: p })) } }),
       ...extra,
     });
+  // The text buttons under an artwork (the artwork itself, a button for voting, isn't one of them).
   const buttons = (wrapper: any, id: string) =>
-    wrapper.find(`#post-${id}`).findAll("button").map((b: any) => b.text());
+    wrapper.find(`#post-${id}`).findAll("figcaption button").map((b: any) => b.text());
+  const art = (wrapper: any, id: string) => wrapper.find(`#post-${id} .art-button`);
+  const vote = async (wrapper: any, id: string) => {
+    await art(wrapper, id).trigger("click");
+    await flushPromises();
+  };
   const click = async (wrapper: any, id: string, label: string) => {
     await wrapper.find(`#post-${id}`).findAll("button").find((b: any) => b.text() === label)!.trigger("click");
     await flushPromises();
@@ -53,12 +59,46 @@ describe("gallery view", () => {
     expect(wrapper.text()).not.toContain("post here");
   });
 
-  test("signed in: a post here button", async () => {
+  test("signed in: POST + above the wall opens the post form over the gallery, which × closes", async () => {
     signedInAs("sasha");
     gallery();
     const { wrapper } = await mountAt("/galleries/g1");
-    expect(wrapper.find("a.button").text()).toBe("post here");
-    expect(wrapper.find("a.button").attributes("href")).toBe("/galleries/g1/post");
+    expect(wrapper.text()).not.toContain("log in to post and vote");
+    const dialog = () => wrapper.find("dialog.post-overlay").element as HTMLDialogElement;
+    expect(dialog().open).toBe(false);
+    await wrapper.find(".wall button.post-button").trigger("click");
+    expect(dialog().open).toBe(true);
+    expect(wrapper.find("dialog .post-form").exists()).toBe(true);
+    await wrapper.find('dialog button[aria-label="close"]').trigger("click");
+    expect(dialog().open).toBe(false);
+  });
+
+  test("posting from the window closes it and reloads the wall in place", async () => {
+    signedInAs("sasha");
+    const api = gallery({
+      "/uploads/request": () => ({ upload: "u9", uploadUrl: "https://storage.test/u9" }),
+      "/posts/create": () => ({ post: "p9" }),
+    });
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) =>
+      String(url).startsWith("https://storage.test") ? new Response(null, { status: 200 }) : realFetch(url, init)) as typeof fetch;
+    try {
+      const { wrapper, router } = await mountAt("/galleries/g1");
+      await wrapper.find(".wall button.post-button").trigger("click");
+      const file = new File(["x"], "art.png", { type: "image/png" });
+      const input = wrapper.find('dialog input[type="file"]');
+      Object.defineProperty(input.element, "files", { value: [file] });
+      await input.trigger("change");
+      await flushPromises();
+      await wrapper.find("dialog form").trigger("submit");
+      await flushPromises();
+      expect(api.called("/posts/create")).toEqual([{ group: "g1", content: "u9", caption: "" }]);
+      expect((wrapper.find("dialog.post-overlay").element as HTMLDialogElement).open).toBe(false);
+      expect(router.currentRoute.value.fullPath).toBe("/galleries/g1"); // stayed on the gallery
+      expect(api.called("/groups/feed").length).toBeGreaterThan(1); // reloaded
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 
   test("a closed gallery offers no posting", async () => {
@@ -76,20 +116,36 @@ describe("gallery view", () => {
     expect(wrapper.find(".empty").exists()).toBe(true);
   });
 
-  test("upvoting fills the button in and it then offers to unvote", async () => {
+  test("clicking someone's art upvotes it; clicking again takes the vote back", async () => {
     signedInAs("sasha");
     const api = gallery({
       "/posts/vote": ({ post }) => (votes.push(post), {}),
       "/posts/unvote": ({ post }) => ((votes = votes.filter((v) => v !== post)), {}),
     });
     const { wrapper } = await mountAt("/galleries/g1");
-    await click(wrapper, "p1", "upvote");
+    expect([art(wrapper, "p1").attributes("data-action"), art(wrapper, "p1").attributes("aria-pressed")]).toEqual(["upvote", "false"]);
+    await vote(wrapper, "p1");
     expect(api.called("/posts/vote")).toEqual([{ post: "p1" }]);
-    const button = wrapper.find("#post-p1 button");
-    expect([button.text(), button.classes()]).toEqual(["unvote", ["voted"]]);
-    await click(wrapper, "p1", "unvote");
+    expect([art(wrapper, "p1").attributes("data-action"), art(wrapper, "p1").attributes("aria-pressed")]).toEqual(["unvote", "true"]);
+    expect(wrapper.find("#post-p1 .votes").classes()).toContain("mine");
+    await vote(wrapper, "p1");
     expect(api.called("/posts/unvote")).toEqual([{ post: "p1" }]);
-    expect(wrapper.find("#post-p1 button").text()).toBe("upvote");
+    expect(art(wrapper, "p1").attributes("data-action")).toBe("upvote");
+  });
+
+  test("a vote changes the count but doesn't reorder the wall until it's loaded again", async () => {
+    signedInAs("sasha");
+    posts = [post("p1", "gigi", 1), post("p2", "sid", 0)];
+    gallery({ "/posts/vote": ({ post: id }) => ((posts = [{ ...posts[1]!, votes: 2 }, posts[0]!]), votes.push(id), {}) });
+    const { wrapper } = await mountAt("/galleries/g1");
+    const order = (w: any) => w.findAll(".artwork").map((f: any) => f.attributes("id"));
+    expect(order(wrapper)).toEqual(["post-p1", "post-p2"]);
+    await vote(wrapper, "p2"); // p2 now leads on the server
+    expect(order(wrapper)).toEqual(["post-p1", "post-p2"]);
+    expect(wrapper.find("#post-p2 .votes").text()).toBe("2 votes");
+    wrapper.unmount();
+    const again = await mountAt("/galleries/g1");
+    expect(order(again.wrapper)).toEqual(["post-p2", "post-p1"]);
   });
 
   test("you can't vote on your own post, but you can delete it after confirming", async () => {
@@ -110,7 +166,8 @@ describe("gallery view", () => {
     signedInAs("milin", true);
     const api = gallery({ "/admin/groups/remove-post": () => ({}) });
     const { wrapper } = await mountAt("/galleries/g1");
-    expect(buttons(wrapper, "p2")).toEqual(["upvote", "remove from gallery"]);
+    expect(art(wrapper, "p2").exists()).toBe(true);
+    expect(buttons(wrapper, "p2")).toEqual(["remove from gallery"]);
     await click(wrapper, "p2", "remove from gallery");
     expect(wrapper.find("#post-p2").text()).toContain("remove this post from Doodles?");
     await click(wrapper, "p2", "yes, remove");
@@ -129,7 +186,7 @@ describe("gallery view", () => {
     signedInAs("sasha");
     gallery({ "/posts/vote": () => ({ error: "CONFLICT" }) });
     const { wrapper } = await mountAt("/galleries/g1");
-    await click(wrapper, "p2", "upvote");
+    await vote(wrapper, "p2");
     expect(wrapper.find("#post-p2 [role=alert]").text()).toBe("you already voted for this post.");
     expect(wrapper.find("#post-p1 [role=alert]").exists()).toBe(false);
   });
@@ -148,7 +205,7 @@ describe("gallery view", () => {
     signedInAs("sasha");
     gallery({ "/posts/vote": () => ({ error: "UNAUTHORIZED" }) });
     const { wrapper } = await mountAt("/galleries/g1");
-    await click(wrapper, "p1", "upvote");
+    await vote(wrapper, "p1");
     const alert = wrapper.find("#post-p1 [role=alert]");
     expect(alert.text()).toContain("your session ended");
     expect(alert.find('a[href="/auth"]').exists()).toBe(true);
@@ -209,7 +266,7 @@ describe("gallery season notices", () => {
     expect(wrapper.find('.season-notice a').attributes("href")).toBe("/archive/g1/0");
     expect(wrapper.find(".badge").exists()).toBe(false);
     expect(wrapper.text()).not.toContain("post here");
-    await wrapper.find("#post-p1 button").trigger("click");
+    await wrapper.find("#post-p1 .art-button").trigger("click");
     await flushPromises();
     expect(wrapper.find("#post-p1 [role=alert]").text()).toBe("this season is over, so its votes are final.");
     expect(api.called("/groups/feed")).toHaveLength(1); // the wall stays as it was

@@ -388,7 +388,7 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 - **entrance**: wide screens enter through the doorway only (page clicks do nothing); narrow screens have no doorway and an enter button; either way you land home; pointing at either half of the figure lights that side and its blurb, and the last side holds
 
 ### web/tests/pages.spec.ts
-- **gallery view**: artwork with caption, owner, votes, image; signed out has no buttons and a "log in to post and vote" link, signed in a "post here" button; closed gallery offers no posting; empty wall; upvote → "unvote" filled in → back; no voting on your own post, delete after confirming; admin removes someone's post after confirming; non-admins never see removal; a refusal shows next to its post; a post already gone leaves with the message above; an ended session links to log in
+- **gallery view**: artwork with caption, owner, votes, image; signed out has no buttons and a "log in to post and vote" link; signed in, POST + inside the wall's top left opens the post form in a window over the gallery (× closes it), and posting closes it and reloads the wall in place; closed gallery offers no posting; empty wall; clicking someone's art upvotes it (washed in the accent colour with "upvote" in the middle on hover, its count in the accent colour) and again takes it back; a vote doesn't reorder the wall until it's loaded again; no voting on your own post, delete after confirming; admin removes someone's post after confirming; non-admins never see removal; a refusal shows next to its post; a post already gone leaves with the message above; an ended session links to log in
 - **wall order**: sorted by votes as it comes; the "sorted by" menu re-sorts newest or oldest first, and back, closing on choosing; from the keyboard an arrow opens it, arrows move, Enter chooses, Esc closes
 - **gallery season notices**: a "new" or filled-in "ending soon" badge beside the name, then "season n of m", then when it started and ends; no badge mid-season and the last season is marked final; a season ending with the page open points to the archive, hides posting, and a vote then says votes are final without reloading the wall
 - **future galleries**: counts down to the close; an idea already nominated is caught before the server; a refusal in an open round means once a day; voting after the round closed says votes are final
@@ -413,8 +413,8 @@ owner `curator`. `bun run test:all` runs backend, frontend, and e2e.
 
 ### e2e/museum.spec.ts
 - the entrance's doorway goes home, and the site's address opens at the entrance every time
-- register, post an image with a caption, land on it, and the image loads from storage
-- another visitor upvotes, then unvotes
+- register, post an image with a caption from the gallery's post window, see it on the wall, and the image loads from storage
+- another visitor clicks a post's artwork to upvote it, then again to take it back
 - an artist deletes their own post after confirming
 - an admin removes someone's post from a gallery
 - the owner schedules a gallery from the admin page (red admin button → new schedule); it's listed as running, opens on the floor plan tagged "new"

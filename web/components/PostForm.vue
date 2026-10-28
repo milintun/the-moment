@@ -7,7 +7,9 @@ import { rooms, type Room } from "../museum.ts";
 import ErrorNote from "./ErrorNote.vue";
 
 // Posts an image to `group`, or, without one, to a gallery or wing picked from the open ones.
-const props = defineProps<{ group?: string }>();
+// Then it goes to the new post on its wall, unless `onPosted` is given (the gallery's own post
+// window), which is told instead.
+const props = defineProps<{ group?: string; onPosted?: (post: string) => void }>();
 
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -81,7 +83,8 @@ async function submit() {
     const result = await client.posts.create({ group: chosen.value, content: requested.upload, caption: caption.value });
     // Its CONFLICTs are "season over" and "upload didn't arrive"; the upload just succeeded, so it's the season.
     if ("error" in result) throw new Error(explain("/posts/create", result.error));
-    router.push(`/galleries/${chosen.value}#post-${result.post}`); // the gallery scrolls to the new post
+    if (props.onPosted) props.onPosted(result.post);
+    else router.push(`/galleries/${chosen.value}#post-${result.post}`); // the gallery scrolls to the new post
   } catch (e) {
     // fetch itself throws when storage can't be reached.
     error.value = e instanceof TypeError ? explain("/uploads/request", "NETWORK_ERROR") : (e as Error).message;
@@ -122,8 +125,8 @@ onUnmounted(() => {
         @change="choose(($event.target as HTMLInputElement).files?.[0])"
       />
     </label>
-    <p><label>caption (optional)<textarea v-model="caption" rows="3"></textarea></label></p>
-    <p><button type="submit" :disabled="busy">post</button></p>
+    <p class="caption"><label>caption (optional)<textarea v-model="caption" rows="3"></textarea></label></p>
+    <p class="actions"><button type="submit" :disabled="busy">post</button></p>
     <p v-if="status">{{ status }}</p>
     <p v-if="error"><ErrorNote :problem="error" /></p>
   </form>
@@ -155,5 +158,16 @@ onUnmounted(() => {
 }
 .post-form {
   max-width: 560px;
+}
+/* The caption box as wide as the form, and the post button at its right edge. */
+.caption label {
+  display: block;
+  margin-right: 0;
+}
+.actions {
+  text-align: right;
+}
+.actions button {
+  margin: 0;
 }
 </style>

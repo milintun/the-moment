@@ -14,7 +14,7 @@ test("the site opens at the entrance, every time; the doorway goes home", async 
   await expect(page.getByRole("heading", { name: "The Moment" })).toBeVisible();
 });
 
-test("register, post an image with a caption, and land on it in the gallery", async ({ page, playwright, baseURL }) => {
+test("register, post an image with a caption from the gallery's post window, and see it on the wall", async ({ page, playwright, baseURL }) => {
   const owner = await playwright.request.newContext({ baseURL, extraHTTPHeaders: { Origin: baseURL! } });
   const { group, name } = await openGallery(owner);
   const username = unique("artist");
@@ -27,20 +27,22 @@ test("register, post an image with a caption, and land on it in the gallery", as
 
   await page.goto(`/galleries/${group}`);
   await expect(page.getByRole("heading", { name })).toBeVisible();
-  await page.getByRole("link", { name: "post here" }).click();
+  await page.getByRole("button", { name: "post +" }).click();
+  await expect(page.getByRole("dialog", { name: "post to this gallery" })).toBeVisible();
   await page.locator('input[type="file"]').setInputFiles(ART);
   await expect(page.getByAltText("preview")).toBeVisible();
   await page.getByLabel("caption (optional)").fill("my first piece");
   await page.getByRole("button", { name: "post", exact: true }).click();
 
-  await expect(page).toHaveURL(new RegExp(`/galleries/${group}#post-`));
+  await expect(page.getByRole("dialog", { name: "post to this gallery" })).toBeHidden();
+  await expect(page).toHaveURL(new RegExp(`/galleries/${group}$`));
   const art = page.locator("figure.artwork").filter({ hasText: "my first piece" });
   await expect(art).toContainText(`by ${username}`);
   // The image really came back from storage.
   await expect.poll(() => art.locator("img").evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(16);
 });
 
-test("another visitor upvotes a post, then takes the vote back", async ({ page, playwright, baseURL }) => {
+test("another visitor clicks a post's artwork to upvote it, then again to take the vote back", async ({ page, playwright, baseURL }) => {
   const owner = await playwright.request.newContext({ baseURL, extraHTTPHeaders: { Origin: baseURL! } });
   const artist = await playwright.request.newContext({ baseURL, extraHTTPHeaders: { Origin: baseURL! } });
   const { group } = await openGallery(owner);
@@ -52,10 +54,10 @@ test("another visitor upvotes a post, then takes the vote back", async ({ page, 
   const art = page.locator(`#post-${post}`);
   await expect(art).toContainText(`by ${artistName}`);
   await expect(art).toContainText("0 votes");
-  await art.getByRole("button", { name: "upvote" }).click();
+  await art.getByRole("button", { name: /^upvote / }).click(); // the artwork itself
   await expect(art).toContainText("1 vote");
-  await expect(art.getByRole("button", { name: "unvote" })).toHaveClass(/voted/);
-  await art.getByRole("button", { name: "unvote" }).click();
+  await expect(art.getByRole("button", { name: /^take back your vote/ })).toHaveAttribute("aria-pressed", "true");
+  await art.getByRole("button", { name: /^take back your vote/ }).click();
   await expect(art).toContainText("0 votes");
 });
 

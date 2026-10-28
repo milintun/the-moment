@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import ErrorNote from "../components/ErrorNote.vue";
+import PostForm from "../components/PostForm.vue";
 import WallEnd from "../components/WallEnd.vue";
 import WallOrder from "../components/WallOrder.vue";
 import { client, dayAndHour, isAdmin, me, seasonPhase, useNow, wallOrder, type WallSort } from "../api.ts";
@@ -16,7 +17,14 @@ const name = ref("");
 const season = ref<{ run: number; runs: number; runStart: string; runEnd: string } | null>(null);
 const posts = ref<Post[]>([]);
 const order = ref<WallSort>("votes");
-const wall = computed(() => wallOrder(posts.value, order.value));
+// By votes, the wall keeps the order it loaded in: a vote changes the count but doesn't move the
+// art around under you (that would be jarring); the new order shows on the next visit.
+const arrangement = ref<string[]>([]);
+const wall = computed(() => {
+  if (order.value !== "votes") return wallOrder(posts.value, order.value);
+  const byId = new Map(posts.value.map((p) => [p.post, p]));
+  return arrangement.value.flatMap((id) => byId.get(id) ?? []);
+});
 // A new order starts the walk again from the wall's beginning.
 const walk = ref<HTMLElement>();
 watch(order, () => walk.value?.scrollTo?.({ left: 0 }));
@@ -43,11 +51,35 @@ async function load() {
   season.value =
     found?.run != null ? { run: found.run, runs: found.runs!, runStart: found.runStart!, runEnd: found.runEnd! } : null;
   posts.value = feed.feed.posts;
+  const ids = posts.value.map((p) => p.post);
+  const kept = arrangement.value.filter((id) => ids.includes(id));
+  arrangement.value = [...kept, ...ids.filter((id) => !kept.includes(id))]; // newcomers at the end
   if (me.value) {
     const mine = await client.posts["my-votes"]({ group });
     voted.value = new Set("error" in mine ? [] : mine.votes.posts.map((p) => p.post));
   }
 }
+
+// Posting opens a window over the wall (the browser's own modal dialog: Esc closes it, focus
+// stays inside). Once posted, it closes and the wall walks to the new post.
+const postDialog = ref<HTMLDialogElement>();
+const posting = ref(false);
+function openPosting() {
+  posting.value = true;
+  postDialog.value?.showModal?.();
+}
+function closePosting() {
+  posting.value = false;
+  if (postDialog.value?.open) postDialog.value.close();
+}
+async function posted(post: string) {
+  closePosting();
+  await load();
+  await nextTick();
+  document.getElementById(`post-${post}`)?.scrollIntoView({ inline: "center", block: "nearest" });
+}
+/** A click on the dimmed page around the window (the dialog itself, outside its panel) closes it. */
+const clickOutside = (e: MouseEvent) => e.target === postDialog.value && closePosting();
 
 const SEASON_OVER = "this season is over, so its votes are final.";
 
@@ -120,59 +152,81 @@ onMounted(async () => {
           this season just ended. <RouterLink :to="`/archive/${group}/${season.run}`">see it in the archive</RouterLink>
         </p>
       </template>
-      <p v-if="open" class="post-line">
-        <RouterLink v-if="me" class="button" :to="`/galleries/${group}/post`">post here</RouterLink>
-        <RouterLink v-else to="/auth">log in to post and vote</RouterLink>
+      <p v-if="open && !me" class="post-line">
+        <RouterLink to="/auth">log in to post and vote</RouterLink>
       </p>
     </header>
 
     <p v-if="problem?.at === 'page'"><ErrorNote :problem="problem" at="page" /></p>
 
     <p class="sort-note"><WallOrder v-model="order" /></p>
-    <div ref="walk" class="walk">
-      <WallEnd side="before" />
-      <p v-if="loaded && !posts.length && problem?.at !== 'page'" class="empty">no art on the walls yet this season.</p>
-      <figure v-for="p in wall" :id="`post-${p.post}`" :key="p.post" class="artwork">
-        <!-- Images load after the first scroll and shift the wall, so walk again once the target's loads. -->
-        <img
-          :src="`/api/images/${p.content}`"
-          :alt="p.caption || `post by ${p.owner}`"
-          @load="target === `post-${p.post}` && scrollToTarget()"
-        />
-        <figcaption>
-          <div class="credit">
-            <div>
-              <p v-if="p.caption">{{ p.caption }}</p>
-              <p class="meta">by {{ p.owner }}</p>
+    <div :class="['wall', { 'can-post': open && me }]">
+      <button v-if="open && me" type="button" class="post-button" aria-haspopup="dialog" @click="openPosting">post +</button>
+      <div ref="walk" class="walk">
+        <WallEnd side="before" />
+        <p v-if="loaded && !posts.length && problem?.at !== 'page'" class="empty">no art on the walls yet this season.</p>
+        <figure v-for="p in wall" :id="`post-${p.post}`" :key="p.post" class="artwork">
+          <!-- Signed in, someone else's art is itself the vote: click it to upvote, again to take it back.
+               Images load after the first scroll and shift the wall, so walk again once the target's loads. -->
+          <component
+            :is="me && me !== p.owner ? 'button' : 'div'"
+            v-bind="
+              me && me !== p.owner
+                ? {
+                    type: 'button',
+                    class: ['art-button', { voted: voted.has(p.post) }],
+                    'data-action': voted.has(p.post) ? 'unvote' : 'upvote',
+                    'aria-pressed': voted.has(p.post),
+                    'aria-label': `${voted.has(p.post) ? 'take back your vote for' : 'upvote'} ${p.caption || `the post by ${p.owner}`}`,
+                    onClick: () => toggle(p.post),
+                  }
+                : {}
+            "
+          >
+            <img :src="`/api/images/${p.content}`" :alt="p.caption || `post by ${p.owner}`" @load="target === `post-${p.post}` && scrollToTarget()" />
+          </component>
+          <figcaption>
+            <div class="credit">
+              <div>
+                <p v-if="p.caption">{{ p.caption }}</p>
+                <p class="meta">by {{ p.owner }}</p>
+              </div>
+              <p :class="['meta', 'votes', { mine: voted.has(p.post) }]">{{ p.votes }} {{ p.votes == 1 ? "vote" : "votes" }}</p>
             </div>
-            <p class="meta votes">{{ p.votes }} {{ p.votes == 1 ? "vote" : "votes" }}</p>
-          </div>
-          <p>
-            <button v-if="me && me !== p.owner" :class="{ voted: voted.has(p.post) }" @click="toggle(p.post)">
-              {{ voted.has(p.post) ? "unvote" : "upvote" }}
-            </button>
-            <template v-if="me === p.owner">
-              <button v-if="confirming !== p.post" @click="confirming = p.post">delete</button>
-              <template v-else>
-                delete this post?
-                <button @click="remove(p.post)">yes, delete</button>
-                <button @click="confirming = null">no</button>
+            <p v-if="me === p.owner || isAdmin">
+              <template v-if="me === p.owner">
+                <button v-if="confirming !== p.post" @click="confirming = p.post">delete</button>
+                <template v-else>
+                  delete this post?
+                  <button @click="remove(p.post)">yes, delete</button>
+                  <button @click="confirming = null">no</button>
+                </template>
               </template>
-            </template>
-            <template v-if="isAdmin && me !== p.owner">
-              <button v-if="confirmingRemoval !== p.post" @click="confirmingRemoval = p.post">remove from gallery</button>
-              <template v-else>
-                remove this post from {{ name }}?
-                <button @click="removeFromGallery(p.post)">yes, remove</button>
-                <button @click="confirmingRemoval = null">no</button>
+              <template v-if="isAdmin && me !== p.owner">
+                <button v-if="confirmingRemoval !== p.post" @click="confirmingRemoval = p.post">remove from gallery</button>
+                <template v-else>
+                  remove this post from {{ name }}?
+                  <button @click="removeFromGallery(p.post)">yes, remove</button>
+                  <button @click="confirmingRemoval = null">no</button>
+                </template>
               </template>
-            </template>
-          </p>
-          <p v-if="problem?.at === p.post"><ErrorNote :problem="problem" :at="p.post" /></p>
-        </figcaption>
-      </figure>
-      <WallEnd side="after" />
+            </p>
+            <p v-if="problem?.at === p.post"><ErrorNote :problem="problem" :at="p.post" /></p>
+          </figcaption>
+        </figure>
+        <WallEnd side="after" />
+      </div>
     </div>
+
+    <dialog ref="postDialog" class="post-overlay" aria-label="post to this gallery" @close="closePosting" @click="clickOutside">
+      <div class="post-panel">
+        <header class="post-head">
+          <h2>post to {{ name }}</h2>
+          <button type="button" class="post-close" aria-label="close" @click="closePosting">×</button>
+        </header>
+        <PostForm v-if="posting" :group="group" :on-posted="posted" />
+      </div>
+    </dialog>
   </div>
 </template>
 
@@ -190,12 +244,118 @@ onMounted(async () => {
   margin-bottom: 0;
 }
 /* Just above the wall, saying how it's ordered. */
+/* Just above the wall, saying how it's ordered. */
 .sort-note {
   clear: right; /* below the mini map, with the wall */
   margin: 0.5rem 0 0;
 }
-.sort-note + .walk {
+.sort-note + .wall .walk {
   margin-top: 0.5rem;
+}
+/* The wall, with POST + in its top left corner, inside the border. */
+.wall {
+  position: relative;
+}
+.wall .post-button {
+  position: absolute;
+  top: calc(1px + 0.6rem);
+  left: 0;
+  z-index: 2;
+}
+.wall.can-post .walk {
+  padding-top: 3.6rem; /* room for POST + above the art */
+}
+/* Someone else's art, signed in: click it to vote. Pointing at it washes it in the accent colour
+   with what a click does ("upvote" or "unvote") in the middle; your vote shows as its count in
+   the accent colour. */
+.art-button {
+  display: block;
+  position: relative;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.art-button:hover:not(:disabled) {
+  background: none;
+}
+.art-button:focus-visible {
+  outline: none; /* the wash shows the focus */
+}
+.art-button::after {
+  content: attr(data-action);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--paper);
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.art-button:hover::after,
+.art-button:focus-visible::after {
+  opacity: 1;
+}
+.votes.mine {
+  color: var(--accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .art-button::after {
+    transition: none;
+  }
+}
+/* Posting: an accent-coloured button. */
+.post-button {
+  margin: 0;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--paper);
+  text-transform: uppercase;
+}
+.post-button:hover:not(:disabled) {
+  background: var(--paper);
+  color: var(--accent);
+}
+/* The post window: the form over the dimmed gallery. */
+.post-overlay {
+  width: min(640px, calc(100vw - 2 * var(--gutter)));
+  max-height: calc(100dvh - 4 * var(--gutter));
+  padding: 0;
+  border: var(--line);
+  background: var(--paper);
+  color: var(--ink);
+}
+.post-overlay::backdrop {
+  background: rgb(0 0 0 / 0.4);
+}
+.post-panel {
+  padding: var(--gutter);
+}
+.post-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.post-head h2 {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  flex: 1;
+}
+.post-close {
+  margin: 0;
+}
+/* In the window, the form, its drop zone, and its caption box fill the width. */
+.post-panel :deep(.post-form),
+.post-panel :deep(.dropzone) {
+  max-width: none;
 }
 /* "new" or "ending soon", beside the gallery's name; ending soon is filled in so it stands out. */
 .badge {
