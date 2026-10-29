@@ -6,6 +6,7 @@ An online, publicly curated digital museum for contemporary art. Anyone can post
 
 ## Project materials
 
+- **[Video demo](https://youtu.be/js_cuW7_Skk)**
 - **Design**
   - [P1: problem framing and design](design/submit/P1_Design.md)
   - [P2: user journey](design/submit/P2_user_journey.md)
