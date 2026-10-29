@@ -6,7 +6,7 @@ import { client, db } from "../src/db.ts";
 import { seed } from "../src/seed.ts";
 
 if (!process.argv.includes("--reset")) {
-  console.log(`This drops the database "${db.databaseName}" and reseeds it. Run again with --reset.`);
+  console.log(`This empties the database "${db.databaseName}" and reseeds it. Run again with --reset.`);
   process.exit(1);
 }
 try {

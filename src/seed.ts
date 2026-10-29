@@ -63,7 +63,10 @@ export async function seed(db: Db): Promise<void> {
   };
 
   console.log(`Seeding: resetting ${db.databaseName}…`);
-  await db.dropDatabase();
+  // Emptied collection by collection: the platform's database user may not drop the database.
+  for (const { name } of await db.listCollections({}, { nameOnly: true }).toArray()) {
+    if (!name.startsWith("system.")) await db.collection(name).deleteMany({});
+  }
   await ensureFutureGalleries(db);
   const category = (await nominating._categories({})).find((c) => c.name === FUTURE_GALLERIES)!.category;
 
