@@ -44,9 +44,9 @@ try {
   console.error("Startup couldn't reach MongoDB. Check MONGODB_URL and the database's network access.", error);
 }
 
-// SEED_RESET=yes wipes the database and fills it with demo history (src/seed.ts), once. It runs
-// after the server is up, so the health check passes while images download.
-if (process.env.SEED_RESET === "yes") seedOnce(db).catch((error) => console.error("Seeding failed.", error));
+// A new SEED_RESET value wipes the database and fills it with demo history (src/seed.ts), once.
+// It runs after the server is up, so the health check passes while images download.
+if (process.env.SEED_RESET) seedOnce(db, process.env.SEED_RESET).catch((error) => console.error("Seeding failed.", error));
 
 console.log(`Backend ready on ${server.url}`);
 

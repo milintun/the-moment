@@ -4,10 +4,12 @@
 //
 // It wipes the database first. Two ways to run it:
 //   - Locally: bun scripts/seed-prod.ts --reset   (uses MONGODB_URL and S3_* from .env)
-//   - On the platform: set SEED_RESET=yes and redeploy. The app seeds itself once at startup
-//     (a marker stops it repeating), then remove the variable.
+//   - On the platform: set SEED_RESET to any new value (yes, 2, 3, …). The app reseeds once at
+//     startup for each new value; a marker remembers the last one, so restarts don't repeat it.
 // Dummy accounts get random passwords that are never shown, so nobody can sign in as them.
 //
+// seed.data.ts is written as of the week of 10/26/2026; every date moves forward by whole weeks
+// to this week, so the history has the same shape whenever it is seeded.
 // The app only dates things "now", so the past is written through the concepts directly.
 // Images are downloaded from their sources (seed.images.json) and uploaded like any post.
 import type { Db } from "mongodb";
@@ -28,19 +30,23 @@ const DAY = 24 * HOUR;
 const monday = (date: string) => new Date(`${date}T05:00:00Z`).getTime();
 const MARKER = "seed.marker";
 
-/** Seeds once per database: does nothing if this database was already seeded. */
-export async function seedOnce(db: Db): Promise<void> {
-  if (await db.collection(MARKER).findOne({})) {
-    console.log("SEED_RESET is set, but this database was already seeded; nothing changed. Remove SEED_RESET.");
+/** Seeds once for each `label` (SEED_RESET's value): does nothing if the last seed used it. */
+export async function seedOnce(db: Db, label: string): Promise<void> {
+  const last = await db.collection<{ label?: string }>(MARKER).findOne({});
+  if (last && (last.label ?? "yes") === label) {
+    console.log(`SEED_RESET is ${label}, which this database was already seeded with; nothing changed.`);
     return;
   }
-  await seed(db);
+  await seed(db, label);
 }
 
-export async function seed(db: Db): Promise<void> {
+export async function seed(db: Db, label = "manual"): Promise<void> {
   const now = Date.now();
   // Rounds close Mondays at 12am EST (see nominations.ts); this week's opened on the last one.
   const roundStart = monday("2026-01-05") + Math.floor((now - monday("2026-01-05")) / (7 * DAY)) * 7 * DAY;
+  // The data's week (10/26) becomes this week; a whole number of weeks keeps starts on Mondays.
+  const shift = Math.max(0, roundStart - monday("2026-10-26"));
+  const at = (date: string) => monday(date) + shift;
 
   // A fixed random sequence, so the same data seeds the same history every time.
   let state = 20261029;
@@ -78,7 +84,7 @@ export async function seed(db: Db): Promise<void> {
   const schedules = new Map<string, Schedule>();
   for (const g of [...GALLERIES, ...UPCOMING.flatMap((u) => u.names.map((name) => ({ ...u, name })))]) {
     const key = `${g.start}|${g.days}|${g.seasons}`;
-    const s = schedules.get(key) ?? { start: monday(g.start), days: g.days, seasons: g.seasons, names: [] };
+    const s = schedules.get(key) ?? { start: at(g.start), days: g.days, seasons: g.seasons, names: [] };
     s.names.push(g.name);
     schedules.set(key, s);
   }
@@ -97,7 +103,7 @@ export async function seed(db: Db): Promise<void> {
   let posted = 0;
   for (const g of GALLERIES) {
     const candidates = shuffled((IMAGES as Record<string, Array<{ url: string }>>)[g.name] ?? []);
-    const start = monday(g.start);
+    const start = at(g.start);
     const period = g.days * DAY;
     const begun = Math.min(g.seasons, Math.ceil((now - start) / period));
     let count = 0;
@@ -114,7 +120,7 @@ export async function seed(db: Db): Promise<void> {
         continue;
       }
       const from = start + (count % begun) * period;
-      const to = Math.min(from + period, now - HOUR);
+      const to = Math.max(from, Math.min(from + period, now - HOUR)); // a season begun under an hour ago: its first minute
       const createdAt = new Date(from + random() * (to - from));
       const owner = pick(USERS);
       const { upload, uploadUrl } = await uploading.requestUpload({ owner, contentType: type, createdAt });
@@ -158,13 +164,13 @@ export async function seed(db: Db): Promise<void> {
   // This week's round, still open: ideas from earlier this week, up to now.
   const people = shuffled(USERS);
   for (const [i, name] of CURRENT_IDEAS.entries()) {
-    const createdAt = new Date(roundStart + HOUR + random() * (now - roundStart - 2 * HOUR));
+    const createdAt = new Date(roundStart + random() * 0.95 * (now - roundStart)); // this week so far
     const nominator = people[i]!;
     const { nomination } = await nominating.nominate({ nominator, category, name, createdAt });
     await vote(nominationVotes, nomination, skewedVotes(16), nominator);
     nominations++;
   }
 
-  await db.collection(MARKER).insertOne({ seededAt: new Date() });
+  await db.collection(MARKER).insertOne({ label, seededAt: new Date() });
   console.log(`Seeding done: ${posted} posts, ${nominations} nominations across ${opened.size + 1} rounds.`);
 }
