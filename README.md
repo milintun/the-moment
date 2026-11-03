@@ -6,7 +6,7 @@ An online, publicly curated digital museum for contemporary art. Anyone can post
 
 ## Project materials
 
-- **[Personal Reflection](design/submit/P5_reflection.md)**
+- **[User Study](design/submit/P5_user_study.md)**
 - **[FINAL Video demo](https://youtu.be/js_cuW7_Skk)**
 - **Design**
   - [FINAL Design doc](design/submit/design_doc.md)
